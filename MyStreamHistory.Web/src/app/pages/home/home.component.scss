@@ -1,4 +1,44 @@
-.home-container {
-    text-align: center;
-    margin-top: 50px;
+@use "variables.scss" as *;
+
+.main {
+    min-height: 100%;
+    flex: 1 1 auto;
+}
+
+.gray-main-block {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around; /* Равномерное распределение элементов */
+    gap: 2rem; /* Отступы между элементами */
+    margin: 0 1rem; /* Отступы от краев */
+    padding: 2rem 0; /* Отступ снизу */
+    align-items: flex-start; /* Выравнивание элементов по верхнему краю */
+    flex-shrink: 0;
+    border-radius: 1.5rem;
+    background: $bg-2-color;
+}
+
+app-small-list-block {
+    display: flex;
+    width: 100%; /* Блок занимает всю доступную ширину */
+    flex: none; /* Отменяем flex: 1, чтобы он не сжимался */
+    justify-content: center;
+}
+
+@media screen and (min-width: 800px) {
+    main {
+        min-height: 100%;
+        flex: 1 1 auto;
+    }
+
+    main .gray-main-block {
+        flex-direction: row;
+    }
+
+    app-small-list-block {
+        display: flex;
+        flex: 1; /* Блоки равномерно занимают пространство */
+        min-width: 0; /* Позволяет блокам сжиматься */
+        justify-content: center;
+    }
 }

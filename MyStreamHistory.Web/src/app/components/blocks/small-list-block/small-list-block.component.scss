@@ -1,0 +1,165 @@
+@use "variables.scss" as *;
+
+.small-list-block {
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex: 1; /* Блоки равномерно занимают пространство */
+    background: $bg-3-color; /* Красный фон */
+    border-radius: 1rem; /* Скругленные углы */
+    padding: 1rem; /* Внутренние отступы */
+    min-width: 15.6rem;
+    max-width: 100%; /* Позволяет блокам сжиматься */
+    margin-right: 1rem;
+    margin-left: 1rem;
+
+    display: inline-flex;
+    padding: 2rem 1.5rem;
+    flex-direction: column;
+    align-items: flex-start;
+    flex-basis: 30rem;
+    gap: 2rem;
+    border-radius: 1.25rem;
+    background: $bg-3-color;
+}
+
+.small-list-block-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    align-self: stretch;
+    min-width: 100%;
+}
+
+.small-list-block-header .title {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+}
+
+.small-list-block-header .btn-view-all {
+    display: flex;
+    padding: 0.75rem 1.25rem;
+    justify-content: center;
+    align-items: center;
+    gap: 0.75rem;
+    border-radius: 6.1875rem;
+    background: var(--bg);
+}
+
+.small-list-block-header .btn-view-all span {
+    color: var(--text-3);
+    font-family: "Montserrat", serif;
+    font-size: 0.875rem;
+    font-style: normal;
+    font-weight: 600;
+    line-height: normal;
+}
+
+.small-list-block-header .btn-view-all i {
+    color: var(--text-3);
+    font-size: 0.875rem;
+    font-style: normal;
+    line-height: normal;
+}
+
+.small-list-block-content {
+    display: flex;
+    height: 22.25rem;
+    padding: 0.5rem;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+    border-radius: 0.5rem;
+    width: 100%;
+    background: var(--bg-2);
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.small-list-block-content .row {
+    display: flex;
+    padding: 0.75rem;
+    width: 100%;
+    min-width: 245px;
+    justify-content: space-between;
+    align-items: center;
+    border-radius: 0.25rem;
+    transition: 0.3s;
+}
+
+.small-list-block-content .row:hover {
+    background: black;
+}
+
+.small-list-block-content a {
+    width: 100%;
+}
+
+.small-list-block-content .row {
+    display: flex;
+    padding: 0.75rem;
+    width: 100%;
+    min-width: 9rem;
+    justify-content: space-between;
+    align-items: center;
+    border-radius: 0.25rem;
+    transition: 0.3s;
+}
+
+.small-list-block-content .row:hover {
+    background: black;
+}
+
+.avatar-nickname {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.avatar-nickname img {
+    width: 2rem;
+    height: 2rem;
+}
+
+.avatar-nickname span {
+    color: var(--text-2, #e7e7e7);
+    font-family: "Montserrat", serif;
+    font-size: 1rem;
+    font-style: normal;
+    font-weight: 600;
+    line-height: normal;
+}
+
+.show-btn {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.75rem;
+    border-radius: 6.25rem;
+    margin-left: auto;
+}
+
+.show-btn span {
+    color: $text-2-color;
+    font-size: 0.8125rem;
+    font-style: normal;
+    line-height: normal;
+}
+
+.show-btn i {
+    color: $text-2-color;
+    font-size: 0.75rem;
+    font-style: normal;
+    line-height: normal;
+}
+
+@media screen and (min-width: 800px) {
+    .small-list-block {
+        flex-basis: 45rem;
+        margin-right: 2.5rem;
+        margin-left: 2.5rem;
+        margin-top: 2rem;
+        max-width: 450px; /* Позволяет блокам сжиматься */
+    }
+}
