@@ -1,0 +1,20 @@
+<header>
+    <div class="left-side">
+        <div class="logo-menu">
+            <div class="logo">
+                <a href="/">
+                <img src="https://static-cdn.jtvnw.net/jtv_user_pictures/098fd779-669e-4c6c-a41e-88ec7ece943c-profile_image-300x300.png"
+                     alt="logo"/></a>
+                <a href="/">MyStreamHistory</a>
+            </div>
+        </div>
+    </div>
+    <div class="auth">
+            <span class="join-text">Join now for <b>FREE</b></span>
+            <div class="login-btn"><a
+                    href="https://id.twitch.tv/oauth2/authorize?response_type=code&client_id=a77bf3umj99gay4n0ng8k5u70qsqja&redirect_uri={% get_env_var 'WEB_SITE_URL' %}auth/twitch/callback/&scope=user:read:email+moderator:read:chatters">
+                <span><b>Log in</b> via</span>
+                <i class="fa-brands fa-twitch"></i></a>
+            </div>
+    </div>
+</header>
