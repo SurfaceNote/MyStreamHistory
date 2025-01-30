@@ -1,0 +1,6 @@
+@MyStreamHistory.API_HostAddress = http://localhost:5129
+
+GET {{MyStreamHistory.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
