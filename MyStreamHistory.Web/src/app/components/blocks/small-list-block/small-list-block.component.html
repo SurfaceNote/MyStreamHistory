@@ -7,103 +7,21 @@
     </div>
     <div class="small-list-block-content">
 
-        <a href="/106010980/">
-            <div class="row">
-                <div class="avatar-nickname">
-                    <img src="https://static-cdn.jtvnw.net/jtv_user_pictures/10bba0bf-2f72-4642-a58c-7302ea1f0408-profile_image-50x50.png"
-                        alt="kination logo">
-                    <span>kination</span>
+        @for (streamer of streamers; track streamer.id) {
+            <a href="/#">
+                <div class="row">
+                    <div class="avatar-nickname">
+                        <img src="{{ streamer.avatarUrl }}" alt="{{ streamer.name }} logo">
+                        <span>{{ streamer.name }}</span>
+                    </div>
+                    <div class="show-btn">
+                        <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+                    </div>
                 </div>
-                <div class="show-btn">
-
-                    <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
-                </div>
-            </div>
-        </a>
-
-        <a href="/216201820/">
-            <div class="row">
-                <div class="avatar-nickname">
-                    <img src="https://static-cdn.jtvnw.net/jtv_user_pictures/af9a5718-93ff-4bfd-b5a3-ec61f9819090-profile_image-50x50.png"
-                        alt="mrazeris logo">
-                    <span>mrazeris</span>
-                </div>
-                <div class="show-btn">
-
-                    <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
-                </div>
-            </div>
-        </a>
-
-        <a href="/104845754/">
-            <div class="row">
-                <div class="avatar-nickname">
-                    <img src="https://static-cdn.jtvnw.net/jtv_user_pictures/3709a735-3531-4276-b48f-a38600eec55f-profile_image-50x50.png"
-                        alt="passengerhofmann logo">
-                    <span>passengerhofmann</span>
-                </div>
-                <div class="show-btn">
-
-                    <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
-                </div>
-            </div>
-        </a>
-
-        <a href="/609409723/">
-            <div class="row">
-                <div class="avatar-nickname">
-                    <img src="https://static-cdn.jtvnw.net/jtv_user_pictures/f76c7cc0-c991-49d6-bcc8-40f11fa3ae15-profile_image-50x50.png"
-                        alt="amawells logo">
-                    <span>amawells</span>
-                </div>
-                <div class="show-btn">
-
-                    <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
-                </div>
-            </div>
-        </a>
-
-        <a href="/161198620/">
-            <div class="row">
-                <div class="avatar-nickname">
-                    <img src="https://static-cdn.jtvnw.net/jtv_user_pictures/13117377-fd75-4717-90f5-1780ce5ce797-profile_image-50x50.png"
-                        alt="yanotik_biofizik logo">
-                    <span>yanotik_biofizik</span>
-                </div>
-                <div class="show-btn">
-
-                    <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
-                </div>
-            </div>
-        </a>
-
-        <a href="/152728154/">
-            <div class="row">
-                <div class="avatar-nickname">
-                    <img src="https://static-cdn.jtvnw.net/jtv_user_pictures/8f6c4328-5964-423f-9431-6d2e5ef7d845-profile_image-50x50.png"
-                        alt="vanoraevsky logo">
-                    <span>vanoraevsky</span>
-                </div>
-                <div class="show-btn">
-
-                    <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
-                </div>
-            </div>
-        </a>
-
-        <a href="/275951619/">
-            <div class="row">
-                <div class="avatar-nickname">
-                    <img src="https://static-cdn.jtvnw.net/jtv_user_pictures/1d56fb22-2be2-4241-80aa-ba731b13e516-profile_image-50x50.jpeg"
-                        alt="SibirskyMraz logo">
-                    <span>SibirskyMraz</span>
-                </div>
-                <div class="show-btn">
-
-                    <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
-                </div>
-            </div>
-        </a>
+            </a>
+        } @empty {
+            <p>There's no objects</p>
+        }
 
     </div>
 </div>

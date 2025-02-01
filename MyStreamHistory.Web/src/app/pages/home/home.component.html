@@ -1,7 +1,7 @@
 <main>
     <div class="gray-main-block">
-        <app-small-list-block title="Popular games" fontIcon="fa-solid fa-gamepad" />
-        <app-small-list-block title="Popular streamers" fontIcon="fa-solid fa-headset" />
-        <app-small-list-block title="Live streams" fontIcon="fa-solid fa-microphone-lines" />
+        <app-small-list-block title="Popular games" fontIcon="fa-solid fa-gamepad" [streamers]="streamers" />
+        <app-small-list-block title="Popular streamers" fontIcon="fa-solid fa-headset" [streamers]="streamers" />
+        <app-small-list-block title="Live streams" fontIcon="fa-solid fa-microphone-lines" [streamers]="streamers" />
     </div>
 </main>

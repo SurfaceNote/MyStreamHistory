@@ -1,4 +1,5 @@
 import { Component, Input } from '@angular/core';
+import { StreamerShortDTO } from '../../../models/streamer-short.dto';
 
 @Component({
   selector: 'app-small-list-block',
@@ -9,4 +10,5 @@ import { Component, Input } from '@angular/core';
 export class SmallListBlockComponent {
   @Input() title: string = '';
   @Input() fontIcon: string = '';
+  @Input() streamers: StreamerShortDTO[] = [];
 }
