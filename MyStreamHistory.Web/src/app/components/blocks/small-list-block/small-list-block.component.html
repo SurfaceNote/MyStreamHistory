@@ -7,12 +7,12 @@
     </div>
     <div class="small-list-block-content">
 
-        @for (streamer of streamers; track streamer.id) {
+        @for (streamer of streamers; track streamer.twitchId) {
             <a href="/#">
                 <div class="row">
                     <div class="avatar-nickname">
-                        <img src="{{ streamer.avatarUrl }}" alt="{{ streamer.name }} logo">
-                        <span>{{ streamer.name }}</span>
+                        <img src="{{ streamer.logoUser }}" alt="{{ streamer.channelName }} logo">
+                        <span>{{ streamer.channelName }}</span>
                     </div>
                     <div class="show-btn">
                         <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
@@ -20,7 +20,7 @@
                 </div>
             </a>
         } @empty {
-            <p>There's no objects</p>
+            <p>Loading...</p>
         }
 
     </div>

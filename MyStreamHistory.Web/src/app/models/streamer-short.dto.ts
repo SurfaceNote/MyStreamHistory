@@ -1,5 +1,5 @@
 export interface StreamerShortDTO {
-    id: number;
-    name: string;
-    avatarUrl: string;
+    twitchId: number;
+    channelName: string;
+    logoUser: string;
 }
