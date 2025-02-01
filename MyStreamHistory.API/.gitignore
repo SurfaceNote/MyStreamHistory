@@ -30,5 +30,6 @@ logs/
 appsettings.Development.json
 appsettings.Local.json
 secrets.json
+.env
 
 docker-compose.override.yml
