@@ -18,7 +18,7 @@
     background: $bg-2-color;
 }
 
-app-small-list-block {
+app-small-list-block-streamers {
     display: flex;
     width: 100%;
     flex: none;
@@ -35,7 +35,7 @@ app-small-list-block {
         flex-direction: row;
     }
 
-    app-small-list-block {
+    app-small-list-block-streamers {
         display: flex;
         flex: 1;
         min-width: 0;
