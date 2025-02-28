@@ -1,0 +1,27 @@
+version: '3.4'
+
+services:
+  mystreamhistory.api:
+    image: ${DOCKER_REGISTRY-}mystreamhistoryapi
+    container_name: mystreamhistory.api
+    build:
+      context: .
+      dockerfile: MyStreamHistory.API/Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - MY_DB_CONNECTION_STRING=${MY_DB_CONNECTION_STRING}
+    ports:
+      - "5000:5000"
+      - "5001:5001"
+
+  mystreamhistory.database:
+    image: postgres:latest
+    container_name: mystreamhistory.database
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - ./.containers/mystreamhistory-db:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
