@@ -5,8 +5,10 @@ services:
     image: ${DOCKER_REGISTRY-}mystreamhistoryapi
     container_name: mystreamhistory.api
     build:
-      context: .
+      context: /var/www/mystreamhistory
       dockerfile: MyStreamHistory.API/Dockerfile
+    env_file:
+      - .env
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - MY_DB_CONNECTION_STRING=${MY_DB_CONNECTION_STRING}
@@ -22,6 +24,6 @@ services:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     volumes:
-      - ./.containers/mystreamhistory-db:/var/lib/postgresql/data
+      - /var/www/mystreamhistory/.containers/mystreamhistory-db:/var/lib/postgresql/data:rw
     ports:
       - "5432:5432"
