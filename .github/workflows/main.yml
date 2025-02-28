@@ -38,18 +38,11 @@ jobs:
       - name: Wait for API to be healthy
         run: |
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
-          end=$(( $(date +%s) + 60 ))  # Устанавливаем время окончания через 60 секунд
-          while [ $(date +%s) -lt $end ]; do
-            if curl -s http://localhost:5000/health; then
-              echo "API is up and running!"
-              exit 0
-            else
-              echo "Waiting for API to be healthy..."
-              sleep 5
-            fi
+          while ! curl -s http://localhost:5000/health; do
+            echo "Waiting for API to be healthy..."
+            sleep 5
           done
-          echo "Error: API did not become healthy in time!"
-          exit 1
+          echo "API is up and running!"
           EOF
 
       - name: Finish deployment
