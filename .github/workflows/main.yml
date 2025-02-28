@@ -34,5 +34,5 @@ jobs:
             docker-compose down
             docker-compose up -d --build
             
-            docker-compose run --rm my-api dotnet ef database update
+            docker-compose run --rm mystreamhistory.api dotnet ef database update
           EOF
