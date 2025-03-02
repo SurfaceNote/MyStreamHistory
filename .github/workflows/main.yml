@@ -28,7 +28,7 @@ jobs:
       - name: Restart API on server
         run: |
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
-          cd ${{ secrets.DEPLOY_PATH }}/MyStreamHistory.API
+          cd ${{ secrets.DEPLOY_PATH }}
           docker-compose pull
           docker-compose down
           docker-compose up -d --build
