@@ -11,9 +11,10 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowSpecificOrigin",
         policy =>
         {
-            policy.WithOrigins("http://localhost", "http://localhost:80", "http://localhost:4200",  "http://mystreamhistory.com", "https://mystreamhistory.com") 
+            policy.WithOrigins("http://localhost", "http://localhost:80", "http://localhost:4200", "http://mystreamhistory.com", "https://mystreamhistory.com")
                   .AllowAnyHeader()
-                  .AllowAnyMethod();
+                  .AllowAnyMethod()
+                  .AllowCredentials();
         });
 });
 
