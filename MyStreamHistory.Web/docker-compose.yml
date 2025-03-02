@@ -1,0 +1,15 @@
+services:
+  mystreamhistoryweb:
+    container_name: mystreamhistorywebcontainer
+    build: . 
+    image: mystreamhistoryweb
+    ports:
+     - 80:80
+    expose:
+     - 80
+    networks:
+      - internalnet
+
+networks:
+ internalnet:
+  driver: bridge
