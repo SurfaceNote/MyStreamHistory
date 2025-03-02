@@ -17,7 +17,7 @@ builder.Services.AddCors(options =>
         });
 });
 
-builder.Configuration.AddEnvironmentVariables();
+Env.Load();
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 connectionString = connectionString?.Replace("%MY_DB_CONNECTION_STRING%", Environment.GetEnvironmentVariable("MY_DB_CONNECTION_STRING"));
