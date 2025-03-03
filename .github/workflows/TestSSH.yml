@@ -1,9 +1,6 @@
 name: Test SSH Connections
 
-on:
-  push:
-    branches:
-      - main
+on: workflow_dispatch
 
 jobs:
   test-ssh:
