@@ -26,7 +26,6 @@ jobs:
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST_WEB }} << 'EOF'
           cd ${{ secrets.DEPLOY_PATH }}/MyStreamHistory.Web
           docker-compose down
-          docker-compose run --rm certbot renew
           docker-compose up -d --build
           docker ps
           EOF
