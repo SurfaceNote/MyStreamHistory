@@ -1,18 +1,15 @@
 services:
   mystreamhistoryweb:
     container_name: mystreamhistorywebcontainer
-    build: .
+    build: . 
     image: mystreamhistoryweb
     ports:
-      - "80:80"
+     - 80:80
     expose:
-      - "80"
+     - 80
     networks:
       - internalnet
-    environment:
-      - NGINX_HOST=mystreamhistory.com
-      - NGINX_PORT=80
 
 networks:
-  internalnet:
-    driver: bridge
+ internalnet:
+  driver: bridge
