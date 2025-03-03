@@ -6,7 +6,28 @@ on:
       - main
 
 jobs:
+  detect-chages:
+    runs-on: ubuntu-latest
+    outputs:
+      api_changed: ${{ steps.filter.outputs.api }}
+      web_changed: ${{ steps.filter.outputs.web }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+        
+      - name: Check changed files
+        id: filter
+        run: |
+          API_CHANGED=$(git diff --name-only HEAD^ HEAD | grep -q '^MyStreamHistory.API/' && echo "true" || echo "false")
+          WEB_CHANGED=$(git diff --name-only HEAD^ HEAD | grep -q '^MyStreamHistory.Web/' && echo "true" || echo "false")
+
+          echo "api=$API_CHANGED" >> $GITHUB_OUTPUT
+          echo "web=$WEB_CHANGED" >> $GITHUB_OUTPUT
   deploy:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.api_changed == 'true'
     runs-on: ubuntu-latest
 
     steps:
