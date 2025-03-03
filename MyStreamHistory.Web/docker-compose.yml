@@ -9,21 +9,9 @@ services:
       - "80"
     networks:
       - internalnet
-    volumes:
-      - ./certbot/www:/var/www/certbot
-      - ./certbot/conf:/etc/letsencrypt
     environment:
       - NGINX_HOST=mystreamhistory.com
       - NGINX_PORT=80
-    depends_on:
-      - certbot
-
-  certbot:
-    image: certbot/certbot
-    volumes:
-      - ./certbot/www:/var/www/certbot
-      - ./certbot/conf:/etc/letsencrypt
-    command: certonly --webroot --webroot-path=/var/www/certbot -d mystreamhistory.com --email surfacenote@gmail.com --agree-tos --non-interactive
 
 networks:
   internalnet:
