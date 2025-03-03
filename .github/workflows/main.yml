@@ -6,7 +6,7 @@ on:
       - main
 
 jobs:
-  detect-chages:
+  detect-changes:
     runs-on: ubuntu-latest
     outputs:
       api_changed: ${{ steps.filter.outputs.api }}
