@@ -25,7 +25,7 @@ jobs:
 
           echo "api=$API_CHANGED" >> $GITHUB_OUTPUT
           echo "web=$WEB_CHANGED" >> $GITHUB_OUTPUT
-  deploy:
+  deploy-api:
     needs: detect-changes
     if: needs.detect-changes.outputs.api_changed == 'true'
     runs-on: ubuntu-latest
@@ -77,3 +77,51 @@ jobs:
       - name: Finish deployment
         run: |
           echo "Deployment finished successfully!"
+  deploy-web:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.web_changed == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.SSH_HOST_WEB }} >> ~/.ssh/known_hosts
+
+      - name: Deploy Web to server
+        run: |
+          rsync -avz --delete ./MyStreamHistory.Web/ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST_WEB }}:${{ secrets.DEPLOY_PATH }}/MyStreamHistory.Web/
+
+      - name: Restart Web on server
+        run: |
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST_WEB }} << 'EOF'
+          cd ${{ secrets.DEPLOY_PATH }}/MyStreamHistory.Web
+          docker-compose down
+          docker-compose up -d --build
+          docker ps
+          EOF
+
+      - name: Wait for Web to be healthy
+        run: |
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST_WEB }} << 'EOF'
+          end=$(( $(date +%s) + 60 ))
+          while [ $(date +%s) -lt $end ]; do
+            if curl -s http://localhost/ | grep "MyStreamHistory"; then
+              echo "Web is up and running!"
+              exit 0
+            else
+              echo "Waiting for Web to be healthy..."
+              sleep 5
+            fi
+          done
+          echo "Error: Web did not become healthy in time!"
+          exit 1
+          EOF
+
+      - name: Finish Web deployment
+        run: echo "Web deployment finished successfully!"
