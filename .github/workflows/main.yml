@@ -1,4 +1,4 @@
-name: Deploy API to Server
+name: Auto deploy API and Web
 
 on:
   push:
