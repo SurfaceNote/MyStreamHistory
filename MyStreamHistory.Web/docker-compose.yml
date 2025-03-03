@@ -5,10 +5,15 @@ services:
     image: mystreamhistoryweb
     ports:
      - 80:80
+     - 443:443
     expose:
      - 80
+     - 443
     volumes:
      - /var/www/certbot:/var/www/certbot
+     - /etc/letsencrypt/live/mystreamhistory.com:/etc/letsencrypt/live/mystreamhistory.com
+     - /etc/letsencrypt/archive/mystreamhistory.com:/etc/letsencrypt/archive/mystreamhistory.com
+     - /etc/letsencrypt/renewal/mystreamhistory.com.conf:/etc/letsencrypt/renewal/mystreamhistory.com.conf
     networks:
       - internalnet
 
