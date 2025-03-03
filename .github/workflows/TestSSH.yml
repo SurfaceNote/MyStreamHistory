@@ -1,0 +1,38 @@
+name: Test SSH Connections
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  test-ssh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up SSH key for API server
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Test SSH connection to API server
+        run: |
+          echo "Testing SSH connection to API server..."
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "echo 'SSH connection to API server successful'"
+
+      - name: Set up SSH key for Web server
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.SSH_HOST_WEB }} >> ~/.ssh/known_hosts
+
+      - name: Test SSH connection to Web server
+        run: |
+          echo "Testing SSH connection to Web server..."
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST_WEB }} "echo 'SSH connection to Web server successful'"
+
