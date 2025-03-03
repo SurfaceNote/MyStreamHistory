@@ -3,9 +3,9 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install
 RUN npx ngcc --properties es2023 browser module main --first-only --create-ivy-entry-points
-COPY . .
-RUN npm run build
+COPY . . 
 FROM nginx:stable
 COPY default.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/dist/my-stream-history.web/ /usr/share/nginx/html
-EXPOSE 80
+COPY ./certbot/conf/live /etc/letsencrypt/live
+EXPOSE 80 443

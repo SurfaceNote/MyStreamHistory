@@ -1,19 +1,24 @@
 services:
   mystreamhistoryweb:
     container_name: mystreamhistorywebcontainer
-    build: . 
+    build: .
     image: mystreamhistoryweb
     ports:
-      - 80:80
-      - 443:443
+      - "80:80"
+      - "443:443"
     expose:
-      - 80
-      - 443
+      - "80"
+      - "443"
     networks:
       - internalnet
     volumes:
       - ./certbot/www:/var/www/certbot
       - ./certbot/conf:/etc/letsencrypt
+    environment:
+      - NGINX_HOST=mystreamhistory.com
+      - NGINX_PORT=443
+    depends_on:
+      - certbot
 
   certbot:
     image: certbot/certbot
@@ -23,5 +28,5 @@ services:
     entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 12h & wait $${!}; done'"
 
 networks:
- internalnet:
-  driver: bridge
+  internalnet:
+    driver: bridge
