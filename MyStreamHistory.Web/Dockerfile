@@ -8,5 +8,4 @@ RUN npm run build
 FROM nginx:stable
 COPY default.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/dist/my-stream-history.web/ /usr/share/nginx/html
-COPY ./certbot/conf/live /etc/letsencrypt/live
 EXPOSE 80 443
