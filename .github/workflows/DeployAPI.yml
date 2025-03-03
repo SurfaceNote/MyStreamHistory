@@ -1,0 +1,55 @@
+name: Deploy API to Server
+
+on: workflow_dispatch
+
+jobs:
+  deploy-api:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy API to server
+        run: |
+          rsync -avz --delete ./MyStreamHistory.API/ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.DEPLOY_PATH }}/MyStreamHistory.API/
+          rsync -avz --delete ./docker-compose.yml ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.DEPLOY_PATH }}/
+
+      - name: Restart API on server
+        run: |
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+          cd ${{ secrets.DEPLOY_PATH }}
+          docker-compose pull
+          docker-compose down
+          docker-compose up -d --build
+          docker-compose exec mystreamhistory.api dotnet ef database update
+          docker ps
+          EOF
+
+      - name: Wait for API to be healthy
+        run: |
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+          end=$(( $(date +%s) + 60 ))  # Устанавливаем время окончания через 60 секунд
+          while [ $(date +%s) -lt $end ]; do
+            if curl -s http://localhost:5000/health; then
+              echo "API is up and running!"
+              exit 0
+            else
+              echo "Waiting for API to be healthy..."
+              sleep 5
+            fi
+          done
+          echo "Error: API did not become healthy in time!"
+          exit 1
+          EOF
+
+      - name: Finish deployment
+        run: |
+          echo "Deployment finished successfully!"
