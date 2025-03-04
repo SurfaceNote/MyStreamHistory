@@ -28,6 +28,16 @@ services:
     ports:
       - "5432:5432"
 
+  mystreamhistory.migrations:
+    image: mystreamhistoryapi
+    container_name: mystreamhistory.migrations
+    build:
+      context: /var/www/mystreamhistory
+      dockerfile: MyStreamHistory.API/Dockerfile
+    command: ["dotnet", "ef", "database", "update", "--environment", "Production"]
+    depends_on:
+      - mystreamhistory.database
+
   mystreamhistory.nginx:
     image: nginx:latest
     container_name: mystreamhistory.nginx
