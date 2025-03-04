@@ -43,7 +43,7 @@ jobs:
       
       - name: Apply EF Migrations
         run: |
-          ssh -T ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "cd ${{ secrets.DEPLOY_PATH }}/MyStreamHistory.API && docker-compose exec mystreamhistory.api dotnet ef database update"
+          ssh -T ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "cd ${{ secrets.DEPLOY_PATH }}/MyStreamHistory.API && docker-compose exec -T mystreamhistory.api dotnet ef database update"
 
       - name: Wait for API to be healthy
         run: |
