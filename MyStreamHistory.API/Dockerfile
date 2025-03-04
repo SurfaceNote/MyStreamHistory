@@ -10,6 +10,6 @@ FROM build AS publish
 RUN dotnet publish "MyStreamHistory.API.csproj" -c Release -o /app/publish
 
 FROM nginx:stable
-COPY default.conf /etc/nginx/conf.d/default.conf
+COPY MyStreamHistory.API/default.conf /etc/nginx/conf.d/default.conf
 COPY --from=publish /app/publish /usr/share/nginx/html
 EXPOSE 80
