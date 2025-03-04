@@ -36,6 +36,9 @@ services:
     volumes:
       - /var/www/mystreamhistory/MyStreamHistory.API/default.conf:/etc/nginx/conf.d/default.conf
       - /var/www/certbot:/var/www/certbot
+      - /etc/letsencrypt/live/api.mystreamhistory.com:/etc/letsencrypt/live/api.mystreamhistory.com
+      - /etc/letsencrypt/archive/api.mystreamhistory.com:/etc/letsencrypt/archive/api.mystreamhistory.com
+      - /etc/letsencrypt/renewal/api.mystreamhistory.com.conf:/etc/letsencrypt/renewal/api.mystreamhistory.com.conf
     ports:
       - "80:80"
       - "443:443"
