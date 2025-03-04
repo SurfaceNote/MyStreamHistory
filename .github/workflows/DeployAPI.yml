@@ -45,7 +45,7 @@ jobs:
         run: |
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
           cd ${{ secrets.DEPLOY_PATH }}/MyStreamHistory.API
-          docker-compose run --rm mystreamhistory.api dotnet ef database update
+          docker-compose exec mystreamhistory.api dotnet ef database update
           EOF
 
       - name: Wait for API to be healthy
