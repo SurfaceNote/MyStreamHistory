@@ -46,6 +46,11 @@ if (app.Environment.IsDevelopment())
     app.ApplyMigrations();
 }
 
+if (args.Contains("--migrate"))
+{
+    app.ApplyMigrations();
+}
+
 app.UseHttpsRedirection();
 
 app.MapControllers();

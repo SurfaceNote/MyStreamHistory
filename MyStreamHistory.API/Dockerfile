@@ -18,4 +18,4 @@ FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
 
-ENTRYPOINT ["dotnet", "MyStreamHistory.API.dll"]
+ENTRYPOINT ["dotnet", "MyStreamHistory.API.dll", "--migrate"]

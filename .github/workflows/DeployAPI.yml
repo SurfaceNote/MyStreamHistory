@@ -1,7 +1,6 @@
 name: Deploy API to Server
 
-on: 
-  workflow_dispatch
+on: workflow_dispatch
 
 jobs:
   deploy-api:
@@ -33,38 +32,12 @@ jobs:
           EOT
           EOF
 
-      - name: Build and Start Docker Containers
-        run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
-          cd ${{ secrets.DEPLOY_PATH }}/MyStreamHistory.API
-          docker-compose down
-          docker-compose up -d --build
-          EOF
-
-      - name: Wait for API to be ready
-        run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
-          cd ${{ secrets.DEPLOY_PATH }}/MyStreamHistory.API
-          while ! docker-compose ps | grep -q 'Up'; do
-            echo "Waiting for API container to be up..."
-            sleep 5
-          done
-          echo "API container is up and running!"
-          EOF
-
-      - name: Run Database Migrations
-        run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
-          cd ${{ secrets.DEPLOY_PATH }}/MyStreamHistory.API
-          docker-compose exec -T mystreamhistory.api dotnet ef database update --no-build
-          EOF
-
       - name: Restart API on server
         run: |
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
           cd ${{ secrets.DEPLOY_PATH }}/MyStreamHistory.API
           docker-compose down
-          docker-compose up -d
+          docker-compose up -d --build
           docker ps
           EOF
 
