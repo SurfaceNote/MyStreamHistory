@@ -38,8 +38,14 @@ jobs:
           cd ${{ secrets.DEPLOY_PATH }}/MyStreamHistory.API
           docker-compose down
           docker-compose up -d --build
-          docker-compose exec -T mystreamhistory.api dotnet ef database update
           docker ps
+          EOF
+      
+      - name: Apply EF Migrations
+        run: |
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+          cd ${{ secrets.DEPLOY_PATH }}/MyStreamHistory.API
+          docker-compose exec mystreamhistory.api dotnet ef database update
           EOF
 
       - name: Wait for API to be healthy
@@ -47,7 +53,7 @@ jobs:
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
           end=$(( $(date +%s) + 60 ))  # Устанавливаем время окончания через 60 секунд
           while [ $(date +%s) -lt $end ]; do
-            if curl -s http://localhost:5000/health; then
+            if curl -s http://localhost/health; then
               echo "API is up and running!"
               exit 0
             else

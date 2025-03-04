@@ -2,7 +2,7 @@ version: '3.4'
 
 services:
   mystreamhistory.api:
-    image: ${DOCKER_REGISTRY-}mystreamhistoryapi
+    image: mystreamhistoryapi
     container_name: mystreamhistory.api
     build:
       context: /var/www/mystreamhistory
@@ -12,9 +12,9 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - MY_DB_CONNECTION_STRING=${MY_DB_CONNECTION_STRING}
-    ports:
-      - "5000:5000"
-      - "5001:5001"
+    expose:
+      - "5000"
+      - "5001"
 
   mystreamhistory.database:
     image: postgres:latest
@@ -27,3 +27,14 @@ services:
       - /var/www/mystreamhistory/.containers/mystreamhistory-db:/var/lib/postgresql/data:rw
     ports:
       - "5432:5432"
+
+  mystreamhistory.nginx:
+    image: nginx:latest
+    container_name: mystreamhistory.nginx
+    depends_on:
+      - mystreamhistory.api
+    volumes:
+      - /var/www/mystreamhistory/MyStreamHistory.API/default.conf:/etc/nginx/conf.d/default.conf
+    ports:
+      - "80:80"
+      - "443:443"
