@@ -6,7 +6,7 @@ services:
     container_name: mystreamhistory.api
     build:
       context: /var/www/mystreamhistory
-      dockerfile: Dockerfile
+      dockerfile: MyStreamHistory.API/Dockerfile
     env_file:
       - .env
     environment:
