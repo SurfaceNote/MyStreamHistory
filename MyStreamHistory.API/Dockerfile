@@ -18,4 +18,7 @@ FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
 
+RUN dotnet tool install --global dotnet-ef
+ENV PATH="$PATH:/root/.dotnet/tools"
+
 ENTRYPOINT ["dotnet", "MyStreamHistory.API.dll"]
