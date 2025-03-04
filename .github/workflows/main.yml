@@ -44,13 +44,11 @@ jobs:
       - name: Deploy API to server
         run: |
           rsync -avz --delete ./MyStreamHistory.API/ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.DEPLOY_PATH }}/MyStreamHistory.API/
-          rsync -avz --delete ./docker-compose.yml ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.DEPLOY_PATH }}/
 
       - name: Restart API on server
         run: |
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
-          cd ${{ secrets.DEPLOY_PATH }}
-          docker-compose pull
+          cd ${{ secrets.DEPLOY_PATH }}/MyStreamHistory.API/
           docker-compose down
           docker-compose up -d --build
           docker-compose exec mystreamhistory.api dotnet ef database update
