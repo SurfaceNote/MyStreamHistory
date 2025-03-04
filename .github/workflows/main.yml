@@ -64,11 +64,7 @@ jobs:
           docker-compose up -d --build
           docker ps
           EOF
-
-      - name: Apply EF Migrations
-        run: |
-          ssh -T ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "cd ${{ secrets.DEPLOY_PATH }}/MyStreamHistory.API && docker-compose exec -T mystreamhistory.api dotnet ef database update"
-
+          
       - name: Wait for API to be healthy
         run: |
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
