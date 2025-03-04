@@ -67,10 +67,10 @@ jobs:
 
       - name: Wait for API to be healthy
         run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST_WEB }} << 'EOF'
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
           end=$(( $(date +%s) + 60 ))
           while [ $(date +%s) -lt $end ]; do
-            if curl -s https://localhost/ | grep "MyStreamHistory"; then
+            if curl -s https://localhost:5000/ | grep "MyStreamHistory"; then
               echo "Web is up and running!"
               exit 0
             else
