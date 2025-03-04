@@ -1,4 +1,4 @@
 export const environment = {
     production: true,
-    api_url: 'http://91.210.169.100:5000'
+    api_url: 'https://api.mystreamhistory.com/'
 };
