@@ -43,18 +43,18 @@ jobs:
 
       - name: Wait for API to be healthy
         run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
-          end=$(( $(date +%s) + 60 ))  # Устанавливаем время окончания через 60 секунд
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST_WEB }} << 'EOF'
+          end=$(( $(date +%s) + 60 ))
           while [ $(date +%s) -lt $end ]; do
-            if curl -s http://localhost/health; then
-              echo "API is up and running!"
+            if curl -s https://localhost/ | grep "MyStreamHistory"; then
+              echo "Web is up and running!"
               exit 0
             else
-              echo "Waiting for API to be healthy..."
+              echo "Waiting for Web to be healthy..."
               sleep 5
             fi
           done
-          echo "Error: API did not become healthy in time!"
+          echo "Error: Web did not become healthy in time!"
           exit 1
           EOF
 
