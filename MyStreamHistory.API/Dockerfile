@@ -2,6 +2,8 @@
 WORKDIR /src
 COPY ["MyStreamHistory.API/MyStreamHistory.API.csproj", "MyStreamHistory.API/"]
 RUN dotnet restore "MyStreamHistory.API/MyStreamHistory.API.csproj"
+RUN dotnet tool install --global dotnet-ef
+ENV PATH="$PATH:/root/.dotnet/tools"
 COPY . .
 WORKDIR "/src/MyStreamHistory.API"
 RUN dotnet build "MyStreamHistory.API.csproj" -c Release -o /app/build
