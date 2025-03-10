@@ -35,7 +35,7 @@ jobs:
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST_WEB }} << 'EOF'
           end=$(( $(date +%s) + 60 ))
           while [ $(date +%s) -lt $end ]; do
-            if curl -s https://localhost/ | grep "MyStreamHistory"; then
+            if curl -k -s https://localhost/ | grep -q "MyStreamHistoryWeb"; then
               echo "Web is up and running!"
               exit 0
             else
