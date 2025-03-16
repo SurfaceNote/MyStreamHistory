@@ -7,11 +7,11 @@
 
     [Route("api/[controller]")]
     [ApiController]
-    public class StreamerController : ControllerBase
+    public class StreamersController : ControllerBase
     {
         private readonly IStreamerRepository _repository;
 
-        public StreamerController(IStreamerRepository repository)
+        public StreamersController(IStreamerRepository repository)
         {
             _repository = repository;
         }
