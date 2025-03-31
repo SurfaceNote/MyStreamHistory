@@ -8,6 +8,10 @@ The project consists of two main components:
 - **API** built with **ASP.NET Core**, handling requests and storing data.
 - **Frontend** built with **Angular**, presenting the data to the user.
 
+## Roadmap
+
+For more details on the roadmap and to track progress, visit the [Roadmap Page](https://github.com/users/SurfaceNote/projects/4).
+
 ## License
 
 This project is licensed under the **GNU General Public License v3.0**. For more details, please refer to the [LICENSE](LICENSE) file.
