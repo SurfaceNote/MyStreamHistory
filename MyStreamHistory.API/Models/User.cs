@@ -4,7 +4,7 @@
     using System.ComponentModel.DataAnnotations;
     using System.ComponentModel.DataAnnotations.Schema;
 
-    public class Streamer
+    public class User
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -14,12 +14,14 @@
         public int TwitchId { get; set; }
         
         [Required]
-        public string ChannelName { get; set; }
+        public string Username { get; set; }
 
         public ChannelStatusEnum BroadcasterType { get; set; }
 
         [MaxLength(200)]
         public string? LogoUser { get; set; }
+
+        public bool? IsStreamer { get; set; }
 
         [MaxLength(300)]
         public string? AccessToken { get; set; }

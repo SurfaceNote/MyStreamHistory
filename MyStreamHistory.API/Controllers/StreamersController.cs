@@ -7,17 +7,17 @@
 
     [Route("api/[controller]")]
     [ApiController]
-    public class StreamersController : ControllerBase
+    public class UserController : ControllerBase
     {
-        private readonly IStreamerRepository _repository;
+        private readonly IUserRepository _repository;
 
-        public StreamersController(IStreamerRepository repository)
+        public UserController(IUserRepository repository)
         {
             _repository = repository;
         }
 
         [HttpGet("full")]
-        public async Task<ActionResult<IEnumerable<Streamer>>> GetStreamers()
+        public async Task<ActionResult<IEnumerable<User>>> GetStreamers()
         {
             var streamers = await _repository.GetStreamersAsync();
             return Ok(streamers);
@@ -31,7 +31,7 @@
             var streamersDTO = streamers.Select(s => new StreamerDTO
             {
                 TwitchId = s.TwitchId,
-                ChannelName = s.ChannelName,
+                ChannelName = s.Username,
                 BroadcasterType = s.BroadcasterType,
                 LogoUser = s.LogoUser
             });
@@ -40,7 +40,7 @@
         }
 
         [HttpGet("full/{id}")]
-        public async Task<ActionResult<Streamer>> GetStreamer(int id)
+        public async Task<ActionResult<User>> GetStreamer(int id)
         {
             var streamer = await _repository.GetStreamerByIdAsync(id);
 
@@ -65,21 +65,21 @@
             var streamerDTO = new StreamerDTO
             {
                 TwitchId = streamer.TwitchId,
-                ChannelName = streamer.ChannelName,
+                ChannelName = streamer.Username,
                 BroadcasterType = streamer.BroadcasterType,
             };
             return Ok(streamerDTO);
         }
 
         [HttpPost]
-        public async Task<ActionResult<Streamer>> PostStreamer(Streamer streamer)
+        public async Task<ActionResult<User>> PostStreamer(User streamer)
         {
             var createdStreamer = await _repository.CreateStreamerAsync(streamer);
             return CreatedAtAction(nameof(GetStreamer), new { id = createdStreamer.Id }, createdStreamer);
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutStreamer(int id, Streamer streamer)
+        public async Task<IActionResult> PutStreamer(int id, User streamer)
         {
             if (id != streamer.Id) 
             {

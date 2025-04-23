@@ -4,9 +4,9 @@
     using Microsoft.EntityFrameworkCore.Metadata.Builders;
     using MyStreamHistory.API.Models;
 
-    public class StreamerConfiguration : IEntityTypeConfiguration<Streamer>
+    public class UserConfiguration : IEntityTypeConfiguration<User>
     {
-        public void Configure(EntityTypeBuilder<Streamer> builder)
+        public void Configure(EntityTypeBuilder<User> builder)
         {
             builder.HasIndex(s => s.TwitchId).IsUnique();
         }

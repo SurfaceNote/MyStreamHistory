@@ -25,7 +25,7 @@ connectionString = connectionString?.Replace("%MY_DB_CONNECTION_STRING%", Enviro
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString));
 
-builder.Services.AddScoped<IStreamerRepository, StreamerRepository>();
+builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<ICompanyRepository, CompanyRepository>();
 
 builder.Services.AddControllers();
