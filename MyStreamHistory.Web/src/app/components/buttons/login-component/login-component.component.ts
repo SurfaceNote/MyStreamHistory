@@ -1,4 +1,5 @@
 import { Component } from '@angular/core';
+import { environment } from '../../../../environments/environment';
 
 @Component({
   selector: 'app-login-component',
@@ -9,7 +10,7 @@ import { Component } from '@angular/core';
 export class LoginComponentComponent {
   loginWithTwitch() {
     const clientId = "a77bf3umj99gay4n0ng8k5u70qsqja";
-    const redirectUri = "https://localhost:5000/auth/twitch/callback";
+    const redirectUri = environment.api_url + "/auth/twitch/callback";
     const scope = 'user:read:email';
     const state = this.generateRandomState();
 
