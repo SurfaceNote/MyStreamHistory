@@ -1,8 +1,10 @@
 using DotNetEnv;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using MyStreamHistory.API.Data;
 using MyStreamHistory.API.Extenstions;
 using MyStreamHistory.API.Repositories;
+using MyStreamHistory.API.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -28,11 +30,16 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<ICompanyRepository, CompanyRepository>();
 
+builder.Services.AddScoped<ITwitchAuthService, TwitchAuthService>();
+
 builder.Services.AddControllers();
 
+builder.Services.AddHttpClient();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-builder.WebHost.UseUrls("http://0.0.0.0:5000");
+builder.WebHost.UseUrls("https://0.0.0.0:5000");
+
+builder.Services.AddControllers().AddNewtonsoftJson();
 
 var app = builder.Build();
 

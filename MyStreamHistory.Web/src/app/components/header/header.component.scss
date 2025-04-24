@@ -107,26 +107,6 @@ header .auth {
     gap: 1.5rem;
 }
 
-header .auth .join-text  {
-    display: none;
-    color: $text-1-color;
-    font-family: 'Montserrat', serif;
-    font-size: 1rem;
-    font-style: normal;
-    font-weight: 500;
-    line-height: normal;
-}
-
-header .auth .login-btn a {
-    display: flex;
-    padding: 0.75rem 1.25rem;
-    justify-content: center;
-    align-items: center;
-    gap: 0.30rem;
-    border-radius: 6.1875rem;
-    background: $purple-color;
-}
-
 @media screen and (min-width: 1000px) {
 
     header {
@@ -143,10 +123,4 @@ header .auth .login-btn a {
         flex-direction: row;
         gap: 2.5rem;
     }
-
-    header .auth .join-text {
-        display: block;
-    }
-
-
 }

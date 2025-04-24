@@ -1,0 +1,40 @@
+@use "variables.scss" as *;
+
+
+.join-text  {
+    display: none;
+    color: $text-1-color;
+    font-family: 'Montserrat', serif;
+    font-size: 1rem;
+    font-style: normal;
+    font-weight: 500;
+    line-height: normal;
+}
+
+.login-btn button {
+    display: flex;
+    padding: 0.75rem 1.25rem;
+    justify-content: center;
+    align-items: center;
+    gap: 0.30rem;
+    border-radius: 6.1875rem;
+    background: $purple-color;
+    border: none; /* Убираем стандартную рамку кнопки */
+    cursor: pointer; /* Курсор как для кликабельного элемента */
+    color: white; /* Цвет текста */
+    font-family: inherit; /* Наследуем шрифт */
+    font-size: inherit; /* Наследуем размер шрифта */
+}
+
+.login-btn button a {
+    color: white;
+}
+
+@media screen and (min-width: 1000px) {
+
+    .join-text {
+        display: block;
+    }
+
+
+}

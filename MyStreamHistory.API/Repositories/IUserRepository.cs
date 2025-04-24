@@ -5,8 +5,9 @@
     {
         Task<IEnumerable<User>> GetStreamersAsync();
         Task<User?> GetStreamerByIdAsync(int id);
-        Task<User> CreateStreamerAsync(User streamer);
-        Task UpdateStreamerAsync(User streamer);
+        Task<User?> GetStreamerByTwitchIdAsync(int twitchId);
+        Task<User> CreateUserAsync(User streamer);
+        Task UpdateUserAsync(User streamer);
         Task DeleteStreamerAsync(int id);
     }
 }

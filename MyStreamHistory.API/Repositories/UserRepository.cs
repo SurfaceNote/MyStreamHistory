@@ -15,7 +15,7 @@
             _appDbContext = appDbContext;
         }
 
-        public async Task<User> CreateStreamerAsync(User streamer)
+        public async Task<User> CreateUserAsync(User streamer)
         {
             _appDbContext.Users.Add(streamer);
             await _appDbContext.SaveChangesAsync();
@@ -42,7 +42,12 @@
             return await _appDbContext.Users.FirstOrDefaultAsync(x => x.Id == id);
         }
 
-        public async Task UpdateStreamerAsync(User streamer)
+        public async Task<User?> GetStreamerByTwitchIdAsync(int twitchId)
+        {
+            return await _appDbContext.Users.FirstOrDefaultAsync(x => x.TwitchId == twitchId);
+        }
+
+        public async Task UpdateUserAsync(User streamer)
         {
             _appDbContext.Entry(streamer).State = EntityState.Modified;
             await _appDbContext.SaveChangesAsync();

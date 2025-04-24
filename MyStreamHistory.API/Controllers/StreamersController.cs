@@ -7,11 +7,11 @@
 
     [Route("api/[controller]")]
     [ApiController]
-    public class UserController : ControllerBase
+    public class StreamerController : ControllerBase
     {
         private readonly IUserRepository _repository;
 
-        public UserController(IUserRepository repository)
+        public StreamerController(IUserRepository repository)
         {
             _repository = repository;
         }
@@ -32,6 +32,7 @@
             {
                 TwitchId = s.TwitchId,
                 Login = s.Login,
+                DisplayName = s.DisplayName,
                 BroadcasterType = s.BroadcasterType,
                 LogoUser = s.LogoUser
             });
@@ -74,7 +75,7 @@
         [HttpPost]
         public async Task<ActionResult<User>> PostStreamer(User streamer)
         {
-            var createdStreamer = await _repository.CreateStreamerAsync(streamer);
+            var createdStreamer = await _repository.CreateUserAsync(streamer);
             return CreatedAtAction(nameof(GetStreamer), new { id = createdStreamer.Id }, createdStreamer);
         }
 
@@ -86,7 +87,7 @@
                 return BadRequest();
             }
 
-            await _repository.UpdateStreamerAsync(streamer);
+            await _repository.UpdateUserAsync(streamer);
             return NoContent();
         }
 
