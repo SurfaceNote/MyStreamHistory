@@ -14,15 +14,26 @@
         
         private readonly string _clientId;
         private readonly string _clientSecret;
+        private readonly string _uri;
         private readonly string _redirectUri;
+        private readonly IWebHostEnvironment _environment;
 
-        public TwitchAuthService(IHttpClientFactory httpClientFactory)
+        public TwitchAuthService(IHttpClientFactory httpClientFactory, IWebHostEnvironment environment)
         {
             _httpClientFactory = httpClientFactory;
-
             _clientId = "a77bf3umj99gay4n0ng8k5u70qsqja";
             _clientSecret = "lmowevzqw3l85fn3g9vhe3vc23fmi6";
-            _redirectUri = "https://localhost:5000/auth/twitch/token";
+            _environment = environment;
+
+            if (_environment.IsDevelopment())
+            {
+                _uri = "https://localhost:5000";
+            }
+            else
+            {
+                _uri = "https://api.mystreamhistory.com";
+            }
+            _redirectUri = $"{_uri}/auth/twitch/token";
         }
 
         public async Task<TokenResponse> ExchangeCodeForTokenAsync(string code)
