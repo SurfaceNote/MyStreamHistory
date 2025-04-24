@@ -31,7 +31,7 @@
             var streamersDTO = streamers.Select(s => new StreamerDTO
             {
                 TwitchId = s.TwitchId,
-                ChannelName = s.Username,
+                Login = s.Login,
                 BroadcasterType = s.BroadcasterType,
                 LogoUser = s.LogoUser
             });
@@ -65,7 +65,7 @@
             var streamerDTO = new StreamerDTO
             {
                 TwitchId = streamer.TwitchId,
-                ChannelName = streamer.Username,
+                Login = streamer.Login,
                 BroadcasterType = streamer.BroadcasterType,
             };
             return Ok(streamerDTO);
