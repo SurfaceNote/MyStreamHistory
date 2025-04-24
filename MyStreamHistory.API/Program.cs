@@ -37,7 +37,7 @@ builder.Services.AddControllers();
 builder.Services.AddHttpClient();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-builder.WebHost.UseUrls("https://0.0.0.0:5000");
+builder.WebHost.UseUrls("http://0.0.0.0:5000");
 
 builder.Services.AddControllers().AddNewtonsoftJson();
 
