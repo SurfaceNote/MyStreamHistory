@@ -29,6 +29,9 @@ jobs:
           POSTGRES_USER="${{ secrets.POSTGRES_USER }}"
           POSTGRES_PASSWORD="${{ secrets.POSTGRES_PASSWORD }}"
           POSTGRES_DB="${{ secrets.POSTGRES_DB }}"
+          TWITCH_CLIENT_ID="${{secrets.TWITCH_CLIENT_ID}}"
+          TWITCH_CLIENT_SECRET="${{secrets.TWITCH_CLIENT_SECRET}}"
+          JWT_SECRET="${{secrets.JWT_SECRET}}"
           EOT
           EOF
 
