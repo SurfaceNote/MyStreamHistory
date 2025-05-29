@@ -2,10 +2,7 @@
 {
     using System.Net.Http;
     using System.Threading.Tasks;
-    using System.Text.Json.Serialization;
-    using System.Diagnostics;
-    using MyStreamHistory.API.Models;
-    using MyStreamHistory.API.Repositories;
+    using System.Text.Json;
     using Newtonsoft.Json;
 
     public class TwitchAuthService : ITwitchAuthService
@@ -17,12 +14,19 @@
         private readonly string _uri;
         private readonly string _redirectUri;
         private readonly IWebHostEnvironment _environment;
+        private readonly IConfiguration _configuration;
 
-        public TwitchAuthService(IHttpClientFactory httpClientFactory, IWebHostEnvironment environment)
+        public TwitchAuthService(IHttpClientFactory httpClientFactory, IWebHostEnvironment environment, IConfiguration configuration)
         {
+            _configuration = configuration;
             _httpClientFactory = httpClientFactory;
-            _clientId = "a77bf3umj99gay4n0ng8k5u70qsqja";
-            _clientSecret = "lmowevzqw3l85fn3g9vhe3vc23fmi6";
+
+            _clientId = _configuration.GetValue<string>("Twitch:ClientId") ?? "";
+            _clientId = _clientId?.Replace("%TWITCH_CLIENT_ID%", Environment.GetEnvironmentVariable("TWITCH_CLIENT_ID")) ?? "";
+            
+            
+            _clientSecret = _configuration.GetValue<string>("Twitch:ClientSecret") ?? "";
+            _clientSecret = _clientSecret?.Replace("%TWITCH_CLIENT_SECRET%", Environment.GetEnvironmentVariable("TWITCH_CLIENT_SECRET")) ?? "";
             _environment = environment;
 
             if (_environment.IsDevelopment())
@@ -38,7 +42,6 @@
 
         public async Task<TokenResponse> ExchangeCodeForTokenAsync(string code)
         {
-            Debug.WriteLine("Test");
             var client = _httpClientFactory.CreateClient();
             var request = new FormUrlEncodedContent(new[]
             {
@@ -50,8 +53,6 @@
             });
 
             var respone = await client.PostAsync("https://id.twitch.tv/oauth2/token", request);
-            var rText = await respone.Content.ReadAsStringAsync();
-            Debug.WriteLine(rText);
             if (!respone.IsSuccessStatusCode)
             {
                 return null;
@@ -75,7 +76,6 @@
 
             var content = await response.Content.ReadAsStringAsync();
             var userData = JsonConvert.DeserializeObject<TwitchUserResponse>(content);
-            Debug.WriteLine(content);
             return userData?.Data?.FirstOrDefault();
         }
     }
@@ -83,40 +83,39 @@
     public class TokenResponse
     {
         [JsonProperty("access_token")]
-        public string AcessToken { get; set; }
+        public string AccessToken { get; set; } = string.Empty;
 
         [JsonProperty("refresh_token")]
-        public string RefreshToken { get; set; }
+        public string RefreshToken { get; set; } = string.Empty;
 
         [JsonProperty("expires_in")]
         public int ExpiresIn { get; set; }
+
+        [JsonProperty("scope")]
+        public string[] Scope { get; set; } = Array.Empty<string>();
+
+        [JsonProperty("token_type")]
+        public string TokenType { get; set; } = string.Empty;
     }
     public class TwitchUser
     {
         [JsonProperty("id")]
         public int Id { get; set; }
-
         [JsonProperty("email")]
         public string? Email { get; set; }
-
         [JsonProperty("login")]
-        public string Login { get; set; }
-
+        public string Login { get; set; } = string.Empty;
         [JsonProperty("display_name")]
-        public string DisplayName { get; set; }
-
+        public string DisplayName { get; set; } = string.Empty;
         [JsonProperty("profile_image_url")]
-        public string ProfileImageUrl { get; set; }
-
+        public string ProfileImageUrl { get; set; } = string.Empty;
         [JsonProperty("broadcaster_type")]
-        public string BroadcasterType { get; set; }
-
+        public string BroadcasterType { get; set; } = string.Empty;
         [JsonProperty("created_at")]
         public DateTime CreatedAt { get; set; }
     }
     public class TwitchUserResponse
     {
-        [JsonProperty("data")]
-        public List<TwitchUser> Data { get; set; }
+        public List<TwitchUser> Data { get; set; } = new();
     }
 }

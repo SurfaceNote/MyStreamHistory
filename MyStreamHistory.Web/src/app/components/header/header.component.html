@@ -10,6 +10,8 @@
         </div>
     </div>
     <div class="auth">
-        <app-login-component/>
+        <app-login-component *ngIf="!isLoggedIn"/>
+        <div *ngIf="isLoggedIn">Hello, {{username}}</div>
+        <button *ngIf="isLoggedIn" (click)="logout()">Logout</button>
     </div>
 </header>

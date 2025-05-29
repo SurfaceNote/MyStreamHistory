@@ -1,5 +1,6 @@
 ﻿namespace MyStreamHistory.API.Controllers
 {
+    using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Mvc;
     using MyStreamHistory.API.DTOs;
     using MyStreamHistory.API.Models;
@@ -16,6 +17,7 @@
             _repository = repository;
         }
 
+        [Authorize]
         [HttpGet("full")]
         public async Task<ActionResult<IEnumerable<User>>> GetStreamers()
         {
@@ -23,6 +25,7 @@
             return Ok(streamers);
         }
 
+        [Authorize]
         [HttpGet]
         public async Task<ActionResult<IEnumerable<StreamerDTO>>> GetStreamersDTO()
         {
@@ -53,6 +56,7 @@
             return Ok(streamer);
         }
 
+        [AllowAnonymous]
         [HttpGet("{id}")]
         public async Task<ActionResult<StreamerDTO>> GetStreamerDTO(int id)
         {

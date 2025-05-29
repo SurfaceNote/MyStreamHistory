@@ -57,8 +57,3 @@ export class SmallListBlockStreamersComponent {
     });
   }
 }
-
-
-// <app-small-list-block title="Popular games" fontIcon="fa-solid fa-gamepad" [streamers]="streamers" [isLoadingStreamers]="isLoadingStreamers" />
-//         <app-small-list-block title="Popular streamers" fontIcon="fa-solid fa-headset" [streamers]="streamers" [isLoadingStreamers]="isLoadingStreamers" />
-//         <app-small-list-block title="Live streams" fontIcon="fa-solid fa-microphone-lines" [streamers]="streamers" [isLoadingStreamers]="isLoadingStreamers" />

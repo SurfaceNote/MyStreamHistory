@@ -22,6 +22,6 @@ export class StreamerService {
                 throw new Error('Unkown stream list type');
         }
 
-        return this.http.get<StreamerShortDTO[]>(url);
+        return this.http.get<StreamerShortDTO[]>(url, {withCredentials: true});
     }
 };

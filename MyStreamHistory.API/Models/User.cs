@@ -1,9 +1,9 @@
 ﻿namespace MyStreamHistory.API.Models
 {
     using MyStreamHistory.API.Enums;
+    using Newtonsoft.Json;
     using System.ComponentModel.DataAnnotations;
     using System.ComponentModel.DataAnnotations.Schema;
-    using System.Text.Json.Serialization;
 
     public class User
     {
@@ -30,10 +30,15 @@
         public bool? IsStreamer { get; set; }
 
         [MaxLength(300)]
+        [JsonIgnore]
         public string? AccessToken { get; set; }
 
         [MaxLength(300)]
+        [JsonIgnore]
         public string? RefreshToken { get; set; }
+
+        [JsonIgnore]
+        public List<RefreshToken> RefreshTokens { get; set; } = [];
 
         public bool? FreshToken { get; set; }
 

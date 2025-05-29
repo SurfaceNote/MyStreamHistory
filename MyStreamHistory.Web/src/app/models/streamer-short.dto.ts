@@ -1,6 +1,6 @@
 export interface StreamerShortDTO {
-    twitchId: number;
-    login: string;
-    displayName : string;
-    logoUser: string;
+    TwitchId: number;
+    Login: string;
+    DisplayName : string;
+    LogoUser: string;
 }

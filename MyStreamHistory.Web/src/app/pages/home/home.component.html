@@ -7,5 +7,5 @@
         </p>
     </div>
 
-    <app-small-list-block-streamers [streamersListType] = "StreamerListType.NewStreamers"/>
+    <app-small-list-block-streamers *ngIf="isLoggedIn" [streamersListType] = "StreamerListType.NewStreamers"/>
 </main>

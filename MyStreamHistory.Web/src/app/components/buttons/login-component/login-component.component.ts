@@ -1,5 +1,5 @@
-import { Component } from '@angular/core';
-import { environment } from '../../../../environments/environment';
+import { Component, inject } from '@angular/core';
+import { AuthService } from '../../../auth/auth.service';
 
 @Component({
   selector: 'app-login-component',
@@ -8,20 +8,9 @@ import { environment } from '../../../../environments/environment';
   styleUrl: './login-component.component.scss'
 })
 export class LoginComponentComponent {
+  private authService = inject(AuthService);
+
   loginWithTwitch() {
-    const clientId = "a77bf3umj99gay4n0ng8k5u70qsqja";
-    const redirectUri = environment.api_url + "/auth/twitch/callback";
-    const scope = 'user:read:email';
-    const state = this.generateRandomState();
-
-    const twitchAuthUrl = `https://id.twitch.tv/oauth2/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}&state=${state}`;
-
-    localStorage.setItem('twitchAuthState', state);
-
-    window.location.href = twitchAuthUrl;
-  }
-
-  private generateRandomState(): string {
-    return Math.random().toString(36).substring(2);
+    this.authService.loginWithTwitch();
   }
 }
