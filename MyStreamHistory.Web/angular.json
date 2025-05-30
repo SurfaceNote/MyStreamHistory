@@ -80,7 +80,10 @@
               "buildTarget": "MyStreamHistory.Web:build:production"
             },
             "development": {
-              "buildTarget": "MyStreamHistory.Web:build:development"
+              "buildTarget": "MyStreamHistory.Web:build:development",
+              "sslKey": "localhost-key.pem",
+              "sslCert": "localhost.pem",
+              "ssl": true
             }
           },
           "defaultConfiguration": "development"
