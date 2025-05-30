@@ -4,7 +4,7 @@
     public interface IUserRepository
     {
         Task<IEnumerable<User>> GetStreamersAsync();
-        Task<User?> GetStreamerByIdAsync(int id);
+        Task<User?> GetUserByIdAsync(int id);
         Task<User?> GetStreamerByTwitchIdAsync(int twitchId);
         Task<User> CreateUserAsync(User streamer);
         Task UpdateUserAsync(User streamer);

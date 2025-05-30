@@ -121,10 +121,19 @@ export class AuthService {
     }
 
     logout(): void {
-        localStorage.removeItem(this.accessTokenKey);
-        this.tokenSubject.next(null);
-        this.usernameSubject.next(null);
-        this.router.navigate(['/']);
+        this.http.post(`${this.apiUrl}/auth/logout`, {}, {withCredentials: true}).subscribe({
+            next: () => {
+                localStorage.removeItem(this.accessTokenKey);
+                this.tokenSubject.next(null);
+                this.usernameSubject.next(null);
+                this.router.navigate(['/']);
+            },
+            error: (err) => {
+                console.error('Logout failed', err);
+                localStorage.removeItem(this.accessTokenKey);
+                this.router.navigate(['/']);
+            }
+        })
     }
 
 }

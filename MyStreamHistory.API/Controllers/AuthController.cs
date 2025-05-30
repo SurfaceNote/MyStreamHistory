@@ -3,6 +3,7 @@
     using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Mvc;
     using Microsoft.Extensions.Configuration;
+    using MyStreamHistory.API.Data;
     using MyStreamHistory.API.Enums;
     using MyStreamHistory.API.Models;
     using MyStreamHistory.API.Repositories;
@@ -19,8 +20,9 @@
         private readonly JwtService _jwtService;
         private readonly IHttpContextAccessor _contextAccessor;
         private readonly IConfiguration _configuration;
+        private readonly AppDbContext _appDbContext;
 
-        public AuthController(IUserRepository repository, ITwitchAuthService twitchAuthService, IRefreshTokenRepository refreshTokenRepository, JwtService jwtService, IHttpContextAccessor contextAccessor, IConfiguration configuration)
+        public AuthController(IUserRepository repository, ITwitchAuthService twitchAuthService, IRefreshTokenRepository refreshTokenRepository, JwtService jwtService, IHttpContextAccessor contextAccessor, IConfiguration configuration, AppDbContext appDbContext)
         {
             _userRepository = repository;
             _twitchAuthService = twitchAuthService;
@@ -28,6 +30,7 @@
             _jwtService = jwtService;
             _contextAccessor = contextAccessor;
             _configuration = configuration;
+            _appDbContext = appDbContext;
         }
 
         [HttpGet("twitch/callback")]
@@ -163,6 +166,59 @@
             finally
             {
                 _jwtService.ReleaseRefreshLock(refreshTokenValue);
+            }
+        }
+
+        [Authorize]
+        [HttpPost("logout")]
+        public async Task<ActionResult> Logout()
+        {
+            var userId = GetCurrentUserId();
+            var refreshTokenValue = Request.Cookies["refresh_token"];
+
+            _jwtService.RemoveTokenFromCookie("refresh_token");
+
+            if (string.IsNullOrEmpty(refreshTokenValue))
+            {
+                return Ok();
+            }
+
+            try
+            {
+                var refreshToken = await _refreshTokenRepository.GetRefreshTokenByToken(refreshTokenValue);
+                if (refreshToken == null)
+                {
+                    return Ok();
+                }
+
+                if (refreshToken.UserId != userId)
+                {
+                    return Unauthorized("Invalid refresh token");
+                }
+
+                using var transaction = await _appDbContext.Database.BeginTransactionAsync();
+                try
+                {
+                    if (refreshToken.ExpiresOnUtc < DateTime.UtcNow)
+                    {
+                        await _refreshTokenRepository.DeleteRefreshTokenAsync(refreshToken);
+                        await transaction.CommitAsync();
+                        return Ok();
+                    }
+
+                    await _refreshTokenRepository.DeleteRefreshTokenAsync(refreshToken);
+                    await transaction.CommitAsync();
+                    return Ok();
+                }
+                catch
+                {
+                    await transaction.RollbackAsync();
+                    throw;
+                }
+            }
+            catch
+            {
+                return StatusCode(500, "An error occured during logout");
             }
         }
 

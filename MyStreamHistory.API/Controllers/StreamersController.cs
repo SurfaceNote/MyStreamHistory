@@ -25,7 +25,7 @@
             return Ok(streamers);
         }
 
-        [Authorize]
+        [AllowAnonymous]
         [HttpGet]
         public async Task<ActionResult<IEnumerable<StreamerDTO>>> GetStreamersDTO()
         {
@@ -46,7 +46,7 @@
         [HttpGet("full/{id}")]
         public async Task<ActionResult<User>> GetStreamer(int id)
         {
-            var streamer = await _repository.GetStreamerByIdAsync(id);
+            var streamer = await _repository.GetUserByIdAsync(id);
 
             if (streamer == null)
             {
@@ -60,7 +60,7 @@
         [HttpGet("{id}")]
         public async Task<ActionResult<StreamerDTO>> GetStreamerDTO(int id)
         {
-            var streamer = await _repository.GetStreamerByIdAsync(id);
+            var streamer = await _repository.GetUserByIdAsync(id);
 
             if (streamer == null)
             {
@@ -98,7 +98,7 @@
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteStreamer(int id)
         {
-            var streamer = await _repository.GetStreamerByIdAsync(id);
+            var streamer = await _repository.GetUserByIdAsync(id);
             if (streamer == null)
             {
                 return NotFound();

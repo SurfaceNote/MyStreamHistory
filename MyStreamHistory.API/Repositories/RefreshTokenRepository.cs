@@ -3,6 +3,7 @@
     using Microsoft.EntityFrameworkCore;
     using MyStreamHistory.API.Data;
     using MyStreamHistory.API.Models;
+    using System.Runtime.InteropServices;
 
     public class RefreshTokenRepository : IRefreshTokenRepository
     {
@@ -28,6 +29,12 @@
         public async Task UpdateRefreshToken(RefreshToken refreshToken)
         {
             _appDbContext.Entry(refreshToken).State = EntityState.Modified;
+            await _appDbContext.SaveChangesAsync();
+        }
+
+        public async Task DeleteRefreshTokenAsync(RefreshToken refreshToken)
+        {
+            _appDbContext.RefreshTokens.Remove(refreshToken);
             await _appDbContext.SaveChangesAsync();
         }
     }

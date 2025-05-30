@@ -22,10 +22,9 @@
 
             var claims = new[]
             {
-                new Claim(JwtRegisteredClaimNames.Sub, user.TwitchId.ToString()),
+                new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
                 new Claim(JwtRegisteredClaimNames.Name, user.Login),
-                new Claim(JwtRegisteredClaimNames.Email, user.Email ?? "No email"),
-                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString())
+                new Claim(JwtRegisteredClaimNames.Email, user.Email ?? "No email")
             };
 
             var tokenDescriptor = new SecurityTokenDescriptor
