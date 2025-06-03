@@ -12,7 +12,7 @@
         }
         @else {
             @for (streamer of streamers; track streamer.TwitchId) {
-                <a href="/#">
+                <a [routerLink]="['/profile', streamer.TwitchId]">
                     <div class="row">
                         <div class="avatar-nickname">
                             <img src="{{ streamer.LogoUser }}" alt="{{ streamer.DisplayName }} logo">

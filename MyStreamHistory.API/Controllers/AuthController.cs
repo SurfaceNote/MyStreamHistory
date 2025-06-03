@@ -173,7 +173,7 @@
         [HttpPost("logout")]
         public async Task<ActionResult> Logout()
         {
-            var userId = GetCurrentUserId();
+            var userId = await GetCurrentUserId();
             var refreshTokenValue = Request.Cookies["refresh_token"];
 
             _jwtService.RemoveTokenFromCookie("refresh_token");
@@ -237,7 +237,17 @@
             throw new InvalidOperationException("Unable to generate a unique refresh token.");
         }
         
-        private int GetCurrentUserId()
+        private async Task<int> GetCurrentUserId()
+        {
+            var user = await _userRepository.GetStreamerByTwitchIdAsync(GetCurrentUserTwitchId());
+            if (user == null)
+            {
+                return 0;
+            }
+            return user.Id;
+        }
+
+        private int GetCurrentUserTwitchId()
         {
             return int.TryParse(_contextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier),
                 out int parsed) ? parsed : 0;

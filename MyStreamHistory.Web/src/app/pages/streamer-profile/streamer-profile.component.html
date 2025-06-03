@@ -1,0 +1,652 @@
+<main>
+    <div class="wrapper">
+        <div class="gray-main-block">
+            <div class="stream-page-main-content">
+                <div class="profile">
+                    <div class="poster">
+                        <img src="{{ streamerShortDTO.LogoUser }}" alt="logo channel {{ streamerShortDTO.Login }}">
+                    </div>
+                    <div class="meta">
+                        <div class="profile">
+                            <span>{{ streamerShortDTO.DisplayName }}</span>
+                            <div class="socials-list">
+                                <a href="https://www.twitch.tv/{{ streamerShortDTO.Login }}">
+                                    <div class="social-link twitch-background"><i class="fa-brands fa-twitch"></i></div>
+                                </a>
+                                <a href="#">
+                                    <div class="social-link youtube-background"><i class="fa-brands fa-youtube"></i>
+                                    </div>
+                                </a>
+                                <a href="#">
+                                    <div class="social-link instagram-background"><i class="fa-brands fa-instagram"></i>
+                                    </div>
+                                </a>
+                                <a href="#">
+                                    <div class="social-link steam-background"><i class="fa-brands fa-steam"></i></div>
+                                </a>
+                            </div>
+                        </div>
+                        <div class="meta-stream-item">
+                            <span>Made</span>
+                            <span><b>100</b> streams</span>
+                        </div>
+                        <div class="meta-stream-item">
+                            <span>Finished</span>
+                            <span><b>20</b> games</span>
+                        </div>
+                        <div class="meta-stream-item">
+                            <span>Streamed</span>
+                            <span><b>350</b> hours</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="schedule-list-wrapper">
+                <div class="schedule-list-header">
+                    <span>Scheduled Streams</span>
+                </div>
+                <div class="schedule-list">
+                    <div class="elements">
+                        <div class="day">
+                            <div class="header">
+                                <span>Thu, 23 Nov (Test)</span>
+                            </div>
+                            <div class="scheduled-game-wrapper">
+                                <div class="scheduled-game-info">
+                                    <div class="scheduled-game">
+                                        <img src="https://static-cdn.jtvnw.net/ttv-boxart/512953_IGDB-130x180.jpg">
+                                        <span>Elden Ring</span>
+                                    </div>
+                                </div>
+                                <div class="time">
+                                    <span>23:30 PM</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="schedule-next-button">
+                    <span>></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="gray-main-block list-walkthrough-and-viewers">
+            <div class="list-walkthrough">
+
+                <div class="block-title">
+                    <div class="start-line"></div>
+                    <h3>In Progress (3)</h3>
+                    <div class="end-line"></div>
+                </div>
+                <div class="games-table">
+                    <div class="table-head hide-mobile">
+                        <div class="head-game">
+                            <span>GAME</span>
+                        </div>
+                        <div class="fixed-width">
+                            <div><span>First Stream</span></div>
+                            <div><span>Last Stream</span></div>
+                            <div><span>Duration</span></div>
+                            <div><span>Unique viewers</span></div>
+                        </div>
+                    </div>
+                    <div class="table-body">
+                        <div class="row">
+                            <div class="game">
+                                <img src="https://static-cdn.jtvnw.net/ttv-boxart/511224-285x380.jpg"
+                                    alt="Poster Apex Legends">
+                                <span>Apex Legends</span>
+                            </div>
+                            <div class="fixed-width hide-mobile">
+                                <div><span>01.01.2025</span></div>
+                                <div><span>31.01.25</span></div>
+                                <div><span>105 h.</span></div>
+                                <div><span>32</span></div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="game">
+                                <img src="https://static-cdn.jtvnw.net/ttv-boxart/32399-285x380.jpg"
+                                    alt="Poster Counter-Strike">
+                                <span>Counter-Strike</span>
+                            </div>
+                            <div class="fixed-width hide-mobile">
+                                <div><span>01.01.2025</span></div>
+                                <div><span>31.01.25</span></div>
+                                <div><span>105 h.</span></div>
+                                <div><span>32</span></div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="game">
+                                <img src="https://static-cdn.jtvnw.net/ttv-boxart/32982_IGDB-285x380.jpg"
+                                    alt="Poster Grand Theft Auto V">
+                                <span>Grand Theft Auto V</span>
+                            </div>
+                            <div class="fixed-width hide-mobile">
+                                <div><span>01.01.2025</span></div>
+                                <div><span>31.01.25</span></div>
+                                <div><span>105 h.</span></div>
+                                <div><span>32</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="block-title">
+                    <div class="start-line"></div>
+                    <h3>Finished (3)</h3>
+                    <div class="end-line"></div>
+                </div>
+                <div class="games-table">
+                    <div class="table-head hide-mobile">
+                        <div class="head-game">
+                            <span>GAME</span>
+                        </div>
+                        <div class="fixed-width">
+                            <div><span>First Stream</span></div>
+                            <div><span>Last Stream</span></div>
+                            <div><span>Duration</span></div>
+                            <div><span>Unique viewers</span></div>
+                        </div>
+                    </div>
+                    <div class="table-body">
+                        <div class="row">
+                            <div class="game">
+                                <img src="https://static-cdn.jtvnw.net/ttv-boxart/511224-285x380.jpg"
+                                    alt="Poster Apex Legends">
+                                <span>Apex Legends</span>
+                            </div>
+                            <div class="fixed-width hide-mobile">
+                                <div><span>01.01.2025</span></div>
+                                <div><span>31.01.25</span></div>
+                                <div><span>105 h.</span></div>
+                                <div><span>32</span></div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="game">
+                                <img src="https://static-cdn.jtvnw.net/ttv-boxart/32399-285x380.jpg"
+                                    alt="Poster Counter-Strike">
+                                <span>Counter-Strike</span>
+                            </div>
+                            <div class="fixed-width hide-mobile">
+                                <div><span>01.01.2025</span></div>
+                                <div><span>31.01.25</span></div>
+                                <div><span>105 h.</span></div>
+                                <div><span>32</span></div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="game">
+                                <img src="https://static-cdn.jtvnw.net/ttv-boxart/32982_IGDB-285x380.jpg"
+                                    alt="Poster Grand Theft Auto V">
+                                <span>Grand Theft Auto V</span>
+                            </div>
+                            <div class="fixed-width hide-mobile">
+                                <div><span>01.01.2025</span></div>
+                                <div><span>31.01.25</span></div>
+                                <div><span>105 h.</span></div>
+                                <div><span>32</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="block-title">
+                    <div class="start-line"></div>
+                    <h3>Abandoned (3)</h3>
+                    <div class="end-line"></div>
+                </div>
+                <div class="games-table">
+                    <div class="table-head hide-mobile">
+                        <div class="head-game">
+                            <span>GAME</span>
+                        </div>
+                        <div class="fixed-width">
+                            <div><span>First Stream</span></div>
+                            <div><span>Last Stream</span></div>
+                            <div><span>Duration</span></div>
+                            <div><span>Unique viewers</span></div>
+                        </div>
+                    </div>
+                    <div class="table-body">
+                        <div class="row">
+                            <div class="game">
+                                <img src="https://static-cdn.jtvnw.net/ttv-boxart/511224-285x380.jpg"
+                                    alt="Poster Apex Legends">
+                                <span>Apex Legends</span>
+                            </div>
+                            <div class="fixed-width hide-mobile">
+                                <div><span>01.01.2025</span></div>
+                                <div><span>31.01.25</span></div>
+                                <div><span>105 h.</span></div>
+                                <div><span>32</span></div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="game">
+                                <img src="https://static-cdn.jtvnw.net/ttv-boxart/32399-285x380.jpg"
+                                    alt="Poster Counter-Strike">
+                                <span>Counter-Strike</span>
+                            </div>
+                            <div class="fixed-width hide-mobile">
+                                <div><span>01.01.2025</span></div>
+                                <div><span>31.01.25</span></div>
+                                <div><span>105 h.</span></div>
+                                <div><span>32</span></div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="game">
+                                <img src="https://static-cdn.jtvnw.net/ttv-boxart/32982_IGDB-285x380.jpg"
+                                    alt="Poster Grand Theft Auto V">
+                                <span>Grand Theft Auto V</span>
+                            </div>
+                            <div class="fixed-width hide-mobile">
+                                <div><span>01.01.2025</span></div>
+                                <div><span>31.01.25</span></div>
+                                <div><span>105 h.</span></div>
+                                <div><span>32</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="block-title">
+                    <div class="start-line"></div>
+                    <h3>Without category (3)</h3>
+                    <div class="end-line"></div>
+                </div>
+                <div class="games-table">
+                    <div class="table-head hide-mobile">
+                        <div class="head-game">
+                            <span>GAME</span>
+                        </div>
+                        <div class="fixed-width">
+                            <div><span>Duration</span></div>
+                        </div>
+                    </div>
+                    <div class="table-body">
+                        <div class="row">
+                            <div class="game">
+                                <img src="https://static-cdn.jtvnw.net/ttv-boxart/511224-285x380.jpg"
+                                    alt="Poster Apex Legends">
+                                <span>Apex Legends</span>
+                            </div>
+                            <div class="fixed-width hide-mobile">
+                                <div><span>105 h.</span></div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="game">
+                                <img src="https://static-cdn.jtvnw.net/ttv-boxart/32399-285x380.jpg"
+                                    alt="Poster Counter-Strike">
+                                <span>Counter-Strike</span>
+                            </div>
+                            <div class="fixed-width hide-mobile">
+                                <div><span>105 h.</span></div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="game">
+                                <img src="https://static-cdn.jtvnw.net/ttv-boxart/32982_IGDB-285x380.jpg"
+                                    alt="Poster Grand Theft Auto V">
+                                <span>Grand Theft Auto V</span>
+                            </div>
+                            <div class="fixed-width hide-mobile">
+                                <div><span>105 h.</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="viewers-list" style="margin-right: 1rem">
+                <div class="header">
+                    <span><b>TOP-100 Viewers</b></span>
+                </div>
+
+                <div class="list">
+                    <div class="viewer-row">
+                        <div class="number">
+                            <span>1</span>
+                        </div>
+                        <img class="channel-logo"
+                            src="https://static-cdn.jtvnw.net/user-default-pictures-uv/ebe4cd89-b4f4-4cd9-adac-2f30151b4209-profile_image-70x70.png"
+                            alt="{{ streamerShortDTO }}'s logo">
+                        <div class="meta">
+                            <div class="nickname">
+                                <span>username1</span>
+                            </div>
+                            <div class="stats">
+                                <div class="stat-item">
+                                    <span><b>10452 h</b></span>
+                                </div>
+                                <div class="stat-item">
+                                    <span><b>52202</b> msg pts</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="viewer-row">
+                        <div class="number">
+                            <span>2</span>
+                        </div>
+                        <img class="channel-logo"
+                            src="https://static-cdn.jtvnw.net/user-default-pictures-uv/ebe4cd89-b4f4-4cd9-adac-2f30151b4209-profile_image-70x70.png"
+                            alt="{{ streamerShortDTO }}'s logo">
+                        <div class="meta">
+                            <div class="nickname">
+                                <span>username2</span>
+                            </div>
+                            <div class="stats">
+                                <div class="stat-item">
+                                    <span><b>10452 h</b></span>
+                                </div>
+                                <div class="stat-item">
+                                    <span><b>52202</b> msg pts</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="viewer-row">
+                        <div class="number">
+                            <span>3</span>
+                        </div>
+                        <img class="channel-logo"
+                            src="https://static-cdn.jtvnw.net/user-default-pictures-uv/ebe4cd89-b4f4-4cd9-adac-2f30151b4209-profile_image-70x70.png"
+                            alt="{{ streamerShortDTO }}'s logo">
+                        <div class="meta">
+                            <div class="nickname">
+                                <span>username3</span>
+                            </div>
+                            <div class="stats">
+                                <div class="stat-item">
+                                    <span><b>10452 h</b></span>
+                                </div>
+                                <div class="stat-item">
+                                    <span><b>52202</b> msg pts</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="viewer-row">
+                        <div class="number">
+                            <span>4</span>
+                        </div>
+                        <img class="channel-logo"
+                            src="https://static-cdn.jtvnw.net/user-default-pictures-uv/ebe4cd89-b4f4-4cd9-adac-2f30151b4209-profile_image-70x70.png"
+                            alt="{{ streamerShortDTO }}'s logo">
+                        <div class="meta">
+                            <div class="nickname">
+                                <span>username4</span>
+                            </div>
+                            <div class="stats">
+                                <div class="stat-item">
+                                    <span><b>10452 h</b></span>
+                                </div>
+                                <div class="stat-item">
+                                    <span><b>52202</b> msg pts</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="viewer-row">
+                        <div class="number">
+                            <span>5</span>
+                        </div>
+                        <img class="channel-logo"
+                            src="https://static-cdn.jtvnw.net/user-default-pictures-uv/ebe4cd89-b4f4-4cd9-adac-2f30151b4209-profile_image-70x70.png"
+                            alt="{{ streamerShortDTO }}'s logo">
+                        <div class="meta">
+                            <div class="nickname">
+                                <span>username5</span>
+                            </div>
+                            <div class="stats">
+                                <div class="stat-item">
+                                    <span><b>10452 h</b></span>
+                                </div>
+                                <div class="stat-item">
+                                    <span><b>52202</b> msg pts</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="viewer-row">
+                        <div class="number">
+                            <span>6</span>
+                        </div>
+                        <img class="channel-logo"
+                            src="https://static-cdn.jtvnw.net/user-default-pictures-uv/ebe4cd89-b4f4-4cd9-adac-2f30151b4209-profile_image-70x70.png"
+                            alt="{{ streamerShortDTO }}'s logo">
+                        <div class="meta">
+                            <div class="nickname">
+                                <span>username6</span>
+                            </div>
+                            <div class="stats">
+                                <div class="stat-item">
+                                    <span><b>10452 h</b></span>
+                                </div>
+                                <div class="stat-item">
+                                    <span><b>52202</b> msg pts</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="viewer-row">
+                        <div class="number">
+                            <span>7</span>
+                        </div>
+                        <img class="channel-logo"
+                            src="https://static-cdn.jtvnw.net/user-default-pictures-uv/ebe4cd89-b4f4-4cd9-adac-2f30151b4209-profile_image-70x70.png"
+                            alt="{{ streamerShortDTO }}'s logo">
+                        <div class="meta">
+                            <div class="nickname">
+                                <span>username7</span>
+                            </div>
+                            <div class="stats">
+                                <div class="stat-item">
+                                    <span><b>10452 h</b></span>
+                                </div>
+                                <div class="stat-item">
+                                    <span><b>52202</b> msg pts</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="viewer-row">
+                        <div class="number">
+                            <span>8</span>
+                        </div>
+                        <img class="channel-logo"
+                            src="https://static-cdn.jtvnw.net/user-default-pictures-uv/ebe4cd89-b4f4-4cd9-adac-2f30151b4209-profile_image-70x70.png"
+                            alt="{{ streamerShortDTO }}'s logo">
+                        <div class="meta">
+                            <div class="nickname">
+                                <span>username8</span>
+                            </div>
+                            <div class="stats">
+                                <div class="stat-item">
+                                    <span><b>10452 h</b></span>
+                                </div>
+                                <div class="stat-item">
+                                    <span><b>52202</b> msg pts</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="viewer-row">
+                        <div class="number">
+                            <span>9</span>
+                        </div>
+                        <img class="channel-logo"
+                            src="https://static-cdn.jtvnw.net/user-default-pictures-uv/ebe4cd89-b4f4-4cd9-adac-2f30151b4209-profile_image-70x70.png"
+                            alt="{{ streamerShortDTO }}'s logo">
+                        <div class="meta">
+                            <div class="nickname">
+                                <span>username9</span>
+                            </div>
+                            <div class="stats">
+                                <div class="stat-item">
+                                    <span><b>10452 h</b></span>
+                                </div>
+                                <div class="stat-item">
+                                    <span><b>52202</b> msg pts</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="viewer-row">
+                        <div class="number">
+                            <span>10</span>
+                        </div>
+                        <img class="channel-logo"
+                            src="https://static-cdn.jtvnw.net/user-default-pictures-uv/ebe4cd89-b4f4-4cd9-adac-2f30151b4209-profile_image-70x70.png"
+                            alt="{{ streamerShortDTO }}'s logo">
+                        <div class="meta">
+                            <div class="nickname">
+                                <span>username10</span>
+                            </div>
+                            <div class="stats">
+                                <div class="stat-item">
+                                    <span><b>10452 h</b></span>
+                                </div>
+                                <div class="stat-item">
+                                    <span><b>52202</b> msg pts</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function addCheckboxEventHandlers() {
+            var checkboxes = document.querySelectorAll('.stream-profile-category input[type="checkbox"]');
+
+            checkboxes.forEach(function (checkbox) {
+                checkbox.addEventListener('change', function () {
+                    var category = checkbox.name;
+                    var person = checkbox.value;
+                    console.log(person);
+                    var streamId = checkbox.closest('.stream-profile').getAttribute('data-stream-id');
+                    console.log(streamId);
+                    var personsBlock = document.getElementById('stream-persons-' + streamId);
+                    console.log(personsBlock);
+
+                    if (checkbox.checked) {
+                        var imageUrl = checkbox.getAttribute('data-image');
+
+                        console.log(imageUrl);
+
+                        var personsBlock = document.getElementById('stream-persons-' + streamId);
+                        console.log(personsBlock);
+                        if (personsBlock.hasChildNodes()) {
+                            personsBlock.innerHTML += '<img src="' + imageUrl + '" style="vertical-align: middle;" width="20" height="20">';
+                        } else {
+                            personsBlock.innerHTML = '<img src="' + imageUrl + '" style="vertical-align: middle;" width="20" height="20">';
+                        }
+
+
+                    } else {
+                        var imageUrl = checkbox.getAttribute('data-image');
+                        var contentToRemove = personsBlock.querySelector('img[src="' + imageUrl + '"]');
+                        if (contentToRemove) {
+                            personsBlock.removeChild(contentToRemove);
+                        }
+                    }
+                });
+            });
+        }
+
+
+        document.addEventListener("DOMContentLoaded", function () {
+            var openModalLinks = document.querySelectorAll(".open-modal");
+
+            openModalLinks.forEach(function (link) {
+                link.addEventListener("click", function (e) {
+                    e.preventDefault();
+                    var itemId = link.getAttribute("data-item-id");
+                    var csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]').value;
+
+                    var xhr = new XMLHttpRequest();
+                    xhr.open("POST", "/get-stream-data/", true);
+                    xhr.setRequestHeader("Content-Type", "application/json");
+                    xhr.setRequestHeader("X-CSRFToken", csrfToken);
+
+                    xhr.onreadystatechange = function () {
+                        if (xhr.readyState === XMLHttpRequest.DONE) {
+                            if (xhr.status === 200) {
+                                var response = JSON.parse(xhr.responseText);
+                                var modal = document.getElementById("modal");
+                                var modalContent = modal.querySelector("#modal-content");
+
+                                modalContent.innerHTML = response.data;
+
+                                modal.style.display = "block";
+
+                                var form = modal.firstElementChild;
+                                console.log(form);
+                                form.action = "/stream/" + itemId + "/settings/";
+
+                                addCheckboxEventHandlers();
+
+                            } else {
+                                console.log("Error with getting data");
+                            }
+                        }
+                    };
+
+                    var requestData = JSON.stringify({ item_id: itemId });
+
+                    xhr.send(requestData);
+                });
+            });
+
+            var closeModalButtons = document.querySelectorAll(".close-modal");
+
+            closeModalButtons.forEach(function (button) {
+                button.addEventListener("click", function (e) {
+                    e.preventDefault();
+                    var modal = document.getElementById("modal");
+                    modal.style.display = "none";
+                });
+            });
+
+            var forms = document.querySelectorAll('.django-form');
+
+            forms.forEach(function (form) {
+                form.addEventListener('submit', function (event) {
+                    event.preventDefault();
+                    var formData = new FormData(form);
+
+                    fetch(form.action, {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                        }
+                    })
+                        .then(function (response) {
+                            if (response.ok) {
+                                var modal = document.getElementById("modal");
+                                var modalContent = modal.querySelector("#modal-content");
+                                var formResult = document.createElement("p");
+                                formResult.style.color = "green";
+                                formResult.textContent = "Form submitted successfully";
+
+                                modalContent.appendChild(formResult);
+
+                            } else {
+                                console.log("Error wile sending a form");
+                            }
+                        })
+                        .catch(function (error) {
+                            console.log("Error wile sending a form: " + error.message);
+                        });
+                });
+            });
+        });
+    </script>
+</main>

@@ -60,7 +60,7 @@
         [HttpGet("{id}")]
         public async Task<ActionResult<StreamerDTO>> GetStreamerDTO(int id)
         {
-            var streamer = await _repository.GetUserByIdAsync(id);
+            var streamer = await _repository.GetStreamerByTwitchIdAsync(id);
 
             if (streamer == null)
             {
@@ -71,6 +71,8 @@
             {
                 TwitchId = streamer.TwitchId,
                 Login = streamer.Login,
+                DisplayName = streamer.DisplayName,
+                LogoUser = streamer.LogoUser,
                 BroadcasterType = streamer.BroadcasterType,
             };
             return Ok(streamerDTO);

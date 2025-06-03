@@ -1,11 +1,12 @@
-import { Component, Input } from '@angular/core';
+import { Component, inject, Input } from '@angular/core';
 import { StreamerShortDTO } from '../../../models/streamer-short.dto';
 import { StreamerListType } from '../../../enums/streamer-list-type.enum';
 import { StreamerService } from '../../../service/streamer.service';
+import { RouterModule } from '@angular/router';
 
 @Component({
   selector: 'app-small-list-block-streamers',
-  imports: [],
+  imports: [RouterModule],
   templateUrl: './small-list-block-streamers.component.html',
   styleUrl: './small-list-block-streamers.component.scss'
 })
@@ -15,8 +16,7 @@ export class SmallListBlockStreamersComponent {
   isLoadingStreamers = true;
   fontIcon: string = '';
   title: string = 'Title';
-
-  constructor(private streamerService: StreamerService){}
+  streamerService = inject(StreamerService)
 
   ngOnInit(): void {
     this.setBlockProperties();

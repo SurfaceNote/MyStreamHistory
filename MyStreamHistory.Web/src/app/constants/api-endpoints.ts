@@ -5,5 +5,6 @@ export const API_ENDPOINTS = {
         NEW: environment.api_url+ '/api/Streamer',
         POPULAR: environment.api_url + '/api/PopularStreamers',
         LIVE: environment.api_url + '/api/LiveStreamers'
-    }
+    },
+    STREAMER: environment.api_url + '/api/Streamer'
 };

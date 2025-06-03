@@ -24,4 +24,12 @@ export class StreamerService {
 
         return this.http.get<StreamerShortDTO[]>(url, {withCredentials: true});
     }
+
+    getStreamerByTwitchId(twitchId: number): Observable<StreamerShortDTO> {
+        let url: string;
+
+        url = API_ENDPOINTS.STREAMER + "/" + twitchId;
+        return this.http.get<StreamerShortDTO>(url);
+
+    }
 };
