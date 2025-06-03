@@ -1,8 +1,9 @@
 import { HttpParams } from '@angular/common/http';
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { StreamerService } from '../../service/streamer.service';
 import { StreamerShortDTO } from '../../models/streamer-short.dto';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-streamer-profile',
@@ -10,27 +11,33 @@ import { StreamerShortDTO } from '../../models/streamer-short.dto';
   templateUrl: './streamer-profile.component.html',
   styleUrl: './streamer-profile.component.scss'
 })
-export class StreamerProfileComponent implements OnInit {
+export class StreamerProfileComponent implements OnInit, OnDestroy {
   twitchId!: number;
-  streamerService = inject(StreamerService)
   streamerShortDTO!: StreamerShortDTO;
-  route = inject(ActivatedRoute);
+  private routeSub: Subscription | null = null;
+
+  private streamerService = inject(StreamerService)
+  private route = inject(ActivatedRoute);
 
   ngOnInit(): void {
-      this.route.paramMap.subscribe(params => {
-        const idParam = params.get('twitchId');
-        if (idParam) {
-          this.twitchId = +idParam;
-        }
-      });
+    this.routeSub = this.route.paramMap.subscribe(params => {
+      const idParam = params.get('twitchId');
+      if (idParam) {
+        this.twitchId = +idParam;
+        this.loadStreamer();
+      }
+    });
+  }
 
-      this.loadStreamer();
+  ngOnDestroy(): void {
+    if (this.routeSub) {
+      this.routeSub.unsubscribe();
+    }
   }
 
   loadStreamer(): void {
     this.streamerService.getStreamerByTwitchId(this.twitchId).subscribe({
       next: (data: StreamerShortDTO) => {
-        console.log('Received streamer data:', data);
         this.streamerShortDTO = data;
       },
       error: (err) => {
