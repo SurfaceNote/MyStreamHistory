@@ -1,15 +1,13 @@
-﻿using System.Net.Http.Headers;
-using DotNetEnv;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
+﻿using DotNetEnv;
+using MyStreamHistory.TwitchBot.Middleware;
 using MyStreamHistory.TwitchBot.Services;
+using MyStreamHistory.TwitchBot.Workers;
 using Serilog;
 using Serilog.Events;
 
 Env.Load();
 
-HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
+var builder = WebApplication.CreateBuilder(args);
 
 builder.Configuration.AddEnvironmentVariables();
 
@@ -22,18 +20,32 @@ builder.Services.AddSerilog(config =>
    config.WriteTo.Console();
 });
 
-
+builder.Services.AddTransient<TwitchAuthHandler>();
 builder.Services.AddHttpClient("TwitchApi", c =>
 {
    c.BaseAddress = new Uri("https://api.twitch.tv/helix/");
-   c.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", "");
-});
+}).AddHttpMessageHandler<TwitchAuthHandler>();
 
 builder.Services.AddHttpClient("Backend", c =>
 {
    c.BaseAddress = new Uri("");
 });
 
-builder.Services.AddSingleton<TwitchAuthService>();
+builder.Services.AddControllers()
+   .AddJsonOptions(options =>
+   {
+      options.JsonSerializerOptions.PropertyNamingPolicy = null;
+   });
 
-await builder.Build().RunAsync();
+builder.Services.AddSingleton<TwitchAuthService>();
+builder.Services.AddSingleton<ITwitchEventDispatcher, TwitchEventDispatcher>();
+builder.Services.AddHostedService<EventSubWorker>();
+
+var app = builder.Build();
+
+app.UseMiddleware<TwitchEventSubMiddleware>();
+
+app.UseHttpsRedirection();
+app.MapControllers();
+
+await app.RunAsync();

@@ -1,7 +1,4 @@
-﻿using System.Net.Http.Headers;
-using System.Text.Json;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
+﻿using System.Text.Json;
 
 namespace MyStreamHistory.TwitchBot.Services;
 
@@ -26,7 +23,7 @@ public class TwitchAuthService(
 
     public async Task RefreshAppAccessTokenAsync(CancellationToken cancellationToken = default)
     {
-        var client = httpClientFactory.CreateClient("TwitchApi");
+        var client = httpClientFactory.CreateClient();
         
         var clientId =  configuration["Twitch:ClientId"]!;
         var clientSecret =  configuration["Twitch:ClientSecret"]!;
@@ -53,10 +50,10 @@ public class TwitchAuthService(
         var expiresIn = root.GetProperty("expires_in").GetInt32();
         _expiresAt = DateTimeOffset.UtcNow.AddSeconds(expiresIn);
         logger.LogInformation("Twitch AccessToken is refreshed");
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _appAccessToken);
         if (!client.DefaultRequestHeaders.Contains("Client-ID"))
         {
             client.DefaultRequestHeaders.Add("Client-ID", clientId);
         }
+        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _appAccessToken);
     }
 }
