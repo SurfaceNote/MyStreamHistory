@@ -19,4 +19,9 @@
     <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\MyStreamHistory.Shared.Application\MyStreamHistory.Shared.Application.csproj" />
+    <ProjectReference Include="..\MyStreamHistory.Shared.Base\MyStreamHistory.Shared.Base.csproj" />
+  </ItemGroup>
+
 </Project>
