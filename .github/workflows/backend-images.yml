@@ -29,11 +29,11 @@ jobs:
         include:
           - service: authservice
             context: Backend
-            dockerfile: Backend/AuthService/Dockerfile
+            dockerfile: Backend/AuthService/MyStreamHistory.AuthService.Api/Dockerfile
             image: authservice
           - service: gateway
             context: Backend
-            dockerfile: Backend/Gateway/Dockerfile
+            dockerfile: Backend/Gateway/MyStreamHistory.Gateway.Api/Dockerfile
             image: gateway
 
     steps:
