@@ -1,5 +1,6 @@
-using Microsoft.OpenApi;
+using Microsoft.OpenApi.Models;
 using MyStreamHistory.Gateway.Api.Extenstions;
+using MyStreamHistory.Shared.Api.Extensions;
 using MyStreamHistory.Shared.Infrastructure;
 using MyStreamHistory.Shared.Infrastructure.Logging;
 using MyStreamHistory.Shared.Infrastructure.Transport;
@@ -26,10 +27,32 @@ builder.Services.AddSwaggerGen(option =>
     });
 });
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("Frontend", policy =>
+        policy
+            .WithOrigins(
+                "http://localhost:4200",
+                "https://localhost:4200")
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials()
+        );
+});
+
+builder.Services.AddAutoMapperProfiles()
+    .AddMediatRHandlers();
+
 var app = builder.Build();
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.UseRouting();
+app.UseCors("Frontend");
+
+app.UseGlobalExceptionHandler();
+app.UseAppExceptionHandler();
 
 if (app.Environment.IsDevelopment())
 {
