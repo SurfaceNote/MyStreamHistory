@@ -1,0 +1,55 @@
+name: Deploy Frontend to Server
+
+on: workflow_dispatch
+
+jobs:
+  deploy-frontend:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.SSH_HOST_WEB }} >> ~/.ssh/known_hosts
+
+      - name: Upload compose to server (do not touch .env)
+        run: |
+          rsync -avz \
+            ./Frontend/docker-compose.yml \
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST_WEB }}:${{ secrets.DEPLOY_PATH }}/Frontend/
+
+      - name: Pull & restart on server
+        run: |
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST_WEB }} << 'EOF'
+          set -e
+
+          cd ${{ secrets.DEPLOY_PATH }}/Frontend
+
+          echo "${{ secrets.TWC_REGISTRY_TOKEN }}" | docker login ${{ secrets.TWC_REGISTRY_HOST }} -u "${{ secrets.TWC_REGISTRY_USER }}" --password-stdin
+
+          docker compose pull
+          docker compose up -d --remove-orphans
+          docker ps
+          EOF
+
+      - name: Wait for Web to be healthy
+        run: |
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST_WEB }} << 'EOF'
+          end=$(( $(date +%s) + 60 ))
+          while [ $(date +%s) -lt $end ]; do
+            code=$(curl -k -s -o /dev/null -w "%{http_code}" https://localhost/ || true)
+            if [ "$code" = "200" ]; then
+              echo "Web is up!"
+              exit 0
+            fi
+            echo "Waiting... (code=$code)"
+            sleep 5
+          done
+          echo "Error: Web did not become healthy in time!"
+          exit 1
+          EOF

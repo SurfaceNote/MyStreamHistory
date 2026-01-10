@@ -1,22 +1,19 @@
 services:
   mystreamhistoryweb:
     container_name: mystreamhistorywebcontainer
-    build: . 
-    image: mystreamhistoryweb
+    image: ${TWC_REGISTRY_HOST}/mystreamhistoryweb:latest
+    restart: unless-stopped
     ports:
-     - 80:80
-     - 443:443
-    expose:
-     - 80
-     - 443
+      - "80:80"
+      - "443:443"
     volumes:
-     - /var/www/certbot:/var/www/certbot
-     - /etc/letsencrypt/live/mystreamhistory.com:/etc/letsencrypt/live/mystreamhistory.com
-     - /etc/letsencrypt/archive/mystreamhistory.com:/etc/letsencrypt/archive/mystreamhistory.com
-     - /etc/letsencrypt/renewal/mystreamhistory.com.conf:/etc/letsencrypt/renewal/mystreamhistory.com.conf
+      - /var/www/certbot:/var/www/certbot:ro
+      - /etc/letsencrypt/live/mystreamhistory.com:/etc/letsencrypt/live/mystreamhistory.com:ro
+      - /etc/letsencrypt/archive/mystreamhistory.com:/etc/letsencrypt/archive/mystreamhistory.com:ro
+      - /etc/letsencrypt/renewal/mystreamhistory.com.conf:/etc/letsencrypt/renewal/mystreamhistory.com.conf:ro
     networks:
       - internalnet
 
 networks:
- internalnet:
-  driver: bridge
+  internalnet:
+    driver: bridge
