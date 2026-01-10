@@ -8,19 +8,6 @@ using MyStreamHistory.Shared.Infrastructure.Transport;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.Configure<ForwardedHeadersOptions>(options =>
-{
-    options.ForwardedHeaders =
-        ForwardedHeaders.XForwardedFor |
-        ForwardedHeaders.XForwardedProto |
-        ForwardedHeaders.XForwardedHost;
-
-    options.KnownNetworks.Clear();
-    options.KnownProxies.Clear();
-
-    options.ForwardLimit = 2;
-});
-
 builder.Services.AddInfrastructure(builder.Configuration)
     .AddSerilog()
     .AddMassTransit()
@@ -60,11 +47,13 @@ builder.Services.AddAutoMapperProfiles()
 var app = builder.Build();
 
 app.UseForwardedHeaders();
+app.UseHttpsRedirection();
+
+app.UseRouting();
 
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.UseRouting();
 app.UseCors("Frontend");
 
 app.UseGlobalExceptionHandler();
