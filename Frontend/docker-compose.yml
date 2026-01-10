@@ -1,6 +1,5 @@
 services:
   mystreamhistoryweb:
-    container_name: mystreamhistorywebcontainer
     image: ${TWC_REGISTRY_HOST}/mystreamhistoryweb:latest
     restart: unless-stopped
     ports:

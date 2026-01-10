@@ -12,6 +12,7 @@ jobs:
 
       - name: Set up SSH key
         run: |
+          set -e
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
@@ -19,6 +20,7 @@ jobs:
 
       - name: Upload compose to server (do not touch .env)
         run: |
+          set -e
           rsync -avz \
             ./Frontend/docker-compose.yml \
             ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST_WEB }}:${{ secrets.DEPLOY_PATH }}/Frontend/
@@ -26,30 +28,75 @@ jobs:
       - name: Pull & restart on server
         run: |
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST_WEB }} << 'EOF'
-          set -e
+          set -euo pipefail
 
           cd ${{ secrets.DEPLOY_PATH }}/Frontend
 
           echo "${{ secrets.TWC_REGISTRY_TOKEN }}" | docker login ${{ secrets.TWC_REGISTRY_HOST }} -u "${{ secrets.TWC_REGISTRY_USER }}" --password-stdin
 
-          docker compose pull
-          docker compose up -d --remove-orphans
-          docker ps
+          # Pick compose command (v2 or v1)
+          if docker compose version >/dev/null 2>&1; then
+            COMPOSE="docker compose"
+          elif command -v docker-compose >/dev/null 2>&1; then
+            COMPOSE="docker-compose"
+          else
+            echo "ERROR: Neither 'docker compose' nor 'docker-compose' found on server."
+            echo "Install docker-compose or docker compose plugin."
+            exit 1
+          fi
+
+          test -f docker-compose.yml
+
+          $COMPOSE pull
+          $COMPOSE up -d --remove-orphans --force-recreate
+
+          echo ""
+          echo "=== Compose services ==="
+          $COMPOSE ps
+
+          echo ""
+          echo "=== Docker containers (top 30) ==="
+          docker ps --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}' | head -n 30
           EOF
 
       - name: Wait for Web to be healthy
         run: |
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST_WEB }} << 'EOF'
-          end=$(( $(date +%s) + 60 ))
+          set -euo pipefail
+          end=$(( $(date +%s) + 90 ))
+
           while [ $(date +%s) -lt $end ]; do
             code=$(curl -k -s -o /dev/null -w "%{http_code}" https://localhost/ || true)
             if [ "$code" = "200" ]; then
-              echo "Web is up!"
+              echo "Web is up! (HTTP 200)"
               exit 0
             fi
-            echo "Waiting... (code=$code)"
+            echo "Waiting... (https://localhost) code=$code"
             sleep 5
           done
+
           echo "Error: Web did not become healthy in time!"
           exit 1
+          EOF
+
+      - name: Cleanup old images on server
+        if: success()
+        run: |
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST_WEB }} << 'EOF'
+          set -euo pipefail
+
+          echo ""
+          echo "=== Docker disk usage BEFORE ==="
+          docker system df || true
+
+          # 1) remove dangling images (<none>)
+          docker image prune -f || true
+
+          # 2) remove any unused images/containers/networks/build cache
+          # Safe: won't remove images used by running containers
+          docker system prune -f || true
+
+          echo ""
+          echo "=== Docker disk usage AFTER ==="
+          docker system df || true
           EOF
