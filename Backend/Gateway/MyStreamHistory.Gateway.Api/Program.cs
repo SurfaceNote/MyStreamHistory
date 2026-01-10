@@ -47,7 +47,6 @@ builder.Services.AddAutoMapperProfiles()
 var app = builder.Build();
 
 app.UseForwardedHeaders();
-app.UseHttpsRedirection();
 
 app.UseRouting();
 
