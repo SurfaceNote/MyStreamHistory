@@ -34,7 +34,9 @@ builder.Services.AddCors(options =>
         policy
             .WithOrigins(
                 "http://localhost:4200",
-                "https://localhost:4200")
+                "https://localhost:4200",
+                "http://mystreamhistory.com",
+                "https://mystreamhistory.com")
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials()
