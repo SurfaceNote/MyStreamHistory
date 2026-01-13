@@ -1,10 +1,13 @@
 import { HttpClient } from "@angular/common/http";
 import { inject, Injectable } from "@angular/core";
 import { BehaviorSubject, Observable, of, throwError } from "rxjs";
-import { catchError, map, tap } from "rxjs/operators";
+import { catchError, filter, map, take, tap } from "rxjs/operators";
 import { Router } from "@angular/router";
 import { environment } from "../../environments/environment";
-import { TokenResponse } from "./auth.model";
+import { TokenResponse } from "../features/auth/models/token-response.model";
+import { RefreshTokenRequest } from "../features/auth/models/refresh-token-request.model";
+import { ApiResponse } from "../core/api/api-response.model";
+import { unwrapData } from "../core/api/api-operators";
 
 @Injectable({
     providedIn: 'root',
@@ -13,6 +16,7 @@ export class AuthService {
     private readonly apiUrl = environment.api_url;
     private readonly redirectUri = `${environment.url}/callback`;
     private readonly accessTokenKey = 'access_token';
+    private readonly refreshTokenKey = 'refresh_token';
     private readonly clientId = environment.clientId;
     private isRefreshing = false;
     private refreshTokenSubject = new BehaviorSubject<string | null>(null);
@@ -21,6 +25,21 @@ export class AuthService {
 
     private http = inject(HttpClient);
     private router = inject(Router);
+
+    private setTokens(tokens: TokenResponse): void {
+        localStorage.setItem(this.accessTokenKey, tokens.accessToken);
+        localStorage.setItem(this.refreshTokenKey, tokens.refreshToken);
+
+        this.tokenSubject.next(tokens.accessToken);
+        this.usernameSubject.next(this.getUsernameFromToken());
+    }
+
+    private clearTokens(): void {
+        localStorage.removeItem(this.accessTokenKey);
+        localStorage.removeItem(this.refreshTokenKey);
+        this.tokenSubject.next(null);
+        this.usernameSubject.next(null);
+    }
 
     generateRandomState(): string {
         const array = new Uint8Array(16);
@@ -45,12 +64,14 @@ export class AuthService {
         }
 
         return this.http
-            .get<TokenResponse>(`${this.apiUrl}/auth/twitch/callback`, { params: { code, state }, withCredentials: true})
+            .get<ApiResponse<TokenResponse>>(`${this.apiUrl}/auth/twitch/callback`, { 
+                params: { code, state }, 
+                withCredentials: true
+            })
             .pipe(
-                tap((response) => {
-                    localStorage.setItem(this.accessTokenKey, response.AccessToken);
-                    this.tokenSubject.next(response.AccessToken);
-                    this.usernameSubject.next(this.getUsernameFromToken());
+                unwrapData<TokenResponse>(),
+                tap((tokens) => {
+                    this.setTokens(tokens);
                     localStorage.removeItem('twitchAuthState');
                 }),
                 map(() => true),
@@ -70,6 +91,10 @@ export class AuthService {
         return localStorage.getItem(this.accessTokenKey);
     }
 
+    getRefreshToken(): string | null {
+        return localStorage.getItem(this.refreshTokenKey);
+    }
+
     getAccessTokenObservable(): Observable<string | null> {
         return this.tokenSubject.asObservable();
     }
@@ -80,28 +105,43 @@ export class AuthService {
 
     refreshToken(): Observable<string | null> {
         if (this.isRefreshing) {
-            return this.refreshTokenSubject.asObservable().pipe(
-                map((token) => token || this.getAccessToken())
+            return this.refreshTokenSubject.pipe(
+                filter((t): t is string => !!t),
+                take(1)
             );
+        }
+
+        const accessToken = this.getAccessToken();
+        const refreshToken = this.getRefreshToken();
+
+        if (!accessToken || !refreshToken) {
+            this.logoutLocal();
+            return throwError(() => new Error('No tokens to refresh'));
         }
 
         this.isRefreshing = true;
         this.refreshTokenSubject.next(null);
 
-        return this.http.post<TokenResponse>(`${this.apiUrl}/auth/refresh-token`, {}, {withCredentials: true}).pipe(
-            tap((response) => {
-                localStorage.setItem(this.accessTokenKey, response.AccessToken);
-                this.refreshTokenSubject.next(response.AccessToken);
-                this.isRefreshing = false;
-            }),
-            map((response) => response.AccessToken),
-            catchError((error) => {
-                console.error('Refresh token failed', error);
-                this.isRefreshing = false;
-                this.logout();
-                return throwError(() => new Error('Refresh token failed'));
-            })
-        );
+        const body: RefreshTokenRequest = { accessToken, refreshToken };
+
+        return this.http.
+            post<ApiResponse<TokenResponse>>(`${this.apiUrl}/auth/refresh-token`, body, { withCredentials: true })
+            .pipe(
+                unwrapData<TokenResponse>(),
+                tap((tokens) => {
+                    this.setTokens(tokens);
+
+                    this.refreshTokenSubject.next(tokens.accessToken);
+                    this.isRefreshing = false;
+                }),
+                map((tokens) => tokens.accessToken),
+                catchError((error) => {
+                    console.error('Refreshing token failed', error);
+                    this.isRefreshing = false;
+                    this.logoutLocal();
+                    return throwError(() => error);
+                })
+            );
     }
 
     getUsernameFromToken(): string | null {
@@ -111,13 +151,12 @@ export class AuthService {
             return null;
         }
 
-        try {
-            const payload = JSON.parse(atob(token.split('.')[1]));
-            return payload.name;
-        } catch(e) {
-            console.error('Failed to decode JWT token', e);
+        const payload = this.decodeJwtPayload(token);
+        if (!payload) {
             return null;
         }
+
+        return payload.UserName ?? payload.name ?? null;
     }
     
     getTwitchIdFromToken(): string | null {
@@ -127,11 +166,22 @@ export class AuthService {
             return null;
         }
 
+        const payload = this.decodeJwtPayload(token);
+        return payload?.sub ?? null;
+    }
+
+    logoutLocal(): void {
+        this.clearTokens();
+        this.router.navigate(['/']);
+    }
+
+    private decodeJwtPayload(token: string): any | null {
         try {
-            const payload = JSON.parse(atob(token.split('.')[1]));
-            return payload.sub;
-        } catch(e) {
-            console.error('Failed to decode JWT token', e);
+            const base64Url = token.split('.')[1];
+            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
+            return JSON.parse(decodeURIComponent(escape(atob(padded))));
+        } catch {
             return null;
         }
     }
