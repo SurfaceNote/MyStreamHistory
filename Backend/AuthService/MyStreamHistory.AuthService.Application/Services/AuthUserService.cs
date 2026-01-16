@@ -19,6 +19,7 @@ public class AuthUserService(IAuthUserRepository authUserRepository, IUnitOfWork
                 {
                     DisplayName = twitchUser.DisplayName,
                     TwitchId = twitchUser.Id,
+                    Avatar = twitchUser.ProfileImageUrl,
                     Email = twitchUser.Email,
                     IsTwitchTokenFresh = true,
                     LastActivityAt = DateTime.UtcNow,
@@ -27,7 +28,7 @@ public class AuthUserService(IAuthUserRepository authUserRepository, IUnitOfWork
                     SiteCreatedAt = DateTime.UtcNow,
                     TwitchAccessToken = tokenResponse.AccessToken,
                     TwitchRefreshToken = tokenResponse.RefreshToken,
-                    TwitchCreatedAt = twitchUser.CreatedAt
+                    TwitchCreatedAt = twitchUser.CreatedAt,
                 }
             );
             

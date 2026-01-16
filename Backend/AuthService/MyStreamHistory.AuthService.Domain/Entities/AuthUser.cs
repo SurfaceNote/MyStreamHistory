@@ -4,6 +4,7 @@ public class AuthUser
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public int TwitchId { get; set; }
+    public string Avatar { get; set; } = null!;
     public string? Email { get; set; }
     public string Login { get; set; } = null!;
     public string DisplayName { get; set; } = null!;

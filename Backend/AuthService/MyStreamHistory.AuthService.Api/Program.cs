@@ -20,6 +20,7 @@ builder.Services.AddInfrastructure(builder.Configuration)
     .AddMassTransit(configureConsumers: configurator =>
     {
         configurator.AddConsumer<TwitchAuthorizeConsumer>();
+        configurator.AddConsumer<GetNewUsersConsumer>();
     });
 
 builder.Services

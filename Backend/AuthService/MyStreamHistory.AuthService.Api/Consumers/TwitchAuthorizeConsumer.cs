@@ -49,6 +49,9 @@ public class TwitchAuthorizeConsumer(
             user = existingUser;
             user.TwitchAccessToken = twitchTokenResponse.AccessToken;
             user.TwitchRefreshToken = twitchTokenResponse.RefreshToken;
+            user.Avatar = twitchUser.ProfileImageUrl;
+            user.DisplayName = twitchUser.DisplayName;
+            user.Login = twitchUser.Login;
             user.LastLoginAt = currentTime;
             
             await authUserRepository.UpdateAsync(user);

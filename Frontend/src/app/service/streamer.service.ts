@@ -4,6 +4,8 @@ import { Observable } from "rxjs";
 import { StreamerShortDTO } from "../models/streamer-short.dto";
 import { API_ENDPOINTS } from "../constants/api-endpoints";
 import { StreamerListType } from "../enums/streamer-list-type.enum";
+import { ApiResponse } from "../core/api/api-response.model";
+import { unwrapData } from "../core/api/api-operators";
 
 @Injectable({
     providedIn: 'root'
@@ -22,7 +24,7 @@ export class StreamerService {
                 throw new Error('Unkown stream list type');
         }
 
-        return this.http.get<StreamerShortDTO[]>(url, {withCredentials: true});
+        return this.http.get<ApiResponse<StreamerShortDTO[]>>(url, {withCredentials: true}).pipe(unwrapData<StreamerShortDTO[]>());
     }
 
     getStreamerByTwitchId(twitchId: number): Observable<StreamerShortDTO> {

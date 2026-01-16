@@ -11,12 +11,12 @@
             <p>Loading...</p>
         }
         @else {
-            @for (streamer of streamers; track streamer.TwitchId) {
-                <a [routerLink]="['/profile', streamer.TwitchId]">
+            @for (streamer of streamers; track streamer.twitchId) {
+                <a [routerLink]="['/profile', streamer.twitchId]">
                     <div class="row">
                         <div class="avatar-nickname">
-                            <img src="{{ streamer.LogoUser }}" alt="{{ streamer.DisplayName }} logo">
-                            <span>{{ streamer.DisplayName }}</span>
+                            <img src="{{ streamer.avatar }}" alt="{{ streamer.displayName }} logo">
+                            <span>{{ streamer.displayName }}</span>
                         </div>
                         <div class="show-btn">
                             <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>

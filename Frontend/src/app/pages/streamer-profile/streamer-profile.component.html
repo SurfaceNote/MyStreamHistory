@@ -4,13 +4,13 @@
             <div class="stream-page-main-content">
                 <div class="profile">
                     <div class="poster">
-                        <img src="{{ streamerShortDTO.LogoUser }}" alt="logo channel {{ streamerShortDTO.Login }}">
+                        <img src="{{ streamerShortDTO.avatar }}" alt="logo channel {{ streamerShortDTO.displayName }}">
                     </div>
                     <div class="meta">
                         <div class="profile">
-                            <span>{{ streamerShortDTO.DisplayName }}</span>
+                            <span>{{ streamerShortDTO.displayName }}</span>
                             <div class="socials-list">
-                                <a href="https://www.twitch.tv/{{ streamerShortDTO.Login }}">
+                                <a href="https://www.twitch.tv/{{ streamerShortDTO.displayName }}">
                                     <div class="social-link twitch-background"><i class="fa-brands fa-twitch"></i></div>
                                 </a>
                                 <a href="#">
