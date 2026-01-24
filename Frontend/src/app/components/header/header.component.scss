@@ -8,7 +8,9 @@ header {
     row-gap: 1.5rem;
     justify-content: space-between;
     align-items: center;
-    background: $bg-1-color;
+    background: transparent;
+    position: relative;
+    z-index: 10;
 }
 
 header .web-name {
@@ -28,6 +30,11 @@ header .login {
 
 header a {
     color: white;
+    transition: color 0.2s ease;
+
+    &:hover {
+        color: $purple-color;
+    }
 }
 
 header .nav-options {
@@ -63,6 +70,12 @@ header .logo-menu .logo {
 header .logo-menu .logo img {
     width: 2.5rem;
     height: 2.5rem;
+    border-radius: 50%;
+    transition: transform 0.3s ease;
+
+    &:hover {
+        transform: scale(1.05);
+    }
 }
 
 header .logo-menu .logo a {
@@ -73,6 +86,11 @@ header .logo-menu .logo a {
     font-weight: 700;
     line-height: normal;
     text-decoration: none;
+    transition: color 0.2s ease;
+
+    &:hover {
+        color: $text-1-color;
+    }
 }
 
 header .logo-menu .burger-menu {
@@ -105,6 +123,42 @@ header .auth {
     justify-content: flex-end;
     align-items: center;
     gap: 1.5rem;
+
+    button {
+        padding: 0.625rem 1.5rem;
+        border-radius: 8px;
+        background: $bg-3-color;
+        border: 1px solid $bg-4-color;
+        color: $text-1-color;
+        font-family: 'Montserrat', serif;
+        font-size: 0.875rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+
+        &:hover {
+            background: $bg-4-color;
+            border-color: $purple-color;
+            transform: translateY(-1px);
+        }
+    }
+
+    div {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: $text-2-color;
+        font-size: 0.875rem;
+        
+        a {
+            font-weight: 600;
+            color: $text-1-color;
+            
+            &:hover {
+                color: $purple-color;
+            }
+        }
+    }
 }
 
 @media screen and (min-width: 1000px) {
