@@ -6,6 +6,7 @@ import { API_ENDPOINTS } from "../constants/api-endpoints";
 import { StreamerListType } from "../enums/streamer-list-type.enum";
 import { ApiResponse } from "../core/api/api-response.model";
 import { unwrapData } from "../core/api/api-operators";
+import { StreamSession } from "../models/stream-session.model";
 
 @Injectable({
     providedIn: 'root'
@@ -28,10 +29,14 @@ export class StreamerService {
     }
 
     getStreamerByTwitchId(twitchId: number): Observable<StreamerShortDTO> {
-        let url: string;
+        const url = API_ENDPOINTS.STREAMER(twitchId);
+        return this.http.get<ApiResponse<StreamerShortDTO>>(url, {withCredentials: true})
+            .pipe(unwrapData<StreamerShortDTO>());
+    }
 
-        url = API_ENDPOINTS.STREAMER + "/" + twitchId;
-        return this.http.get<StreamerShortDTO>(url);
-
+    getRecentStreams(twitchId: number, count: number = 10): Observable<StreamSession[]> {
+        const url = API_ENDPOINTS.RECENT_STREAMS(twitchId, count);
+        return this.http.get<ApiResponse<StreamSession[]>>(url, {withCredentials: true})
+            .pipe(unwrapData<StreamSession[]>());
     }
 };

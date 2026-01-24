@@ -4,6 +4,7 @@ using MyStreamHistory.AuthService.Domain.Entities;
 using MyStreamHistory.Shared.Application.UnitOfWork;
 using MyStreamHistory.Shared.Base.Contracts.Auth.Requests;
 using MyStreamHistory.Shared.Base.Contracts.Auth.Responses;
+using MyStreamHistory.Shared.Base.Contracts.TwitchEventSub;
 using MyStreamHistory.Shared.Base.Error;
 using MyStreamHistory.Shared.Base.Exceptions;
 
@@ -38,11 +39,13 @@ public class TwitchAuthorizeConsumer(
 
         var currentTime = DateTime.UtcNow;
         AuthUser user;
+        bool isNewUser = false;
 
         if (existingUser == null)
         {
             user = await authUserService.CreateAuthUserAsync(twitchUser, twitchTokenResponse);
             await authUserRepository.AddAsync(user);
+            isNewUser = true;
         }
         else
         {
@@ -67,6 +70,17 @@ public class TwitchAuthorizeConsumer(
         await refreshTokenRepository.AddAsync(refreshToken);
         
         await unitOfWork.SaveChangesAsync();
+
+        // Publish UserRegisteredEvent if this is a new user
+        if (isNewUser)
+        {
+            await context.Publish(new UserRegisteredEventContract
+            {
+                TwitchUserId = user.TwitchId,
+                DisplayName = user.DisplayName,
+                Login = user.Login
+            });
+        }
         
         await context.RespondAsync(new TwitchAuthorizeResponseContract
         {

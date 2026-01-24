@@ -6,5 +6,7 @@ export const API_ENDPOINTS = {
         POPULAR: environment.api_url + '/api/PopularStreamers',
         LIVE: environment.api_url + '/api/LiveStreamers'
     },
-    STREAMER: environment.api_url + '/user/get-new-users'
+    STREAMER: (twitchId: number) => `${environment.api_url}/user/${twitchId}`,
+    RECENT_STREAMS: (twitchId: number, count: number = 10) => 
+        `${environment.api_url}/user/${twitchId}/recent-streams?count=${count}`
 };
