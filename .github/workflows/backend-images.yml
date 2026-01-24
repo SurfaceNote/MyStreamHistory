@@ -6,11 +6,6 @@ on:
     paths:
       - "Backend/**"
       - ".github/workflows/backend-images.yml"
-  pull_request:
-    branches: [ "main" ]
-    paths:
-      - "Backend/**"
-      - ".github/workflows/backend-images.yml"
 
 permissions:
   contents: read
