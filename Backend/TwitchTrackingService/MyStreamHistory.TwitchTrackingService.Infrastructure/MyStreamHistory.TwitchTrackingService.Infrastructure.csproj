@@ -1,0 +1,28 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net9.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+    
+    <ItemGroup>
+        <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.4"/>
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.4" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.4">
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+            <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
+        <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4"/>
+        <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.4" />
+        <PackageReference Include="Microsoft.Extensions.Options" Version="9.0.4" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\Shared\MyStreamHistory.Shared.Base\MyStreamHistory.Shared.Base.csproj" />
+      <ProjectReference Include="..\..\Shared\MyStreamHistory.Shared.Infrastructure\MyStreamHistory.Shared.Infrastructure.csproj" />
+      <ProjectReference Include="..\MyStreamHistory.TwitchTrackingService.Application\MyStreamHistory.TwitchTrackingService.Application.csproj" />
+      <ProjectReference Include="..\MyStreamHistory.TwitchTrackingService.Domain\MyStreamHistory.TwitchTrackingService.Domain.csproj" />
+    </ItemGroup>
+
+</Project>

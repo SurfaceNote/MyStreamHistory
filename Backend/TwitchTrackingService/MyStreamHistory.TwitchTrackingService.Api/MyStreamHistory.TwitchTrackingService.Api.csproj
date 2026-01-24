@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <TargetFramework>net9.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="12.0.1" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.4">
+          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+          <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\Shared\MyStreamHistory.Shared.Api\MyStreamHistory.Shared.Api.csproj" />
+      <ProjectReference Include="..\..\Shared\MyStreamHistory.Shared.Infrastructure\MyStreamHistory.Shared.Infrastructure.csproj" />
+      <ProjectReference Include="..\MyStreamHistory.TwitchTrackingService.Infrastructure\MyStreamHistory.TwitchTrackingService.Infrastructure.csproj" />
+    </ItemGroup>
+
+</Project>

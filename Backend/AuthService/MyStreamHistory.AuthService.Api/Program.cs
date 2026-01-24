@@ -21,6 +21,8 @@ builder.Services.AddInfrastructure(builder.Configuration)
     {
         configurator.AddConsumer<TwitchAuthorizeConsumer>();
         configurator.AddConsumer<GetNewUsersConsumer>();
+        configurator.AddConsumer<GetAllUsersConsumer>();
+        configurator.AddConsumer<GetUserByTwitchIdConsumer>();
     });
 
 builder.Services

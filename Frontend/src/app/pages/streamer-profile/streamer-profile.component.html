@@ -28,7 +28,7 @@
                         </div>
                         <div class="meta-stream-item">
                             <span>Made</span>
-                            <span><b>100</b> streams</span>
+                            <span><b>{{ recentStreams.length }}</b> streams</span>
                         </div>
                         <div class="meta-stream-item">
                             <span>Finished</span>
@@ -70,6 +70,78 @@
                     <span>></span>
                 </div>
             </div>
+        </div>
+
+        <div class="recent-streams-section">
+            <div class="block-title">
+                <div class="start-line"></div>
+                <h3>Recent Streams ({{ recentStreams.length }})</h3>
+                <div class="end-line"></div>
+            </div>
+            
+            @if (isLoadingStreams) {
+                <div style="padding: 2rem; text-align: center;">
+                    <p>Loading streams...</p>
+                </div>
+            }
+            
+            @if (!isLoadingStreams && recentStreams.length === 0) {
+                <div style="padding: 2rem; text-align: center;">
+                    <p>No recent streams found</p>
+                </div>
+            }
+            
+            @if (!isLoadingStreams && recentStreams.length > 0) {
+                <div class="streams-list-wrapper">
+                    <div class="streams-list-horizontal">
+                        @for (stream of recentStreams; track stream.id) {
+                            <div class="stream-card">
+                                <div class="stream-header">
+                                    <div class="stream-status">
+                                        @if (stream.isLive) {
+                                            <span class="badge live">LIVE</span>
+                                        } @else {
+                                            <span class="badge offline">ENDED</span>
+                                        }
+                                    </div>
+                                    <div class="stream-date">
+                                        <span>{{ formatDate(stream.startedAt) }}</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="stream-content">
+                                    <div class="stream-game">
+                                        @if (stream.gameName) {
+                                            <span class="game-name">{{ stream.gameName }}</span>
+                                        } @else {
+                                            <span class="game-name no-game">No category</span>
+                                        }
+                                    </div>
+                                    
+                                    @if (stream.streamTitle) {
+                                        <div class="stream-title">
+                                            <span>{{ stream.streamTitle }}</span>
+                                        </div>
+                                    }
+                                    
+                                    <div class="stream-stats">
+                                        <div class="stat-item">
+                                            <i class="fa-regular fa-clock"></i>
+                                            <span>{{ formatDuration(stream.startedAt, stream.endedAt) }}</span>
+                                        </div>
+                                        @if (stream.isLive && stream.viewerCount !== null && stream.viewerCount !== undefined) {
+                                            <div class="stat-item">
+                                                <i class="fa-regular fa-eye"></i>
+                                                <span>{{ stream.viewerCount }} viewers</span>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
         </div>
 
         <div class="gray-main-block list-walkthrough-and-viewers">

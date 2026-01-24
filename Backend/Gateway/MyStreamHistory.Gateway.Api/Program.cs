@@ -1,6 +1,6 @@
-using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.OpenApi.Models;
 using MyStreamHistory.Gateway.Api.Extenstions;
+using MyStreamHistory.Gateway.Application.Options;
 using MyStreamHistory.Shared.Api.Extensions;
 using MyStreamHistory.Shared.Infrastructure;
 using MyStreamHistory.Shared.Infrastructure.Logging;
@@ -45,6 +45,11 @@ builder.Services.AddCors(options =>
 
 builder.Services.AddAutoMapperProfiles()
     .AddMediatRHandlers();
+
+builder.Services.AddOptions<TwitchEventSubOptions>()
+    .Bind(builder.Configuration.GetSection(TwitchEventSubOptions.SectionName))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
 
 var app = builder.Build();
 
