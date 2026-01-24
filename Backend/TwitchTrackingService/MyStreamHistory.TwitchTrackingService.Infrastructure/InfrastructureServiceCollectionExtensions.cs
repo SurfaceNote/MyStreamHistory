@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using MyStreamHistory.TwitchTrackingService.Application.Interfaces;
 using MyStreamHistory.TwitchTrackingService.Application.Services;
 using MyStreamHistory.TwitchTrackingService.Infrastructure.Options;
@@ -28,7 +30,18 @@ public static class InfrastructureServiceCollectionExtensions
             .ValidateOnStart();
 
         // Add HttpClient for Twitch API
-        services.AddHttpClient<ITwitchApiClient, TwitchApiClient>();
+        // Register as Singleton to maintain token cache across requests
+        services.AddHttpClient<TwitchApiClient>()
+            .SetHandlerLifetime(TimeSpan.FromMinutes(5));
+        
+        services.AddSingleton<ITwitchApiClient>(sp =>
+        {
+            var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
+            var httpClient = httpClientFactory.CreateClient(nameof(TwitchApiClient));
+            var options = sp.GetRequiredService<IOptions<TwitchApiOptions>>();
+            var logger = sp.GetRequiredService<ILogger<TwitchApiClient>>();
+            return new TwitchApiClient(httpClient, options, logger);
+        });
 
         // Add Repositories
         services.AddScoped<IStreamSessionRepository, StreamSessionRepository>();

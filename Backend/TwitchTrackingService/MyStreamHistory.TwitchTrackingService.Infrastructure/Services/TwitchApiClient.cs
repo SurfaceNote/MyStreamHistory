@@ -14,7 +14,10 @@ public class TwitchApiClient : ITwitchApiClient
     private readonly HttpClient _httpClient;
     private readonly TwitchApiOptions _options;
     private readonly ILogger<TwitchApiClient> _logger;
+    private readonly SemaphoreSlim _tokenLock = new(1, 1);
+    
     private string? _appAccessToken;
+    private DateTime _tokenExpiresAt = DateTime.MinValue;
 
     public TwitchApiClient(HttpClient httpClient, IOptions<TwitchApiOptions> options, ILogger<TwitchApiClient> logger)
     {
@@ -349,10 +352,33 @@ public class TwitchApiClient : ITwitchApiClient
 
     private async Task EnsureAppAccessTokenAsync(CancellationToken cancellationToken)
     {
-        if (!string.IsNullOrEmpty(_appAccessToken))
+        // Check if token is still valid (with 5-minute safety buffer)
+        if (!string.IsNullOrEmpty(_appAccessToken) && DateTime.UtcNow < _tokenExpiresAt.AddMinutes(-5))
         {
             return;
         }
+
+        // Use semaphore to prevent multiple concurrent token requests
+        await _tokenLock.WaitAsync(cancellationToken);
+        try
+        {
+            // Double-check after acquiring lock
+            if (!string.IsNullOrEmpty(_appAccessToken) && DateTime.UtcNow < _tokenExpiresAt.AddMinutes(-5))
+            {
+                return;
+            }
+
+            await RefreshAppAccessTokenAsync(cancellationToken);
+        }
+        finally
+        {
+            _tokenLock.Release();
+        }
+    }
+
+    private async Task RefreshAppAccessTokenAsync(CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Requesting new Twitch app access token");
 
         var requestContent = new FormUrlEncodedContent(new[]
         {
@@ -365,13 +391,41 @@ public class TwitchApiClient : ITwitchApiClient
         
         if (!response.IsSuccessStatusCode)
         {
+            var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+            _logger.LogError("Failed to obtain app access token. Status: {StatusCode}, Error: {Error}", 
+                response.StatusCode, errorContent);
             throw new InvalidOperationException("Failed to obtain app access token");
         }
 
         var tokenResponse = await response.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: cancellationToken);
         _appAccessToken = tokenResponse.GetProperty("access_token").GetString();
+        
+        // Get expiration time (Twitch returns expires_in in seconds)
+        var expiresIn = tokenResponse.GetProperty("expires_in").GetInt32();
+        _tokenExpiresAt = DateTime.UtcNow.AddSeconds(expiresIn);
 
-        _logger.LogInformation("Obtained Twitch app access token");
+        _logger.LogInformation("Obtained Twitch app access token. Expires at: {ExpiresAt} UTC (in {ExpiresIn} seconds)", 
+            _tokenExpiresAt, expiresIn);
+    }
+
+    private async Task<T?> ExecuteWithTokenRetryAsync<T>(Func<Task<T>> operation, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await operation();
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+        {
+            _logger.LogWarning("Received 401 Unauthorized. Token may have expired. Refreshing token and retrying...");
+            
+            // Force token refresh
+            _appAccessToken = null;
+            _tokenExpiresAt = DateTime.MinValue;
+            await EnsureAppAccessTokenAsync(cancellationToken);
+            
+            // Retry operation once with new token
+            return await operation();
+        }
     }
 }
 
