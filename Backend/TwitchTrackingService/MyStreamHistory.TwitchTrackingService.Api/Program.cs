@@ -24,6 +24,9 @@ builder.Services.AddInfrastructure(builder.Configuration)
         configurator.AddConsumer<StreamOfflineConsumer>();
         configurator.AddConsumer<UserRegisteredConsumer>();
         configurator.AddConsumer<GetRecentStreamsConsumer>();
+        configurator.AddConsumer<GetEventSubSubscriptionsConsumer>();
+        configurator.AddConsumer<DeleteAllSubscriptionsConsumer>();
+        configurator.AddConsumer<SubscribeToAllUsersConsumer>();
     })
     .AddTransportBus();
 

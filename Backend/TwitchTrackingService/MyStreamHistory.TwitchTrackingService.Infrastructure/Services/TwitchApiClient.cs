@@ -122,6 +122,40 @@ public class TwitchApiClient : ITwitchApiClient
         }
     }
 
+    public async Task<EventSubSubscriptionsDto> GetEventSubSubscriptionsAsync(CancellationToken cancellationToken = default)
+    {
+        await EnsureAppAccessTokenAsync(cancellationToken);
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, _options.EventSubEndpoint);
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _appAccessToken);
+        request.Headers.Add("Client-Id", _options.ClientId);
+
+        try
+        {
+            using var response = await _httpClient.SendAsync(request, cancellationToken);
+            
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+                _logger.LogError("Failed to get EventSub subscriptions. Status: {StatusCode}, Error: {Error}", 
+                    response.StatusCode, errorContent);
+                return new EventSubSubscriptionsDto();
+            }
+
+            var subscriptionsDto = await response.Content.ReadFromJsonAsync<EventSubSubscriptionsDto>(cancellationToken: cancellationToken);
+            
+            _logger.LogInformation("Retrieved {Count} EventSub subscriptions. Total cost: {TotalCost}/{MaxTotalCost}", 
+                subscriptionsDto?.Total ?? 0, subscriptionsDto?.TotalCost ?? 0, subscriptionsDto?.MaxTotalCost ?? 0);
+
+            return subscriptionsDto ?? new EventSubSubscriptionsDto();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting EventSub subscriptions");
+            return new EventSubSubscriptionsDto();
+        }
+    }
+
     public async Task DeleteSubscriptionAsync(string subscriptionId, CancellationToken cancellationToken = default)
     {
         await EnsureAppAccessTokenAsync(cancellationToken);
@@ -208,6 +242,109 @@ public class TwitchApiClient : ITwitchApiClient
 
         _logger.LogInformation("Total active streams fetched: {TotalStreams}", allStreams.Count);
         return allStreams;
+    }
+
+    public async Task<int> DeleteAllSubscriptionsAsync(CancellationToken cancellationToken = default)
+    {
+        await EnsureAppAccessTokenAsync(cancellationToken);
+
+        _logger.LogInformation("Starting to delete all EventSub subscriptions");
+
+        try
+        {
+            var subscriptions = await GetEventSubSubscriptionsAsync(cancellationToken);
+            
+            if (subscriptions.Data == null || subscriptions.Data.Count == 0)
+            {
+                _logger.LogInformation("No subscriptions to delete");
+                return 0;
+            }
+
+            int deletedCount = 0;
+            
+            foreach (var subscription in subscriptions.Data)
+            {
+                try
+                {
+                    await DeleteSubscriptionAsync(subscription.Id, cancellationToken);
+                    deletedCount++;
+                    _logger.LogInformation("Deleted subscription {SubscriptionId} ({DeletedCount}/{Total})", 
+                        subscription.Id, deletedCount, subscriptions.Data.Count);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to delete subscription {SubscriptionId}", subscription.Id);
+                }
+            }
+
+            _logger.LogInformation("Deleted {DeletedCount} of {TotalCount} subscriptions", 
+                deletedCount, subscriptions.Data.Count);
+            
+            return deletedCount;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting all EventSub subscriptions");
+            return 0;
+        }
+    }
+
+    public async Task<(int successCount, int failCount)> SubscribeToAllUsersAsync(List<int> userIds, CancellationToken cancellationToken = default)
+    {
+        if (userIds == null || userIds.Count == 0)
+        {
+            _logger.LogWarning("No user IDs provided for subscription");
+            return (0, 0);
+        }
+
+        await EnsureAppAccessTokenAsync(cancellationToken);
+
+        _logger.LogInformation("Starting to subscribe to {UserCount} users", userIds.Count);
+
+        int successCount = 0;
+        int failCount = 0;
+
+        foreach (var userId in userIds)
+        {
+            try
+            {
+                // Subscribe to stream.online
+                var onlineSubId = await CreateEventSubSubscriptionAsync(userId, "stream.online", cancellationToken);
+                if (!string.IsNullOrEmpty(onlineSubId))
+                {
+                    successCount++;
+                    _logger.LogInformation("Created stream.online subscription for user {UserId}", userId);
+                }
+                else
+                {
+                    failCount++;
+                    _logger.LogWarning("Failed to create stream.online subscription for user {UserId}", userId);
+                }
+
+                // Subscribe to stream.offline
+                var offlineSubId = await CreateEventSubSubscriptionAsync(userId, "stream.offline", cancellationToken);
+                if (!string.IsNullOrEmpty(offlineSubId))
+                {
+                    successCount++;
+                    _logger.LogInformation("Created stream.offline subscription for user {UserId}", userId);
+                }
+                else
+                {
+                    failCount++;
+                    _logger.LogWarning("Failed to create stream.offline subscription for user {UserId}", userId);
+                }
+            }
+            catch (Exception ex)
+            {
+                failCount += 2; // Both subscriptions failed
+                _logger.LogError(ex, "Error creating subscriptions for user {UserId}", userId);
+            }
+        }
+
+        _logger.LogInformation("Subscription complete. Success: {SuccessCount}, Failed: {FailCount}", 
+            successCount, failCount);
+
+        return (successCount, failCount);
     }
 
     private async Task EnsureAppAccessTokenAsync(CancellationToken cancellationToken)

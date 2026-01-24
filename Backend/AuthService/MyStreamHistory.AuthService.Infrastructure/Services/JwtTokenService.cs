@@ -19,6 +19,7 @@ public class JwtTokenService(IConfiguration configuration) : IJwtTokenService
             new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
 
             new("UserName", user.DisplayName),
+            new("TwitchId", user.TwitchId.ToString()),
         };
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["Jwt:Key"]!));
