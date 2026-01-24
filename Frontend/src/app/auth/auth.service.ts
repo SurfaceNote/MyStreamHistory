@@ -167,7 +167,7 @@ export class AuthService {
         }
 
         const payload = this.decodeJwtPayload(token);
-        return payload?.sub ?? null;
+        return payload?.TwitchId ?? null;
     }
 
     logoutLocal(): void {

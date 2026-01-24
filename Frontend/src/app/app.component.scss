@@ -1,0 +1,111 @@
+@use "variables" as *;
+
+// Background effects
+.bg-effect {
+    position: fixed;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.bg-effect-top-right {
+    top: 0;
+    right: 0;
+    width: 700px;
+    height: 700px;
+    background: radial-gradient(
+        circle at top right, 
+        rgba(100, 65, 165, 0.4) 0%, 
+        rgba(100, 65, 165, 0.25) 20%,
+        rgba(100, 65, 165, 0.15) 40%,
+        transparent 70%
+    );
+    transform: translate(35%, -35%);
+}
+
+.bg-effect-bottom-left {
+    bottom: 0;
+    left: 0;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(
+        circle at bottom left, 
+        rgba(255, 102, 0, 0.3) 0%, 
+        rgba(255, 102, 0, 0.18) 20%,
+        rgba(255, 102, 0, 0.1) 40%,
+        transparent 70%
+    );
+    transform: translate(-35%, 35%);
+}
+
+// Alpha Badge - Fixed in bottom left corner (visible on all pages)
+.alpha-badge {
+    position: fixed;
+    bottom: 2rem;
+    left: 2rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem;
+    background: rgba(255, 102, 0, 0.15);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 102, 0, 0.3);
+    border-radius: 100px;
+    color: $orange-color;
+    font-size: 0.875rem;
+    font-weight: 600;
+    box-shadow: 0 4px 15px rgba(255, 102, 0, 0.2);
+    z-index: 1000;
+    transition: all 0.3s ease;
+
+    &:hover {
+        background: rgba(255, 102, 0, 0.2);
+        border-color: rgba(255, 102, 0, 0.5);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(255, 102, 0, 0.3);
+    }
+
+    svg {
+        animation: pulse 2s ease-in-out infinite;
+    }
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+// Responsive - mobile version of alpha-badge
+@media screen and (max-width: 768px) {
+    .alpha-badge {
+        bottom: 1rem;
+        left: 1rem;
+        padding: 0.625rem 1rem;
+        font-size: 0.75rem;
+
+        svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        span {
+            display: none;
+        }
+
+        &::after {
+            content: 'Alpha';
+            font-weight: 600;
+        }
+    }
+}
+
+// Ensure content is above background effects
+app-header,
+router-outlet {
+    position: relative;
+    z-index: 1;
+}

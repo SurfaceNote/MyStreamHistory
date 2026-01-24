@@ -1,26 +1,25 @@
 @use "variables.scss" as *;
 
 .small-list-block {
+    display: inline-flex;
     flex-direction: column;
-    justify-content: space-between;
     align-items: flex-start;
     flex: 1;
-    background: $bg-3-color;
-    border-radius: 1rem;
-    padding: 1rem;
+    flex-basis: 30rem;
+    gap: 2rem;
+    padding: 2rem 1.5rem;
+    border-radius: 1.25rem;
+    background: $bg-2-color;
+    border: 1px solid $bg-4-color;
     min-width: 15.6rem;
     max-width: 100%;
     margin-right: 1rem;
     margin-left: 1rem;
+    transition: all 0.3s ease;
 
-    display: inline-flex;
-    padding: 2rem 1.5rem;
-    flex-direction: column;
-    align-items: flex-start;
-    flex-basis: 30rem;
-    gap: 2rem;
-    border-radius: 1.25rem;
-    background: $bg-3-color;
+    &:hover {
+        border-color: rgba(100, 65, 165, 0.3);
+    }
 }
 
 .small-list-block-header {
@@ -33,8 +32,16 @@
 
 .small-list-block-header .title {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     gap: 1rem;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: $text-1-color;
+
+    i {
+        color: $purple-color;
+        font-size: 1.25rem;
+    }
 }
 
 .small-list-block-header .btn-view-all {
@@ -44,23 +51,29 @@
     align-items: center;
     gap: 0.75rem;
     border-radius: 6.1875rem;
-    background: var(--bg);
-}
+    background: $bg-3-color;
+    transition: all 0.3s ease;
+    cursor: pointer;
 
-.small-list-block-header .btn-view-all span {
-    color: var(--text-3);
-    font-family: "Montserrat", serif;
-    font-size: 0.875rem;
-    font-style: normal;
-    font-weight: 600;
-    line-height: normal;
-}
+    &:hover {
+        background: $bg-4-color;
+    }
 
-.small-list-block-header .btn-view-all i {
-    color: var(--text-3);
-    font-size: 0.875rem;
-    font-style: normal;
-    line-height: normal;
+    span {
+        color: $text-3-color;
+        font-family: "Montserrat", serif;
+        font-size: 0.875rem;
+        font-style: normal;
+        font-weight: 600;
+        line-height: normal;
+    }
+
+    i {
+        color: $text-3-color;
+        font-size: 0.875rem;
+        font-style: normal;
+        line-height: normal;
+    }
 }
 
 .small-list-block-content {
@@ -72,28 +85,19 @@
     gap: 1rem;
     border-radius: 0.5rem;
     width: 100%;
-    background: var(--bg-2);
+    background: $bg-3-color;
     overflow-y: auto;
     overflow-x: hidden;
-}
 
-.small-list-block-content .row {
-    display: flex;
-    padding: 0.75rem;
-    width: 100%;
-    min-width: 245px;
-    justify-content: space-between;
-    align-items: center;
-    border-radius: 0.25rem;
-    transition: 0.3s;
-}
-
-.small-list-block-content .row:hover {
-    background: black;
+    p {
+        color: $text-3-color;
+        padding: 1rem;
+    }
 }
 
 .small-list-block-content a {
     width: 100%;
+    text-decoration: none;
 }
 
 .small-list-block-content .row {
@@ -103,32 +107,47 @@
     min-width: 9rem;
     justify-content: space-between;
     align-items: center;
-    border-radius: 0.25rem;
-    transition: 0.3s;
-}
+    border-radius: 0.5rem;
+    transition: all 0.3s ease;
+    cursor: pointer;
 
-.small-list-block-content .row:hover {
-    background: black;
+    &:hover {
+        background: rgba(100, 65, 165, 0.1);
+        transform: translateX(5px);
+
+        .show-btn i {
+            transform: translateX(3px);
+            color: $purple-color;
+        }
+
+        .avatar-nickname span {
+            color: $text-1-color;
+        }
+    }
 }
 
 .avatar-nickname {
     display: flex;
     align-items: center;
     gap: 0.75rem;
-}
 
-.avatar-nickname img {
-    width: 2rem;
-    height: 2rem;
-}
+    img {
+        width: 2.5rem;
+        height: 2.5rem;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid $bg-4-color;
+    }
 
-.avatar-nickname span {
-    color: var(--text-2, #e7e7e7);
-    font-family: "Montserrat", serif;
-    font-size: 1rem;
-    font-style: normal;
-    font-weight: 600;
-    line-height: normal;
+    span {
+        color: $text-2-color;
+        font-family: "Montserrat", serif;
+        font-size: 1rem;
+        font-style: normal;
+        font-weight: 600;
+        line-height: normal;
+        transition: color 0.3s ease;
+    }
 }
 
 .show-btn {
@@ -138,20 +157,21 @@
     gap: 0.75rem;
     border-radius: 6.25rem;
     margin-left: auto;
-}
 
-.show-btn span {
-    color: $text-2-color;
-    font-size: 0.8125rem;
-    font-style: normal;
-    line-height: normal;
-}
+    span {
+        color: $text-2-color;
+        font-size: 0.8125rem;
+        font-style: normal;
+        line-height: normal;
+    }
 
-.show-btn i {
-    color: $text-2-color;
-    font-size: 0.75rem;
-    font-style: normal;
-    line-height: normal;
+    i {
+        color: $text-3-color;
+        font-size: 0.75rem;
+        font-style: normal;
+        line-height: normal;
+        transition: all 0.3s ease;
+    }
 }
 
 @media screen and (min-width: 800px) {

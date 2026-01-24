@@ -16,20 +16,21 @@ a {
 }
 
 body::-webkit-scrollbar-track {
-    -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
-    border-radius: 10px;
-    background-color: #f5f5f5;
+    background-color: $bg-1-color;
 }
 
 body::-webkit-scrollbar {
     width: 12px;
-    background-color: #f5f5f5;
+    background-color: $bg-1-color;
 }
 
 body::-webkit-scrollbar-thumb {
     border-radius: 10px;
-    -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
-    background-color: #555;
+    background: linear-gradient(180deg, $purple-color 0%, $orange-color 100%);
+    
+    &:hover {
+        background: linear-gradient(180deg, #8b5fd6 0%, #ff8533 100%);
+    }
 }
 
 body {
@@ -40,21 +41,28 @@ body {
     display: flex;
     flex-direction: column;
     width: 100%;
+    min-height: 100vh;
 }
 
 div::-webkit-scrollbar-track {
-    -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
-    border-radius: 10px;
-    background-color: #f5f5f5;
+    background-color: rgba(245, 245, 245, 0.05);
 }
 
 div::-webkit-scrollbar {
-    width: 12px;
-    background-color: rgba(245, 245, 245, 0);
+    width: 8px;
+    background-color: transparent;
 }
 
 div::-webkit-scrollbar-thumb {
     border-radius: 10px;
-    -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
-    background-color: #555;
+    background: rgba(100, 65, 165, 0.5);
+    
+    &:hover {
+        background: rgba(100, 65, 165, 0.7);
+    }
+}
+
+// Smooth scrolling
+html {
+    scroll-behavior: smooth;
 }

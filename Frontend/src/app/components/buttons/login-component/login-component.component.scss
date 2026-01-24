@@ -1,40 +1,62 @@
 @use "variables.scss" as *;
 
+:host {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
 
-.join-text  {
-    display: none;
+.join-text {
     color: $text-1-color;
     font-family: 'Montserrat', serif;
     font-size: 1rem;
     font-style: normal;
     font-weight: 500;
     line-height: normal;
+    display: none;
 }
 
 .login-btn button {
-    display: flex;
-    padding: 0.75rem 1.25rem;
-    justify-content: center;
+    display: inline-flex;
     align-items: center;
-    gap: 0.30rem;
-    border-radius: 6.1875rem;
-    background: $purple-color;
-    border: none; /* Убираем стандартную рамку кнопки */
-    cursor: pointer; /* Курсор как для кликабельного элемента */
-    color: white; /* Цвет текста */
-    font-family: inherit; /* Наследуем шрифт */
-    font-size: inherit; /* Наследуем размер шрифта */
-}
-
-.login-btn button a {
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.875rem 2rem;
+    border-radius: 12px;
+    background: linear-gradient(135deg, $purple-color 0%, #8b5fd6 100%);
+    border: none;
+    cursor: pointer;
     color: white;
+    font-family: 'Montserrat', serif;
+    font-size: 1rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(100, 65, 165, 0.3);
+
+    &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(100, 65, 165, 0.4);
+    }
+
+    &:active {
+        transform: translateY(0);
+    }
+
+    span {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    i {
+        font-size: 1.25rem;
+        display: flex;
+        align-items: center;
+    }
 }
 
 @media screen and (min-width: 1000px) {
-
     .join-text {
         display: block;
     }
-
-
 }
