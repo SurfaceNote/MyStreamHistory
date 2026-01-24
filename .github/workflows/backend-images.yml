@@ -35,6 +35,10 @@ jobs:
             context: Backend
             dockerfile: Backend/Gateway/MyStreamHistory.Gateway.Api/Dockerfile
             image: gateway
+          - service: twitchtrackingservice
+            context: Backend
+            dockerfile: Backend/TwitchTrackingService/MyStreamHistory.TwitchTrackingService.Api/Dockerfile
+            image: twitchtrackingservice
 
     steps:
       - name: Checkout
