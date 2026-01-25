@@ -1,5 +1,8 @@
+import { TwitchCategory } from './twitch-category.model';
+
 export interface StreamSession {
     id: string;
+    streamId?: string;
     twitchUserId: number;
     streamerLogin: string;
     streamerDisplayName: string;
@@ -9,5 +12,6 @@ export interface StreamSession {
     streamTitle?: string;
     gameName?: string;
     viewerCount?: number;
+    categories: TwitchCategory[];
 }
 

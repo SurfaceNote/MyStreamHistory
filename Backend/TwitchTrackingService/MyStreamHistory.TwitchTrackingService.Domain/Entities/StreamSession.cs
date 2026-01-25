@@ -3,6 +3,7 @@ namespace MyStreamHistory.TwitchTrackingService.Domain.Entities;
 public class StreamSession
 {
     public Guid Id { get; set; } = Guid.NewGuid();
+    public string? StreamId { get; set; }
     public int TwitchUserId { get; set; }
     public string StreamerLogin { get; set; } = null!;
     public string StreamerDisplayName { get; set; } = null!;
@@ -12,5 +13,8 @@ public class StreamSession
     public string? StreamTitle { get; set; }
     public string? GameName { get; set; }
     public int? ViewerCount { get; set; }
+    
+    // Navigation properties
+    public ICollection<StreamCategory> StreamCategories { get; set; } = new List<StreamCategory>();
 }
 

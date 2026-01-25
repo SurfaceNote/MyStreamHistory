@@ -247,6 +247,66 @@ public class TwitchApiClient : ITwitchApiClient
         return allStreams;
     }
 
+    public async Task<List<TwitchGameDataDto>> GetGamesAsync(List<string> gameIds, CancellationToken cancellationToken = default)
+    {
+        if (gameIds == null || gameIds.Count == 0)
+        {
+            return new List<TwitchGameDataDto>();
+        }
+
+        await EnsureAppAccessTokenAsync(cancellationToken);
+
+        var allGames = new List<TwitchGameDataDto>();
+
+        // Split gameIds into batches of 100 (Twitch API limit)
+        var batches = gameIds
+            .Select((id, index) => new { id, index })
+            .GroupBy(x => x.index / 100)
+            .Select(g => g.Select(x => x.id).ToList())
+            .ToList();
+
+        _logger.LogInformation("Fetching games info for {TotalGames} games in {BatchCount} batches", gameIds.Count, batches.Count);
+
+        foreach (var batch in batches)
+        {
+            try
+            {
+                var gameIdsParam = string.Join("&", batch.Select(id => $"id={id}"));
+                var url = $"https://api.twitch.tv/helix/games?{gameIdsParam}";
+
+                using var request = new HttpRequestMessage(HttpMethod.Get, url);
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _appAccessToken);
+                request.Headers.Add("Client-Id", _options.ClientId);
+
+                using var response = await _httpClient.SendAsync(request, cancellationToken);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+                    _logger.LogError("Failed to get games. Status: {StatusCode}, Error: {Error}", 
+                        response.StatusCode, errorContent);
+                    continue;
+                }
+
+                var gamesResponse = await response.Content.ReadFromJsonAsync<TwitchGameResponseDto>(cancellationToken: cancellationToken);
+                
+                if (gamesResponse?.Data != null)
+                {
+                    allGames.AddRange(gamesResponse.Data);
+                    _logger.LogDebug("Fetched {GameCount} games from batch of {BatchSize} ids", 
+                        gamesResponse.Data.Count, batch.Count);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching games for batch");
+            }
+        }
+
+        _logger.LogInformation("Total games fetched: {TotalGames}", allGames.Count);
+        return allGames;
+    }
+
     public async Task<int> DeleteAllSubscriptionsAsync(CancellationToken cancellationToken = default)
     {
         await EnsureAppAccessTokenAsync(cancellationToken);

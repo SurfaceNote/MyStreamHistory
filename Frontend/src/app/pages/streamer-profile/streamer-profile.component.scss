@@ -355,6 +355,61 @@ main {
       flex-direction: column;
       gap: 0.5rem;
 
+      .stream-categories {
+        .categories-row {
+          display: flex;
+          gap: 0.5rem;
+          overflow-x: auto;
+          padding: 0.25rem 0;
+          
+          /* Custom scrollbar for categories */
+          &::-webkit-scrollbar {
+            height: 4px;
+          }
+          
+          &::-webkit-scrollbar-track {
+            background: transparent;
+          }
+          
+          &::-webkit-scrollbar-thumb {
+            background: $bg-4-color;
+            border-radius: 2px;
+          }
+
+          .category-box-art {
+            flex-shrink: 0;
+            
+            img {
+              width: 52px;
+              height: 72px;
+              border-radius: 0.25rem;
+              object-fit: cover;
+              transition: transform 0.2s ease;
+              
+              &:hover {
+                transform: scale(1.05);
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+              }
+            }
+          }
+        }
+
+        .game-name-fallback {
+          color: $text-2-color;
+          font-size: 1.125rem;
+          font-weight: 700;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .game-name.no-game {
+          color: $text-4-color;
+          font-style: italic;
+          font-size: 1rem;
+        }
+      }
+
       .stream-game {
         .game-name {
           color: $text-2-color;

@@ -11,5 +11,6 @@ public interface ITwitchApiClient
     Task<int> DeleteAllSubscriptionsAsync(CancellationToken cancellationToken = default);
     Task<(int successCount, int failCount)> SubscribeToAllUsersAsync(List<int> userIds, CancellationToken cancellationToken = default);
     Task<List<TwitchStreamDto>> GetStreamsAsync(List<int> userIds, CancellationToken cancellationToken = default);
+    Task<List<TwitchGameDataDto>> GetGamesAsync(List<string> gameIds, CancellationToken cancellationToken = default);
 }
 

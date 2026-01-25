@@ -34,6 +34,7 @@ public class GetRecentStreamsConsumer : IConsumer<GetRecentStreamsRequestContrac
                 StreamSessions = streams.Select(s => new Shared.Base.Contracts.StreamSessions.StreamSessionDto
                 {
                     Id = s.Id,
+                    StreamId = s.StreamId,
                     TwitchUserId = s.TwitchUserId,
                     StreamerLogin = s.StreamerLogin,
                     StreamerDisplayName = s.StreamerDisplayName,
@@ -42,7 +43,14 @@ public class GetRecentStreamsConsumer : IConsumer<GetRecentStreamsRequestContrac
                     IsLive = s.IsLive,
                     StreamTitle = s.StreamTitle,
                     GameName = s.GameName,
-                    ViewerCount = s.ViewerCount
+                    ViewerCount = s.ViewerCount,
+                    Categories = s.Categories.Select(c => new Shared.Base.Contracts.StreamSessions.TwitchCategoryDto
+                    {
+                        TwitchId = c.TwitchId,
+                        Name = c.Name,
+                        BoxArtUrl = c.BoxArtUrl,
+                        IgdbId = c.IgdbId
+                    }).ToList()
                 }).ToList()
             };
 

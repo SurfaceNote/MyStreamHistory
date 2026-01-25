@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using MyStreamHistory.TwitchTrackingService.Infrastructure.Persistence;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MyStreamHistory.TwitchTrackingService.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(TwitchTrackingDbContext))]
-    partial class TwitchTrackingDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260125150631_AddCategoryTracking")]
+    partial class AddCategoryTracking
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

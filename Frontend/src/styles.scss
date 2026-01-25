@@ -62,7 +62,7 @@ div::-webkit-scrollbar-thumb {
     }
 }
 
-// Smooth scrolling
+// Instant scrolling (no animation)
 html {
-    scroll-behavior: smooth;
+    scroll-behavior: auto;
 }

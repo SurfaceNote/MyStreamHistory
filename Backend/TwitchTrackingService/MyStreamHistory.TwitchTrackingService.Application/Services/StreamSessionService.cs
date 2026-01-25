@@ -9,12 +9,18 @@ namespace MyStreamHistory.TwitchTrackingService.Application.Services;
 public class StreamSessionService : IStreamSessionService
 {
     private readonly IStreamSessionRepository _repository;
+    private readonly IStreamCategoryRepository _streamCategoryRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<StreamSessionService> _logger;
 
-    public StreamSessionService(IStreamSessionRepository repository, IUnitOfWork unitOfWork, ILogger<StreamSessionService> logger)
+    public StreamSessionService(
+        IStreamSessionRepository repository, 
+        IStreamCategoryRepository streamCategoryRepository,
+        IUnitOfWork unitOfWork, 
+        ILogger<StreamSessionService> logger)
     {
         _repository = repository;
+        _streamCategoryRepository = streamCategoryRepository;
         _unitOfWork = unitOfWork;
         _logger = logger;
     }
@@ -61,10 +67,20 @@ public class StreamSessionService : IStreamSessionService
             return;
         }
 
+        var endTime = DateTime.UtcNow;
         activeSession.IsLive = false;
-        activeSession.EndedAt = DateTime.UtcNow;
+        activeSession.EndedAt = endTime;
 
         await _repository.UpdateAsync(activeSession, cancellationToken);
+        
+        // Close active category segment if exists
+        var activeSegment = await _streamCategoryRepository.GetActiveSegmentByStreamIdAsync(activeSession.Id, cancellationToken);
+        if (activeSegment != null)
+        {
+            await _streamCategoryRepository.CloseSegmentAsync(activeSegment.Id, endTime, cancellationToken);
+            _logger.LogInformation("Closed active category segment for stream {StreamSessionId}", activeSession.Id);
+        }
+        
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation("Stream session ended for broadcaster {BroadcasterUserLogin}", eventDto.BroadcasterUserLogin);
@@ -104,6 +120,12 @@ public class StreamSessionService : IStreamSessionService
 
             // Update stream data
             var hasChanges = false;
+
+            if (session.StreamId != stream.Id)
+            {
+                session.StreamId = stream.Id;
+                hasChanges = true;
+            }
 
             if (session.StreamTitle != stream.Title)
             {
@@ -150,6 +172,7 @@ public class StreamSessionService : IStreamSessionService
         var sessionDtos = sessions.Select(s => new StreamSessionDto
         {
             Id = s.Id,
+            StreamId = s.StreamId,
             TwitchUserId = s.TwitchUserId,
             StreamerLogin = s.StreamerLogin,
             StreamerDisplayName = s.StreamerDisplayName,
@@ -158,7 +181,18 @@ public class StreamSessionService : IStreamSessionService
             IsLive = s.IsLive,
             StreamTitle = s.StreamTitle,
             GameName = s.GameName,
-            ViewerCount = s.ViewerCount
+            ViewerCount = s.ViewerCount,
+            Categories = s.StreamCategories
+                .Select(sc => sc.TwitchCategory)
+                .Distinct()
+                .Select(c => new TwitchCategoryDto
+                {
+                    TwitchId = c.TwitchId,
+                    Name = c.Name,
+                    BoxArtUrl = c.BoxArtUrl,
+                    IgdbId = c.IgdbId
+                })
+                .ToList()
         }).ToList();
 
         _logger.LogInformation("Found {SessionCount} recent streams for TwitchUserId {TwitchUserId}", sessionDtos.Count, twitchUserId);

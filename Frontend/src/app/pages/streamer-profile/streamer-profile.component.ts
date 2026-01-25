@@ -82,4 +82,10 @@ export class StreamerProfileComponent implements OnInit, OnDestroy {
     }
     return `${minutes}m`;
   }
+
+  getCategoryBoxArt(boxArtUrl: string, width: number, height: number): string {
+    return boxArtUrl
+      .replace('{width}', width.toString())
+      .replace('{height}', height.toString());
+  }
 }

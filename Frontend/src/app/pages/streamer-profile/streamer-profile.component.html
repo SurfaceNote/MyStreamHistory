@@ -110,9 +110,19 @@
                                 </div>
                                 
                                 <div class="stream-content">
-                                    <div class="stream-game">
-                                        @if (stream.gameName) {
-                                            <span class="game-name">{{ stream.gameName }}</span>
+                                    <div class="stream-categories">
+                                        @if (stream.categories && stream.categories.length > 0) {
+                                            <div class="categories-row">
+                                                @for (category of stream.categories; track category.twitchId) {
+                                                    <div class="category-box-art">
+                                                        <img [src]="getCategoryBoxArt(category.boxArtUrl, 52, 72)" 
+                                                             [alt]="category.name"
+                                                             [title]="category.name">
+                                                    </div>
+                                                }
+                                            </div>
+                                        } @else if (stream.gameName) {
+                                            <span class="game-name-fallback">{{ stream.gameName }}</span>
                                         } @else {
                                             <span class="game-name no-game">No category</span>
                                         }

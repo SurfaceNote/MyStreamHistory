@@ -49,6 +49,8 @@ public class StreamSessionRepository : IStreamSessionRepository
     public async Task<List<StreamSession>> GetRecentStreamsByTwitchUserIdAsync(int twitchUserId, int count = 10, CancellationToken cancellationToken = default)
     {
         return await _context.StreamSessions
+            .Include(s => s.StreamCategories)
+                .ThenInclude(sc => sc.TwitchCategory)
             .Where(s => s.TwitchUserId == twitchUserId)
             .OrderByDescending(s => s.StartedAt)
             .Take(count)

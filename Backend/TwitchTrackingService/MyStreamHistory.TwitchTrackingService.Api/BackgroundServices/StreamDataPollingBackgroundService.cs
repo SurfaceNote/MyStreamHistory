@@ -33,6 +33,7 @@ public class StreamDataPollingBackgroundService : BackgroundService
                 var streamSessionRepository = scope.ServiceProvider.GetRequiredService<IStreamSessionRepository>();
                 var twitchApiClient = scope.ServiceProvider.GetRequiredService<ITwitchApiClient>();
                 var streamSessionService = scope.ServiceProvider.GetRequiredService<IStreamSessionService>();
+                var categoryTrackingService = scope.ServiceProvider.GetRequiredService<ICategoryTrackingService>();
 
                 // Get all active stream sessions
                 var allSessions = await streamSessionRepository.GetAllAsync(stoppingToken);
@@ -54,6 +55,36 @@ public class StreamDataPollingBackgroundService : BackgroundService
 
                     // Update active stream sessions with fresh data
                     await streamSessionService.UpdateActiveStreamsDataAsync(streams, stoppingToken);
+
+                    // Process categories for streams
+                    try
+                    {
+                        // Create dictionary: StreamSessionId -> GameId
+                        var streamGameIds = new Dictionary<Guid, string>();
+                        
+                        foreach (var stream in streams)
+                        {
+                            if (!int.TryParse(stream.UserId, out var userId))
+                            {
+                                continue;
+                            }
+
+                            var session = activeSessions.FirstOrDefault(s => s.TwitchUserId == userId);
+                            if (session != null && !string.IsNullOrWhiteSpace(stream.GameId))
+                            {
+                                streamGameIds[session.Id] = stream.GameId;
+                            }
+                        }
+
+                        if (streamGameIds.Count > 0)
+                        {
+                            await categoryTrackingService.ProcessStreamCategoriesAsync(streamGameIds, stoppingToken);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error processing stream categories. Continuing with next poll cycle.");
+                    }
 
                     _logger.LogInformation("Stream data polling completed. Next poll in {Interval}", _pollingInterval);
                 }
