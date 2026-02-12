@@ -27,6 +27,7 @@ public class TwitchTrackingDbContext : DbContext
             
             entity.Property(e => e.StreamerLogin).HasMaxLength(100).IsRequired();
             entity.Property(e => e.StreamerDisplayName).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.StreamerAvatarUrl).HasMaxLength(500);
             entity.Property(e => e.GameName).HasMaxLength(200);
             entity.Property(e => e.StreamId).HasMaxLength(100);
         });

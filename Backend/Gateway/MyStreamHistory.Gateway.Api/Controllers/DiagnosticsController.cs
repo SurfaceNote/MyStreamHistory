@@ -188,5 +188,113 @@ public class DiagnosticsController : ApiControllerBase
             return StatusCode(500, "An error occurred while processing your request");
         }
     }
+
+    /// <summary>
+    /// Get all chat message EventSub subscriptions from ViewerService.
+    /// TEMPORARY: Only accessible by user "kination" during development.
+    /// This shows subscriptions to channel.chat.message events.
+    /// </summary>
+    /// <returns>List of all chat message subscriptions</returns>
+    [HttpGet("chat-subscriptions")]
+    [Authorize]
+    [ProducesResponseType(typeof(ApiResultContainer<GetChatSubscriptionsResponseContract>), 200)]
+    [ProducesResponseType(typeof(ApiResultContainer), 401)]
+    [ProducesResponseType(typeof(ApiResultContainer), 403)]
+    [ProducesResponseType(typeof(ApiResultContainer), 500)]
+    public async Task<ActionResult<ApiResultContainer<GetChatSubscriptionsResponseContract>>> GetChatSubscriptions(
+        CancellationToken cancellationToken)
+    {
+        // TEMPORARY: Hardcoded username check for development only
+        // TODO: Replace with proper admin role check in production
+        var userName = User.FindFirstValue("UserName");
+        
+        if (string.IsNullOrEmpty(userName))
+        {
+            _logger.LogWarning("Unauthorized access attempt to chat-subscriptions: UserName claim not found");
+            return Unauthorized("Invalid authentication token: UserName claim not found");
+        }
+
+        if (userName != "kination")
+        {
+            _logger.LogWarning("Access denied to chat-subscriptions for user: {UserName}", userName);
+            return StatusCode(403, new 
+            { 
+                message = "Access denied. This diagnostic endpoint is restricted during development.",
+                note = "This is a temporary restriction while the application is in development.",
+                userName
+            });
+        }
+
+        try
+        {
+            var query = new GetChatSubscriptionsQuery();
+            var subscriptions = await _mediator.Send(query, cancellationToken);
+
+            _logger.LogInformation("User {UserName} accessed chat subscriptions. Count: {Count}", 
+                userName, subscriptions.Count);
+
+            return this.Success(subscriptions);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while fetching chat subscriptions for user {UserName}", userName);
+            return StatusCode(500, "An error occurred while processing your request");
+        }
+    }
+
+    /// <summary>
+    /// Cleanup all chat message EventSub subscriptions from ViewerService.
+    /// TEMPORARY: Only accessible by user "kination" during development.
+    /// WARNING: This will unsubscribe from ALL channel.chat.message events!
+    /// </summary>
+    /// <returns>Number of deleted subscriptions</returns>
+    [HttpDelete("chat-subscriptions")]
+    [Authorize]
+    [ProducesResponseType(typeof(ApiResultContainer<CleanupChatSubscriptionsResponseContract>), 200)]
+    [ProducesResponseType(typeof(ApiResultContainer), 401)]
+    [ProducesResponseType(typeof(ApiResultContainer), 403)]
+    [ProducesResponseType(typeof(ApiResultContainer), 500)]
+    public async Task<ActionResult<ApiResultContainer<CleanupChatSubscriptionsResponseContract>>> CleanupChatSubscriptions(
+        CancellationToken cancellationToken)
+    {
+        // TEMPORARY: Hardcoded username check for development only
+        // TODO: Replace with proper admin role check in production
+        var userName = User.FindFirstValue("UserName");
+        
+        if (string.IsNullOrEmpty(userName))
+        {
+            _logger.LogWarning("Unauthorized access attempt to cleanup-chat-subscriptions: UserName claim not found");
+            return Unauthorized("Invalid authentication token: UserName claim not found");
+        }
+
+        if (userName != "kination")
+        {
+            _logger.LogWarning("Access denied to cleanup-chat-subscriptions for user: {UserName}", userName);
+            return StatusCode(403, new 
+            { 
+                message = "Access denied. This diagnostic endpoint is restricted during development.",
+                note = "This is a temporary restriction while the application is in development.",
+                userName
+            });
+        }
+
+        try
+        {
+            _logger.LogWarning("User {UserName} is cleaning up ALL chat subscriptions", userName);
+            
+            var command = new CleanupChatSubscriptionsCommand();
+            var result = await _mediator.Send(command, cancellationToken);
+
+            _logger.LogWarning("User {UserName} cleaned up {DeletedCount} chat subscriptions", 
+                userName, result.DeletedCount);
+
+            return this.Success(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while cleaning up chat subscriptions for user {UserName}", userName);
+            return StatusCode(500, "An error occurred while processing your request");
+        }
+    }
 }
 

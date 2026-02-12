@@ -10,6 +10,7 @@ public static class ApplicationServicesRegistration
     public static IServiceCollection AddApplicationServices(this IServiceCollection services)
     {
         services.AddHttpClient<ITwitchAuthService, TwitchAuthService>();
+        services.AddHttpClient<ITwitchAppTokenService, TwitchAppTokenService>();
         services.AddScoped<IAuthUserService, AuthUserService>();
         services.AddScoped<IAuthUserRepository, AuthUserRepository>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();

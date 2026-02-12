@@ -1,10 +1,11 @@
 import { HttpParams } from '@angular/common/http';
 import { Component, inject, OnDestroy, OnInit } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { StreamerService } from '../../service/streamer.service';
 import { StreamerShortDTO } from '../../models/streamer-short.dto';
 import { Subscription } from 'rxjs';
 import { StreamSession } from '../../models/stream-session.model';
+import { ViewerStats } from '../../models/viewer-stats.model';
 import { CommonModule } from '@angular/common';
 
 @Component({
@@ -17,11 +18,14 @@ export class StreamerProfileComponent implements OnInit, OnDestroy {
   twitchId!: number;
   streamerShortDTO!: StreamerShortDTO;
   recentStreams: StreamSession[] = [];
+  topViewers: ViewerStats[] = [];
   isLoadingStreams: boolean = false;
+  isLoadingViewers: boolean = false;
   private routeSub: Subscription | null = null;
 
-  private streamerService = inject(StreamerService)
+  private streamerService = inject(StreamerService);
   private route = inject(ActivatedRoute);
+  private router = inject(Router);
 
   ngOnInit(): void {
     this.routeSub = this.route.paramMap.subscribe(params => {
@@ -30,6 +34,7 @@ export class StreamerProfileComponent implements OnInit, OnDestroy {
         this.twitchId = +idParam;
         this.loadStreamer();
         this.loadRecentStreams();
+        this.loadTopViewers();
       }
     });
   }
@@ -87,5 +92,36 @@ export class StreamerProfileComponent implements OnInit, OnDestroy {
     return boxArtUrl
       .replace('{width}', width.toString())
       .replace('{height}', height.toString());
+  }
+
+  loadTopViewers(): void {
+    this.isLoadingViewers = true;
+    this.streamerService.getTopViewers(this.twitchId, 100).subscribe({
+      next: (data: ViewerStats[]) => {
+        this.topViewers = data;
+        this.isLoadingViewers = false;
+      },
+      error: (err) => {
+        console.error('Error loading top viewers', err);
+        this.isLoadingViewers = false;
+      }
+    });
+  }
+
+  formatHours(minutes: number): string {
+    const hours = Math.floor(minutes / 60);
+    return `${hours} h`;
+  }
+
+  formatMessagePoints(points: number): string {
+    return points.toFixed(1);
+  }
+
+  getDefaultAvatar(): string {
+    return 'https://static-cdn.jtvnw.net/user-default-pictures-uv/ebe4cd89-b4f4-4cd9-adac-2f30151b4209-profile_image-70x70.png';
+  }
+
+  navigateToStreamDetail(streamId: string): void {
+    this.router.navigate(['/stream', streamId]);
   }
 }

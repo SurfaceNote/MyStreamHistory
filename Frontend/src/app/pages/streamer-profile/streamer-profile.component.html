@@ -95,7 +95,7 @@
                 <div class="streams-list-wrapper">
                     <div class="streams-list-horizontal">
                         @for (stream of recentStreams; track stream.id) {
-                            <div class="stream-card">
+                            <div class="stream-card" (click)="navigateToStreamDetail(stream.id)" style="cursor: pointer;">
                                 <div class="stream-header">
                                     <div class="stream-status">
                                         @if (stream.isLive) {
@@ -384,221 +384,48 @@
             </div>
             <div class="viewers-list" style="margin-right: 1rem">
                 <div class="header">
-                    <span><b>TOP-100 Viewers</b></span>
+                    <span><b>TOP-100 Viewers ({{ topViewers.length }})</b></span>
                 </div>
 
-                <div class="list">
-                    <div class="viewer-row">
-                        <div class="number">
-                            <span>1</span>
-                        </div>
-                        <img class="channel-logo"
-                            src="https://static-cdn.jtvnw.net/user-default-pictures-uv/ebe4cd89-b4f4-4cd9-adac-2f30151b4209-profile_image-70x70.png"
-                            alt="{{ streamerShortDTO }}'s logo">
-                        <div class="meta">
-                            <div class="nickname">
-                                <span>username1</span>
-                            </div>
-                            <div class="stats">
-                                <div class="stat-item">
-                                    <span><b>10452 h</b></span>
-                                </div>
-                                <div class="stat-item">
-                                    <span><b>52202</b> msg pts</span>
-                                </div>
-                            </div>
-                        </div>
+                @if (isLoadingViewers) {
+                    <div style="padding: 2rem; text-align: center;">
+                        <p>Loading viewers...</p>
                     </div>
-                    <div class="viewer-row">
-                        <div class="number">
-                            <span>2</span>
-                        </div>
-                        <img class="channel-logo"
-                            src="https://static-cdn.jtvnw.net/user-default-pictures-uv/ebe4cd89-b4f4-4cd9-adac-2f30151b4209-profile_image-70x70.png"
-                            alt="{{ streamerShortDTO }}'s logo">
-                        <div class="meta">
-                            <div class="nickname">
-                                <span>username2</span>
-                            </div>
-                            <div class="stats">
-                                <div class="stat-item">
-                                    <span><b>10452 h</b></span>
-                                </div>
-                                <div class="stat-item">
-                                    <span><b>52202</b> msg pts</span>
-                                </div>
-                            </div>
-                        </div>
+                }
+
+                @if (!isLoadingViewers && topViewers.length === 0) {
+                    <div style="padding: 2rem; text-align: center;">
+                        <p>No viewers data yet</p>
                     </div>
-                    <div class="viewer-row">
-                        <div class="number">
-                            <span>3</span>
-                        </div>
-                        <img class="channel-logo"
-                            src="https://static-cdn.jtvnw.net/user-default-pictures-uv/ebe4cd89-b4f4-4cd9-adac-2f30151b4209-profile_image-70x70.png"
-                            alt="{{ streamerShortDTO }}'s logo">
-                        <div class="meta">
-                            <div class="nickname">
-                                <span>username3</span>
-                            </div>
-                            <div class="stats">
-                                <div class="stat-item">
-                                    <span><b>10452 h</b></span>
+                }
+
+                @if (!isLoadingViewers && topViewers.length > 0) {
+                    <div class="list">
+                        @for (viewer of topViewers; track viewer.id; let i = $index) {
+                            <div class="viewer-row">
+                                <div class="number">
+                                    <span>{{ i + 1 }}</span>
                                 </div>
-                                <div class="stat-item">
-                                    <span><b>52202</b> msg pts</span>
+                                <img class="channel-logo"
+                                    [src]="viewer.viewer?.profileImageUrl || getDefaultAvatar()"
+                                    [alt]="viewer.viewer?.displayName + '\'s avatar'">
+                                <div class="meta">
+                                    <div class="nickname">
+                                        <span>{{ viewer.viewer?.displayName || 'Unknown' }}</span>
+                                    </div>
+                                    <div class="stats">
+                                        <div class="stat-item">
+                                            <span><b>{{ formatHours(viewer.minutesWatched) }}</b></span>
+                                        </div>
+                                        <div class="stat-item">
+                                            <span><b>{{ formatMessagePoints(viewer.earnedMsgPoints) }}</b> msg pts</span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        }
                     </div>
-                    <div class="viewer-row">
-                        <div class="number">
-                            <span>4</span>
-                        </div>
-                        <img class="channel-logo"
-                            src="https://static-cdn.jtvnw.net/user-default-pictures-uv/ebe4cd89-b4f4-4cd9-adac-2f30151b4209-profile_image-70x70.png"
-                            alt="{{ streamerShortDTO }}'s logo">
-                        <div class="meta">
-                            <div class="nickname">
-                                <span>username4</span>
-                            </div>
-                            <div class="stats">
-                                <div class="stat-item">
-                                    <span><b>10452 h</b></span>
-                                </div>
-                                <div class="stat-item">
-                                    <span><b>52202</b> msg pts</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="viewer-row">
-                        <div class="number">
-                            <span>5</span>
-                        </div>
-                        <img class="channel-logo"
-                            src="https://static-cdn.jtvnw.net/user-default-pictures-uv/ebe4cd89-b4f4-4cd9-adac-2f30151b4209-profile_image-70x70.png"
-                            alt="{{ streamerShortDTO }}'s logo">
-                        <div class="meta">
-                            <div class="nickname">
-                                <span>username5</span>
-                            </div>
-                            <div class="stats">
-                                <div class="stat-item">
-                                    <span><b>10452 h</b></span>
-                                </div>
-                                <div class="stat-item">
-                                    <span><b>52202</b> msg pts</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="viewer-row">
-                        <div class="number">
-                            <span>6</span>
-                        </div>
-                        <img class="channel-logo"
-                            src="https://static-cdn.jtvnw.net/user-default-pictures-uv/ebe4cd89-b4f4-4cd9-adac-2f30151b4209-profile_image-70x70.png"
-                            alt="{{ streamerShortDTO }}'s logo">
-                        <div class="meta">
-                            <div class="nickname">
-                                <span>username6</span>
-                            </div>
-                            <div class="stats">
-                                <div class="stat-item">
-                                    <span><b>10452 h</b></span>
-                                </div>
-                                <div class="stat-item">
-                                    <span><b>52202</b> msg pts</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="viewer-row">
-                        <div class="number">
-                            <span>7</span>
-                        </div>
-                        <img class="channel-logo"
-                            src="https://static-cdn.jtvnw.net/user-default-pictures-uv/ebe4cd89-b4f4-4cd9-adac-2f30151b4209-profile_image-70x70.png"
-                            alt="{{ streamerShortDTO }}'s logo">
-                        <div class="meta">
-                            <div class="nickname">
-                                <span>username7</span>
-                            </div>
-                            <div class="stats">
-                                <div class="stat-item">
-                                    <span><b>10452 h</b></span>
-                                </div>
-                                <div class="stat-item">
-                                    <span><b>52202</b> msg pts</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="viewer-row">
-                        <div class="number">
-                            <span>8</span>
-                        </div>
-                        <img class="channel-logo"
-                            src="https://static-cdn.jtvnw.net/user-default-pictures-uv/ebe4cd89-b4f4-4cd9-adac-2f30151b4209-profile_image-70x70.png"
-                            alt="{{ streamerShortDTO }}'s logo">
-                        <div class="meta">
-                            <div class="nickname">
-                                <span>username8</span>
-                            </div>
-                            <div class="stats">
-                                <div class="stat-item">
-                                    <span><b>10452 h</b></span>
-                                </div>
-                                <div class="stat-item">
-                                    <span><b>52202</b> msg pts</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="viewer-row">
-                        <div class="number">
-                            <span>9</span>
-                        </div>
-                        <img class="channel-logo"
-                            src="https://static-cdn.jtvnw.net/user-default-pictures-uv/ebe4cd89-b4f4-4cd9-adac-2f30151b4209-profile_image-70x70.png"
-                            alt="{{ streamerShortDTO }}'s logo">
-                        <div class="meta">
-                            <div class="nickname">
-                                <span>username9</span>
-                            </div>
-                            <div class="stats">
-                                <div class="stat-item">
-                                    <span><b>10452 h</b></span>
-                                </div>
-                                <div class="stat-item">
-                                    <span><b>52202</b> msg pts</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="viewer-row">
-                        <div class="number">
-                            <span>10</span>
-                        </div>
-                        <img class="channel-logo"
-                            src="https://static-cdn.jtvnw.net/user-default-pictures-uv/ebe4cd89-b4f4-4cd9-adac-2f30151b4209-profile_image-70x70.png"
-                            alt="{{ streamerShortDTO }}'s logo">
-                        <div class="meta">
-                            <div class="nickname">
-                                <span>username10</span>
-                            </div>
-                            <div class="stats">
-                                <div class="stat-item">
-                                    <span><b>10452 h</b></span>
-                                </div>
-                                <div class="stat-item">
-                                    <span><b>52202</b> msg pts</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                }
             </div>
         </div>
     </div>

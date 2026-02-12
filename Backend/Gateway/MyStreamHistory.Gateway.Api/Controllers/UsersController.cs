@@ -7,6 +7,7 @@ using MyStreamHistory.Shared.Api.Extensions;
 using MyStreamHistory.Shared.Api.Wrappers;
 using MyStreamHistory.Shared.Base.Contracts.Users;
 using MyStreamHistory.Shared.Base.Contracts.StreamSessions;
+using MyStreamHistory.Shared.Base.Contracts.Viewers;
 
 namespace MyStreamHistory.Gateway.Api.Controllers;
 
@@ -55,5 +56,24 @@ public class UsersController(IMapper mapper, IMediator mediator) : ApiController
         var streams = await mediator.Send(query);
 
         return this.Success(streams);
+    }
+
+    [HttpGet("{twitchId}/top-viewers")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(ApiResultContainer<List<ViewerStatsDto>>), 200)]
+    [ProducesResponseType(typeof(ApiResultContainer), 500)]
+    [ProducesResponseType(typeof(ApiResultContainer), 400)]
+    public async Task<ActionResult<ApiResultContainer<List<ViewerStatsDto>>>> GetTopViewers(
+        [FromRoute] int twitchId,
+        [FromQuery] int limit = 100)
+    {
+        var query = new GetTopViewersQuery 
+        { 
+            StreamerTwitchUserId = twitchId.ToString(), 
+            Limit = limit 
+        };
+        var topViewers = await mediator.Send(query);
+
+        return this.Success(topViewers);
     }
 }

@@ -38,6 +38,7 @@ public class GetRecentStreamsConsumer : IConsumer<GetRecentStreamsRequestContrac
                     TwitchUserId = s.TwitchUserId,
                     StreamerLogin = s.StreamerLogin,
                     StreamerDisplayName = s.StreamerDisplayName,
+                    StreamerAvatarUrl = s.StreamerAvatarUrl,
                     StartedAt = s.StartedAt,
                     EndedAt = s.EndedAt,
                     IsLive = s.IsLive,

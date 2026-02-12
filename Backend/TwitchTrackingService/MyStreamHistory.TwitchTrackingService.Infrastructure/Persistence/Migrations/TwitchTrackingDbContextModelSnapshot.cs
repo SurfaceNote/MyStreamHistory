@@ -119,6 +119,10 @@ namespace MyStreamHistory.TwitchTrackingService.Infrastructure.Persistence.Migra
                     b.Property<string>("StreamTitle")
                         .HasColumnType("text");
 
+                    b.Property<string>("StreamerAvatarUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
                     b.Property<string>("StreamerDisplayName")
                         .IsRequired()
                         .HasMaxLength(100)

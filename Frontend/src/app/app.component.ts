@@ -17,7 +17,7 @@ export class AppComponent implements OnInit {
     this.router.events
       .pipe(filter(event => event instanceof NavigationEnd))
       .subscribe(() => {
-        // Мгновенный скролл наверх без анимации
+        // Instant scroll to top without animation
         window.scrollTo(0, 0);
       });
   }

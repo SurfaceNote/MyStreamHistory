@@ -48,7 +48,7 @@ export class AuthService {
     }
 
     loginWithTwitch(): void {
-        const scope = 'user:read:email+moderator:read:chatters';
+        const scope = 'user:read:email+moderator:read:chatters+user:read:chat+user:bot';
         const state = this.generateRandomState();
         const twitchAuthUrl = `https://id.twitch.tv/oauth2/authorize?client_id=${this.clientId}&redirect_uri=${this.redirectUri}&response_type=code&scope=${scope}&state=${state}`;
 

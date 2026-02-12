@@ -7,6 +7,7 @@ public class StreamSession
     public int TwitchUserId { get; set; }
     public string StreamerLogin { get; set; } = null!;
     public string StreamerDisplayName { get; set; } = null!;
+    public string? StreamerAvatarUrl { get; set; }
     public DateTime StartedAt { get; set; }
     public DateTime? EndedAt { get; set; }
     public bool IsLive { get; set; }

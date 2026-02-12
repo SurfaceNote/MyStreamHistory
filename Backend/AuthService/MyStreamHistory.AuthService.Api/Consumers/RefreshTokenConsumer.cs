@@ -5,7 +5,7 @@ namespace MyStreamHistory.AuthService.Api.Consumers;
 
 public class RefreshTokenConsumer : IConsumer<RefreshTokenRequestContract>
 {
-    // TODO: Продолжить работать над рефреш токеном
+    // TODO: Continue working on refresh token
     public Task Consume(ConsumeContext<RefreshTokenRequestContract> context)
     {
         throw new NotImplementedException();

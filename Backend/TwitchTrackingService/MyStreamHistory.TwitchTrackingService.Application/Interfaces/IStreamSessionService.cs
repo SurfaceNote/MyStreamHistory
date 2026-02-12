@@ -8,5 +8,6 @@ public interface IStreamSessionService
     Task HandleStreamOfflineAsync(StreamOfflineEventDto eventDto, CancellationToken cancellationToken = default);
     Task UpdateActiveStreamsDataAsync(List<TwitchStreamDto> streams, CancellationToken cancellationToken = default);
     Task<List<StreamSessionDto>> GetRecentStreamsByTwitchUserIdAsync(int twitchUserId, int count = 10, CancellationToken cancellationToken = default);
+    Task<StreamSessionDto?> GetStreamSessionByIdAsync(Guid streamSessionId, CancellationToken cancellationToken = default);
 }
 

@@ -1,0 +1,8 @@
+namespace MyStreamHistory.Shared.Base.Contracts.Auth.Requests;
+
+public class RefreshTwitchAccessTokenRequestContract
+{
+    public string TwitchUserId { get; set; } = string.Empty;
+    public string RequestingService { get; set; } = string.Empty;
+}
+

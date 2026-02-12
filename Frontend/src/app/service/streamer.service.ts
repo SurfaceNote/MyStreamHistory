@@ -7,6 +7,8 @@ import { StreamerListType } from "../enums/streamer-list-type.enum";
 import { ApiResponse } from "../core/api/api-response.model";
 import { unwrapData } from "../core/api/api-operators";
 import { StreamSession } from "../models/stream-session.model";
+import { StreamDetails } from "../models/stream-details.model";
+import { ViewerStats } from "../models/viewer-stats.model";
 
 @Injectable({
     providedIn: 'root'
@@ -38,5 +40,17 @@ export class StreamerService {
         const url = API_ENDPOINTS.RECENT_STREAMS(twitchId, count);
         return this.http.get<ApiResponse<StreamSession[]>>(url, {withCredentials: true})
             .pipe(unwrapData<StreamSession[]>());
+    }
+
+    getStreamDetails(streamId: string): Observable<StreamDetails> {
+        const url = API_ENDPOINTS.STREAM_DETAILS(streamId);
+        return this.http.get<ApiResponse<StreamDetails>>(url, {withCredentials: true})
+            .pipe(unwrapData<StreamDetails>());
+    }
+
+    getTopViewers(twitchId: number, limit: number = 100): Observable<ViewerStats[]> {
+        const url = API_ENDPOINTS.TOP_VIEWERS(twitchId, limit);
+        return this.http.get<ApiResponse<ViewerStats[]>>(url, {withCredentials: true})
+            .pipe(unwrapData<ViewerStats[]>());
     }
 };

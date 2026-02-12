@@ -23,6 +23,9 @@ builder.Services.AddInfrastructure(builder.Configuration)
         configurator.AddConsumer<GetNewUsersConsumer>();
         configurator.AddConsumer<GetAllUsersConsumer>();
         configurator.AddConsumer<GetUserByTwitchIdConsumer>();
+        configurator.AddConsumer<GetTwitchAccessTokenConsumer>();
+        configurator.AddConsumer<RefreshTwitchAccessTokenConsumer>();
+        configurator.AddConsumer<GetAppAccessTokenConsumer>();
     });
 
 builder.Services

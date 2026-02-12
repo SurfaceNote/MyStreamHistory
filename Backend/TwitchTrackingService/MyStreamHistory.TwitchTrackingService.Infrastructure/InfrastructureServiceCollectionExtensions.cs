@@ -53,6 +53,7 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<IStreamSessionService, StreamSessionService>();
         services.AddScoped<ISubscriptionSyncService, SubscriptionSyncService>();
         services.AddScoped<ICategoryTrackingService, CategoryTrackingService>();
+        services.AddScoped<IUserProfileService, Application.Services.UserProfileService>();
 
         return services;
     }

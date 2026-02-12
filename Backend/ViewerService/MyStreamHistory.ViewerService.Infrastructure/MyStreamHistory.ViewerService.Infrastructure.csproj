@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net9.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+    
+    <ItemGroup>
+        <PackageReference Include="MassTransit.Abstractions" Version="8.5.5"/>
+        <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.4"/>
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.4" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.4">
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+            <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
+        <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.1" />
+        <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+        <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4"/>
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="Persistence\Migrations\" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\Shared\MyStreamHistory.Shared.Base\MyStreamHistory.Shared.Base.csproj" />
+      <ProjectReference Include="..\..\Shared\MyStreamHistory.Shared.Infrastructure\MyStreamHistory.Shared.Infrastructure.csproj" />
+      <ProjectReference Include="..\MyStreamHistory.ViewerService.Application\MyStreamHistory.ViewerService.Application.csproj" />
+      <ProjectReference Include="..\MyStreamHistory.ViewerService.Domain\MyStreamHistory.ViewerService.Domain.csproj" />
+    </ItemGroup>
+
+</Project>
+

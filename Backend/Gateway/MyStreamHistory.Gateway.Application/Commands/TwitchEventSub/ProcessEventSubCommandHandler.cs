@@ -71,10 +71,16 @@ public class ProcessEventSubCommandHandler : IRequestHandler<ProcessEventSubComm
                 switch (subscriptionType)
                 {
                     case "stream.online":
-                        await HandleStreamOnlineAsync(eventData, cancellationToken);
+                        await HandleStreamOnlineAsync(eventData, request.MessageId, cancellationToken);
                         break;
                     case "stream.offline":
-                        await HandleStreamOfflineAsync(eventData, cancellationToken);
+                        await HandleStreamOfflineAsync(eventData, request.MessageId, cancellationToken);
+                        break;
+                    case "channel.chat.message":
+                        await HandleChatMessageAsync(eventData, request.MessageId, cancellationToken);
+                        break;
+                    case "channel.update":
+                        await HandleChannelUpdateAsync(eventData, request.MessageId, cancellationToken);
                         break;
                     default:
                         _logger.LogWarning("Unknown EventSub subscription type: {Type}", subscriptionType);
@@ -88,10 +94,11 @@ public class ProcessEventSubCommandHandler : IRequestHandler<ProcessEventSubComm
         return null;
     }
 
-    private async Task HandleStreamOnlineAsync(JsonElement eventData, CancellationToken cancellationToken)
+    private async Task HandleStreamOnlineAsync(JsonElement eventData, string messageId, CancellationToken cancellationToken)
     {
         var eventContract = new StreamOnlineEventContract
         {
+            MessageId = messageId,
             BroadcasterUserId = int.Parse(eventData.GetProperty("broadcaster_user_id").GetString()!),
             BroadcasterUserLogin = eventData.GetProperty("broadcaster_user_login").GetString()!,
             BroadcasterUserName = eventData.GetProperty("broadcaster_user_name").GetString()!,
@@ -103,16 +110,59 @@ public class ProcessEventSubCommandHandler : IRequestHandler<ProcessEventSubComm
         await _transportBus.PublishAsync(eventContract, cancellationToken);
     }
 
-    private async Task HandleStreamOfflineAsync(JsonElement eventData, CancellationToken cancellationToken)
+    private async Task HandleStreamOfflineAsync(JsonElement eventData, string messageId, CancellationToken cancellationToken)
     {
         var eventContract = new StreamOfflineEventContract
         {
+            MessageId = messageId,
             BroadcasterUserId = int.Parse(eventData.GetProperty("broadcaster_user_id").GetString()!),
             BroadcasterUserLogin = eventData.GetProperty("broadcaster_user_login").GetString()!,
             BroadcasterUserName = eventData.GetProperty("broadcaster_user_name").GetString()!
         };
 
         _logger.LogInformation("Publishing stream.offline event for {BroadcasterUserLogin}", eventContract.BroadcasterUserLogin);
+        await _transportBus.PublishAsync(eventContract, cancellationToken);
+    }
+
+    private async Task HandleChatMessageAsync(JsonElement eventData, string messageId, CancellationToken cancellationToken)
+    {
+        var messageText = eventData.GetProperty("message").GetProperty("text").GetString() ?? string.Empty;
+        
+        var eventContract = new ChatMessageEventContract
+        {
+            MessageId = messageId,
+            BroadcasterUserId = eventData.GetProperty("broadcaster_user_id").GetString()!,
+            BroadcasterUserLogin = eventData.GetProperty("broadcaster_user_login").GetString()!,
+            BroadcasterUserName = eventData.GetProperty("broadcaster_user_name").GetString()!,
+            ChatterUserId = eventData.GetProperty("chatter_user_id").GetString()!,
+            ChatterUserLogin = eventData.GetProperty("chatter_user_login").GetString()!,
+            ChatterUserName = eventData.GetProperty("chatter_user_name").GetString()!,
+            MessageText = messageText,
+            CharacterCount = messageText.Length,
+            MessageTimestamp = DateTime.UtcNow // EventSub doesn't provide message timestamp, use current time
+        };
+
+        _logger.LogDebug("Publishing chat message event for broadcaster {BroadcasterUserLogin}, chatter {ChatterUserLogin}", 
+            eventContract.BroadcasterUserLogin, eventContract.ChatterUserLogin);
+        await _transportBus.PublishAsync(eventContract, cancellationToken);
+    }
+
+    private async Task HandleChannelUpdateAsync(JsonElement eventData, string messageId, CancellationToken cancellationToken)
+    {
+        var eventContract = new ChannelUpdateEventContract
+        {
+            MessageId = messageId,
+            BroadcasterUserId = int.Parse(eventData.GetProperty("broadcaster_user_id").GetString()!),
+            BroadcasterUserLogin = eventData.GetProperty("broadcaster_user_login").GetString()!,
+            BroadcasterUserName = eventData.GetProperty("broadcaster_user_name").GetString()!,
+            StreamTitle = eventData.GetProperty("title").GetString()!,
+            Language = eventData.GetProperty("language").GetString()!,
+            CategoryId = eventData.GetProperty("category_id").GetString()!,
+            CategoryName = eventData.GetProperty("category_name").GetString()!
+        };
+
+        _logger.LogInformation("Publishing channel.update event for {BroadcasterUserLogin}, new category: {CategoryName}", 
+            eventContract.BroadcasterUserLogin, eventContract.CategoryName);
         await _transportBus.PublishAsync(eventContract, cancellationToken);
     }
 

@@ -1,4 +1,6 @@
+using MassTransit;
 using Microsoft.Extensions.Logging;
+using MyStreamHistory.Shared.Base.Contracts.TwitchEventSub;
 using MyStreamHistory.TwitchTrackingService.Application.Interfaces;
 using MyStreamHistory.TwitchTrackingService.Domain.Entities;
 
@@ -8,18 +10,24 @@ public class CategoryTrackingService : ICategoryTrackingService
 {
     private readonly ITwitchCategoryRepository _categoryRepository;
     private readonly IStreamCategoryRepository _streamCategoryRepository;
+    private readonly IStreamSessionRepository _streamSessionRepository;
     private readonly ITwitchApiClient _twitchApiClient;
+    private readonly IPublishEndpoint _publishEndpoint;
     private readonly ILogger<CategoryTrackingService> _logger;
 
     public CategoryTrackingService(
         ITwitchCategoryRepository categoryRepository,
         IStreamCategoryRepository streamCategoryRepository,
+        IStreamSessionRepository streamSessionRepository,
         ITwitchApiClient twitchApiClient,
+        IPublishEndpoint publishEndpoint,
         ILogger<CategoryTrackingService> logger)
     {
         _categoryRepository = categoryRepository;
         _streamCategoryRepository = streamCategoryRepository;
+        _streamSessionRepository = streamSessionRepository;
         _twitchApiClient = twitchApiClient;
+        _publishEndpoint = publishEndpoint;
         _logger = logger;
     }
 
@@ -69,8 +77,8 @@ public class CategoryTrackingService : ICategoryTrackingService
                     {
                         TwitchId = game.Id,
                         Name = game.Name,
-                        BoxArtUrl = game.Box_Art_Url,
-                        IgdbId = game.Igdb_Id
+                        BoxArtUrl = game.BoxArtUrl,
+                        IgdbId = game.IgdbId
                     }).ToList();
 
                     await _categoryRepository.AddRangeAsync(newCategories, cancellationToken);
@@ -118,6 +126,14 @@ public class CategoryTrackingService : ICategoryTrackingService
 
             try
             {
+                // Get StreamSession to obtain BroadcasterUserId for event publishing
+                var streamSession = await _streamSessionRepository.GetByIdAsync(streamSessionId, cancellationToken);
+                if (streamSession == null)
+                {
+                    _logger.LogWarning("StreamSession {StreamSessionId} not found during polling", streamSessionId);
+                    continue;
+                }
+
                 // Get active segment for this stream
                 var activeSegment = await _streamCategoryRepository.GetActiveSegmentByStreamIdAsync(streamSessionId, cancellationToken);
 
@@ -137,10 +153,15 @@ public class CategoryTrackingService : ICategoryTrackingService
                     
                     _logger.LogDebug("Created new segment for stream {StreamSessionId}, category {CategoryName}", 
                         streamSessionId, category.Name);
+
+                    // Publish event with StreamCategory.Id (not TwitchCategory.Id)
+                    await PublishCategoryChangedEventAsync(streamSessionId, streamSession.TwitchUserId, null, newSegment.Id, category.Name, currentTime, cancellationToken);
                 }
                 else if (activeSegment.TwitchCategoryId != category.Id)
                 {
                     // Category changed - close old segment and create new one
+                    var oldStreamCategoryId = activeSegment.Id; // Use StreamCategory.Id, not TwitchCategory.Id
+                    
                     await _streamCategoryRepository.CloseSegmentAsync(activeSegment.Id, currentTime, cancellationToken);
                     segmentsClosed++;
 
@@ -157,6 +178,9 @@ public class CategoryTrackingService : ICategoryTrackingService
                     
                     _logger.LogInformation("Category changed for stream {StreamSessionId}: {OldCategory} -> {NewCategory}", 
                         streamSessionId, activeSegment.TwitchCategory?.Name ?? "Unknown", category.Name);
+
+                    // Publish event with StreamCategory.Id (not TwitchCategory.Id)
+                    await PublishCategoryChangedEventAsync(streamSessionId, streamSession.TwitchUserId, oldStreamCategoryId, newSegment.Id, category.Name, currentTime, cancellationToken);
                 }
                 else
                 {
@@ -177,6 +201,154 @@ public class CategoryTrackingService : ICategoryTrackingService
         _logger.LogInformation(
             "Category processing complete. Segments: {Created} created, {Closed} closed, {Updated} updated",
             segmentsCreated, segmentsClosed, segmentsUpdated);
+    }
+
+    public async Task<bool> ProcessSingleStreamCategoryAsync(Guid streamSessionId, string categoryId, string categoryName, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(categoryId))
+        {
+            _logger.LogDebug("Empty category ID for stream {StreamSessionId}", streamSessionId);
+            return false;
+        }
+
+        try
+        {
+            // Get StreamSession to obtain BroadcasterUserId
+            var streamSession = await _streamSessionRepository.GetByIdAsync(streamSessionId, cancellationToken);
+            if (streamSession == null)
+            {
+                _logger.LogWarning("StreamSession {StreamSessionId} not found", streamSessionId);
+                return false;
+            }
+            // Check if category exists in DB
+            var categories = await _categoryRepository.GetByTwitchIdsAsync(new List<string> { categoryId }, cancellationToken);
+            var category = categories.FirstOrDefault();
+
+            if (category == null)
+            {
+                // Fetch from Twitch API
+                _logger.LogInformation("Fetching new category {CategoryId} from Twitch API", categoryId);
+                
+                var gameData = await _twitchApiClient.GetGamesAsync(new List<string> { categoryId }, cancellationToken);
+                
+                if (gameData.Count > 0)
+                {
+                    category = new TwitchCategory
+                    {
+                        TwitchId = gameData[0].Id,
+                        Name = gameData[0].Name,
+                        BoxArtUrl = gameData[0].BoxArtUrl,
+                        IgdbId = gameData[0].IgdbId
+                    };
+
+                    await _categoryRepository.AddRangeAsync(new List<TwitchCategory> { category }, cancellationToken);
+                    _logger.LogInformation("Saved new category {CategoryName} to database", category.Name);
+                }
+                else
+                {
+                    _logger.LogWarning("Twitch API returned no data for category {CategoryId}, using provided name", categoryId);
+                    
+                    // Create category with provided name
+                    category = new TwitchCategory
+                    {
+                        TwitchId = categoryId,
+                        Name = categoryName,
+                        BoxArtUrl = string.Empty,
+                        IgdbId = null
+                    };
+                    
+                    await _categoryRepository.AddRangeAsync(new List<TwitchCategory> { category }, cancellationToken);
+                }
+            }
+
+            // Get active segment for this stream
+            var activeSegment = await _streamCategoryRepository.GetActiveSegmentByStreamIdAsync(streamSessionId, cancellationToken);
+            var currentTime = DateTime.UtcNow;
+
+            if (activeSegment == null)
+            {
+                // No active segment - create new one
+                var newSegment = new StreamCategory
+                {
+                    StreamSessionId = streamSessionId,
+                    TwitchCategoryId = category.Id,
+                    StartedAt = currentTime,
+                    EndedAt = null
+                };
+
+                await _streamCategoryRepository.CreateSegmentAsync(newSegment, cancellationToken);
+                
+                _logger.LogInformation("Created new category segment for stream {StreamSessionId}, category {CategoryName}", 
+                    streamSessionId, category.Name);
+
+                // Publish event with StreamCategory.Id (not TwitchCategory.Id)
+                await PublishCategoryChangedEventAsync(streamSessionId, streamSession.TwitchUserId, null, newSegment.Id, category.Name, currentTime, cancellationToken);
+                
+                return true;
+            }
+            else if (activeSegment.TwitchCategoryId != category.Id)
+            {
+                // Category changed - close old segment and create new one
+                var oldStreamCategoryId = activeSegment.Id; // Use StreamCategory.Id, not TwitchCategory.Id
+                
+                await _streamCategoryRepository.CloseSegmentAsync(activeSegment.Id, currentTime, cancellationToken);
+
+                var newSegment = new StreamCategory
+                {
+                    StreamSessionId = streamSessionId,
+                    TwitchCategoryId = category.Id,
+                    StartedAt = currentTime,
+                    EndedAt = null
+                };
+
+                await _streamCategoryRepository.CreateSegmentAsync(newSegment, cancellationToken);
+                
+                _logger.LogInformation("Category changed for stream {StreamSessionId}: {OldCategory} -> {NewCategory}", 
+                    streamSessionId, activeSegment.TwitchCategory?.Name ?? "Unknown", category.Name);
+
+                // Publish event with StreamCategory.Id (not TwitchCategory.Id)
+                await PublishCategoryChangedEventAsync(streamSessionId, streamSession.TwitchUserId, oldStreamCategoryId, newSegment.Id, category.Name, currentTime, cancellationToken);
+                
+                return true;
+            }
+            else
+            {
+                // Same category - no action needed
+                _logger.LogDebug("Category unchanged for stream {StreamSessionId}, category {CategoryName}", 
+                    streamSessionId, category.Name);
+                return false;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error processing category change for stream {StreamSessionId}", streamSessionId);
+            throw;
+        }
+    }
+
+    private async Task PublishCategoryChangedEventAsync(
+        Guid streamSessionId,
+        int broadcasterUserId,
+        Guid? oldCategoryId, 
+        Guid newCategoryId, 
+        string categoryName, 
+        DateTime changedAt,
+        CancellationToken cancellationToken)
+    {
+        var eventContract = new StreamCategoryChangedEventContract
+        {
+            MessageId = Guid.NewGuid().ToString(),
+            StreamSessionId = streamSessionId,
+            BroadcasterUserId = broadcasterUserId,
+            OldCategoryId = oldCategoryId,
+            NewCategoryId = newCategoryId,
+            CategoryName = categoryName,
+            ChangedAt = changedAt
+        };
+
+        await _publishEndpoint.Publish(eventContract, cancellationToken);
+        
+        _logger.LogInformation("Published StreamCategoryChangedEvent for stream {StreamSessionId}", streamSessionId);
     }
 }
 

@@ -1,0 +1,94 @@
+<div class="stream-detail-container" *ngIf="!isLoading && streamDetails">
+  <!-- Stream Header -->
+  <div class="stream-header">
+    <div class="streamer-profile-section">
+      <img 
+        [src]="streamDetails.streamerAvatarUrl || getTwitchProfileImage(streamDetails.twitchUserId.toString())" 
+        alt="{{ streamDetails.streamerDisplayName }}"
+        class="streamer-avatar"
+      />
+      <div class="streamer-info-wrapper">
+        <h1 class="streamer-name">{{ streamDetails.streamerDisplayName }}</h1>
+        <button class="btn-view-profile" (click)="navigateToStreamerProfile()">
+          view streamer profile ›
+        </button>
+      </div>
+    </div>
+    
+    <div class="stream-meta">
+      <div class="meta-item">
+        <span class="meta-label">Date</span>
+        <span class="meta-value">{{ formatDateShort(streamDetails.startedAt) }}</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Duration</span>
+        <span class="meta-value">{{ formatTotalMinutes(streamDetails.startedAt, streamDetails.endedAt) }} minutes</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="content-wrapper">
+    <!-- Categories Section -->
+    <div class="categories-section">
+      <h2 class="section-title">Categories:</h2>
+      <div class="categories-grid">
+        <div class="category-card" *ngFor="let category of streamDetails.categories">
+          <div class="category-image-wrapper">
+            <img 
+              [src]="getCategoryBoxArt(category.boxArtUrl, 285, 380)" 
+              alt="{{ category.name }}"
+              class="category-image"
+            />
+          </div>
+          <div class="category-details">
+            <h3 class="category-name">{{ category.name }}</h3>
+            <div class="category-stats">
+              <div class="category-stat">
+                <span class="stat-icon">⏱</span>
+                <span class="stat-label">Duration</span>
+                <span class="stat-value">{{ category.durationMinutes }} minutes</span>
+              </div>
+              <div class="category-stat">
+                <span class="stat-icon">👁</span>
+                <span class="stat-label">Viewers count</span>
+                <span class="stat-value">{{ category.uniqueViewers }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Viewers Sidebar -->
+    <div class="viewers-section">
+      <h2 class="section-title">Viewers <span class="viewers-count">({{ streamDetails.viewers.length }})</span></h2>
+      <div class="viewers-list">
+        <div class="viewer-card" *ngFor="let viewer of streamDetails.viewers; let i = index">
+          <div class="viewer-rank">{{ i + 1 }}</div>
+          <img 
+            [src]="viewer.profileImageUrl || getTwitchProfileImage(viewer.twitchUserId)" 
+            alt="{{ viewer.displayName }}"
+            class="viewer-avatar"
+          />
+          <div class="viewer-details">
+            <div class="viewer-name">{{ viewer.displayName }}</div>
+            <div class="viewer-stats">
+              <span class="viewer-stat-item">{{ formatHours(viewer.minutesWatched) }} hours</span>
+              <span class="viewer-stat-item">{{ formatPoints(viewer.chatPoints) }} msg pts</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="loading-container" *ngIf="isLoading">
+  <div class="spinner"></div>
+  <p>Loading stream details...</p>
+</div>
+
+<div class="error-container" *ngIf="error && !isLoading">
+  <p class="error-message">{{ error }}</p>
+  <button class="btn-retry" (click)="loadStreamDetails()">Retry</button>
+</div>
