@@ -47,8 +47,8 @@ public class TwitchEventSubClient : ITwitchEventSubClient
             transport = new
             {
                 method = "webhook",
-                callback = $"https://warrior-switches-enterprises-queens.trycloudflare.com/api/eventsub/callback", // This should be configured
-                secret = "your-eventsub-secret-key-here-min-10-chars" // This should be configured
+                callback = _options.EventSubCallbackUrl,
+                secret = _options.EventSubSecret
             }
         };
 

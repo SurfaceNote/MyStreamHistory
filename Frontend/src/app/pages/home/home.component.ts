@@ -47,7 +47,7 @@ export class HomeComponent implements OnInit, OnDestroy {
       })
     );
 
-    // Загружаем список новых стримеров
+    // Load list of new streamers
     this.loadStreamers();
   }
 
