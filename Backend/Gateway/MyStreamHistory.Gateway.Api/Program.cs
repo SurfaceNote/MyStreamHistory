@@ -65,7 +65,7 @@ builder.Services.AddCors(options =>
 builder.Services.AddCors(o =>
 {
     o.AddPolicy("ExtDev", p => p
-        .WithOrigins("https://*.trycloudflare.com")
+        .WithOrigins("https://*.trycloudflare.com", "https://0fowmr0pl34smxhy55n0wj5fx5o9mn.ext-twitch.tv")
         .SetIsOriginAllowedToAllowWildcardSubdomains()
         .AllowAnyHeader()
         .AllowAnyMethod());
