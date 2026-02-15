@@ -54,11 +54,21 @@ builder.Services.AddCors(options =>
                 "http://localhost:4200",
                 "https://localhost:4200",
                 "http://mystreamhistory.com",
-                "https://mystreamhistory.com")
+                "https://mystreamhistory.com",
+                "")
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials()
         );
+});
+
+builder.Services.AddCors(o =>
+{
+    o.AddPolicy("ExtDev", p => p
+        .WithOrigins("https://*.trycloudflare.com")
+        .SetIsOriginAllowedToAllowWildcardSubdomains()
+        .AllowAnyHeader()
+        .AllowAnyMethod());
 });
 
 builder.Services.AddAutoMapperProfiles()
@@ -102,6 +112,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.UseCors("Frontend");
+app.UseCors("ExtDev");
 
 app.UseGlobalExceptionHandler();
 app.UseAppExceptionHandler();
