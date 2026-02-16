@@ -7,7 +7,6 @@ import { Subscription } from 'rxjs';
 import { StreamSession } from '../../models/stream-session.model';
 import { ViewerStats } from '../../models/viewer-stats.model';
 import { CommonModule } from '@angular/common';
-import { SettingsService } from '../../service/settings.service';
 import { SocialLink } from '../../models/social-link.model';
 
 @Component({
@@ -28,7 +27,6 @@ export class StreamerProfileComponent implements OnInit, OnDestroy {
   private routeSub: Subscription | null = null;
 
   private streamerService = inject(StreamerService);
-  private settingsService = inject(SettingsService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
 
@@ -47,7 +45,7 @@ export class StreamerProfileComponent implements OnInit, OnDestroy {
 
   loadSocialLinks(): void {
     this.isLoadingSocialLinks = true;
-    this.settingsService.getSocialLinks().subscribe({
+    this.streamerService.getSocialLinksByTwitchId(this.twitchId).subscribe({
       next: (response) => {
         this.socialLinks = response.socialLinks;
         this.isLoadingSocialLinks = false;

@@ -20,7 +20,7 @@ export interface GetSocialLinksResponse {
 }
 
 export interface UpdateSocialLinksRequest {
-  socialLinks: SocialLink[];
+  socialLink: SocialLink;
 }
 
 export interface UpdateSocialLinksResponse {

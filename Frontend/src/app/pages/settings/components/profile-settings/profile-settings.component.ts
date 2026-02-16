@@ -153,15 +153,13 @@ export class ProfileSettingsComponent implements OnInit {
     link.error = undefined;
     this.globalSuccessMessage = '';
 
-    const linksToSave = Array.from(this.socialLinks.values())
-      .filter(l => l.path && l.path.trim())
-      .map(l => ({
-        socialNetworkType: l.socialNetworkType,
-        path: l.path.trim(),
-        fullUrl: l.fullUrl
-      }));
+    const linkToSave = {
+      socialNetworkType: link.socialNetworkType,
+      path: link.path.trim(),
+      fullUrl: link.fullUrl
+    };
 
-    this.settingsService.updateSocialLinks({ socialLinks: linksToSave }).subscribe({
+    this.settingsService.updateSocialLinks({ socialLink: linkToSave }).subscribe({
       next: (response) => {
         if (response.success) {
           link.isEditing = false;
@@ -241,26 +239,24 @@ export class ProfileSettingsComponent implements OnInit {
       link.error = undefined;
     }
 
-    this.socialLinks.delete(type);
     this.globalSuccessMessage = '';
 
-    const linksToSave = Array.from(this.socialLinks.values())
-      .filter(l => l.path && l.path.trim())
-      .map(l => ({
-        socialNetworkType: l.socialNetworkType,
-        path: l.path.trim(),
-        fullUrl: l.fullUrl
-      }));
+    // Send empty path to signal deletion
+    const linkToDelete = {
+      socialNetworkType: type,
+      path: '',
+      fullUrl: ''
+    };
 
-    this.settingsService.updateSocialLinks({ socialLinks: linksToSave }).subscribe({
+    this.settingsService.updateSocialLinks({ socialLink: linkToDelete }).subscribe({
       next: (response) => {
         if (response.success) {
+          this.socialLinks.delete(type);
           this.globalSuccessMessage = 'Link successfully deleted';
           setTimeout(() => this.globalSuccessMessage = '', 3000);
         } else {
           // Restore the link if deletion failed
           if (link) {
-            this.socialLinks.set(type, link);
             link.error = response.error || 'Failed to delete link';
             link.isSaving = false;
           }
@@ -270,8 +266,6 @@ export class ProfileSettingsComponent implements OnInit {
         console.error('Failed to delete social link', err);
         // Restore the link if deletion failed
         if (link) {
-          this.socialLinks.set(type, link);
-          
           // Try to extract error message from different possible locations
           let errorMessage = 'Failed to delete link';
           

@@ -13,12 +13,12 @@ public class UpdateSocialLinksCommandHandler(ITransportBus bus)
 {
     public async Task<UpdateSocialLinksResponseDto> Handle(UpdateSocialLinksCommand request, CancellationToken cancellationToken)
     {
-        var contractLinks = request.SocialLinks.Select(sl => new Shared.Base.Contracts.Auth.SocialLinkDto
+        var contractLink = new Shared.Base.Contracts.Auth.SocialLinkDto
         {
-            SocialNetworkType = sl.SocialNetworkType,
-            Path = sl.Path,
-            FullUrl = sl.FullUrl
-        }).ToList();
+            SocialNetworkType = request.SocialLink.SocialNetworkType,
+            Path = request.SocialLink.Path,
+            FullUrl = request.SocialLink.FullUrl
+        };
 
         var response = await bus.SendRequestAsync<
             UpdateSocialLinksRequestContract, 
@@ -28,7 +28,7 @@ public class UpdateSocialLinksCommandHandler(ITransportBus bus)
             new UpdateSocialLinksRequestContract 
             { 
                 UserId = request.UserId,
-                SocialLinks = contractLinks
+                SocialLink = contractLink
             }, 
             cancellationToken
         );

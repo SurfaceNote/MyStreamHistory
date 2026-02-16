@@ -10,6 +10,8 @@ namespace MyStreamHistory.Shared.Api.Mapping
             [ErrorCodes.AlreadyExist] = 409,
             [ErrorCodes.PermissionDenied] = 403,
             [ErrorCodes.InvalidCredentials] = 401,
+            [ErrorCodes.InvalidToken] = 401,
+            [ErrorCodes.TokenExpired] = 401,
             [ErrorCodes.RegistrationTimeout] = 504,
             [ErrorCodes.InternalError] = 500,
         };

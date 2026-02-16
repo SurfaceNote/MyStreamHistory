@@ -28,6 +28,10 @@ export class HeaderComponent implements OnInit, OnDestroy {
     this.subscriptions.add(
       this.authService.getAccessTokenObservable().subscribe(token => {
         this.isLoggedIn = !!token;
+        if (this.isLoggedIn) {
+          this.username = this.authService.getUsernameFromToken();
+          this.twitchId = this.authService.getTwitchIdFromToken();
+        }
       })
     );
 

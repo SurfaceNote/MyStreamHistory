@@ -54,11 +54,11 @@ builder.Services.AddCors(options =>
                 "http://localhost:4200",
                 "https://localhost:4200",
                 "http://mystreamhistory.com",
-                "https://mystreamhistory.com",
-                "")
+                "https://mystreamhistory.com")
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials()
+            .WithExposedHeaders("*")
         );
 });
 
@@ -98,21 +98,73 @@ builder.Services.AddAuthentication(options =>
             IssuerSigningKey = new SymmetricSecurityKey(
                 Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
         };
+        
+        // Handle authentication failures for refresh-token endpoint
+        options.Events = new JwtBearerEvents
+        {
+            OnAuthenticationFailed = context =>
+            {
+                // For refresh-token endpoint, allow expired tokens
+                if (context.Request.Path.StartsWithSegments("/auth/refresh-token"))
+                {
+                    // Only ignore lifetime validation errors
+                    if (context.Exception is SecurityTokenExpiredException)
+                    {
+                        // Manually validate the expired token
+                        var tokenHandler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
+                        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!));
+                        
+                        var validationParameters = new TokenValidationParameters
+                        {
+                            ValidateIssuer = true,
+                            ValidateAudience = true,
+                            ValidateLifetime = false, // Ignore expiration
+                            ValidateIssuerSigningKey = true,
+                            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+                            ValidAudience = builder.Configuration["Jwt:Audience"],
+                            IssuerSigningKey = key
+                        };
+                        
+                        try
+                        {
+                            var token = context.Request.Headers["Authorization"].ToString().Replace("Bearer ", "");
+                            var principal = tokenHandler.ValidateToken(token, validationParameters, out _);
+                            context.Principal = principal;
+                            context.Success();
+                        }
+                        catch
+                        {
+                            // If validation fails for other reasons, keep the original failure
+                        }
+                    }
+                }
+                
+                return Task.CompletedTask;
+            }
+        };
     });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("AllowExpiredJwt", policy =>
+    {
+        policy.RequireAuthenticatedUser();
+    });
+});
 
 var app = builder.Build();
 
 app.UseForwardedHeaders();
 
+// CORS должен быть ПЕРЕД Authentication/Authorization
+// чтобы CORS заголовки добавлялись даже к 401 ответам
+app.UseCors("Frontend");
+app.UseCors("ExtDev");
+
 app.UseRouting();
 
 app.UseAuthentication();
 app.UseAuthorization();
-
-app.UseCors("Frontend");
-app.UseCors("ExtDev");
 
 app.UseGlobalExceptionHandler();
 app.UseAppExceptionHandler();

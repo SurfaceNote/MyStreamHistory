@@ -25,7 +25,7 @@ public class SettingsController(IMediator mediator) : ApiControllerBase
         return this.Success(result);
     }
 
-    [HttpPut("social-links")]
+    [HttpPatch("social-links")]
     [ProducesResponseType(typeof(ApiResultContainer<UpdateSocialLinksResponseDto>), 200)]
     [ProducesResponseType(typeof(ApiResultContainer), 400)]
     [ProducesResponseType(typeof(ApiResultContainer), 401)]
@@ -33,7 +33,7 @@ public class SettingsController(IMediator mediator) : ApiControllerBase
     public async Task<ActionResult<ApiResultContainer<UpdateSocialLinksResponseDto>>> UpdateSocialLinks(
         [FromBody] UpdateSocialLinksRequestDto request)
     {
-        var command = new UpdateSocialLinksCommand(UserId, request.SocialLinks);
+        var command = new UpdateSocialLinksCommand(UserId, request.SocialLink);
         var result = await mediator.Send(command);
         
         if (!result.Success)

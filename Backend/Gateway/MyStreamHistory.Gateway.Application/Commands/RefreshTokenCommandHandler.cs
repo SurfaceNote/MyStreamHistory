@@ -18,11 +18,17 @@ public class RefreshTokenCommandHandler(ITransportBus bus) : IRequestHandler<Ref
             throw new AppException(ErrorCodes.InvalidCredentials);
         }
 
+        if (request.UserId == Guid.Empty)
+        {
+            throw new AppException(ErrorCodes.InvalidCredentials);
+        }
+
         var response =
             await bus
                 .SendRequestAsync<RefreshTokenRequestContract, RefreshTokenResponseContract,
                     BaseFailedResponseContract>(new RefreshTokenRequestContract
                 {
+                    UserId = request.UserId,
                     Token = request.Token
                 });
 

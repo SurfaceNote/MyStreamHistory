@@ -21,7 +21,7 @@ export class SettingsService {
   }
 
   updateSocialLinks(request: UpdateSocialLinksRequest): Observable<UpdateSocialLinksResponse> {
-    return this.http.put<ApiResponse<UpdateSocialLinksResponse>>(
+    return this.http.patch<ApiResponse<UpdateSocialLinksResponse>>(
       API_ENDPOINTS.SETTINGS.SOCIAL_LINKS,
       request
     ).pipe(

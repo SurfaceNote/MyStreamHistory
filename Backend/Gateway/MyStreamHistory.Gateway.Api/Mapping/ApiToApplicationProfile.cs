@@ -10,7 +10,7 @@ public class ApiToApplicationProfile : Profile
     public ApiToApplicationProfile()
     {
         CreateMap<TwitchCallbackRequest, TwitchCallbackCommand>();
-        CreateMap<RefreshTokenRequest, RefreshTokenCommand>();
+        // RefreshTokenCommand создается вручную в контроллере с UserId из JWT claims
 
         CreateMap<TwitchCallbackResultDto, TwitchCallbackResponse>();
         CreateMap<RefreshTokenResultDto, RefreshTokenResponse>();

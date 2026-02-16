@@ -20,40 +20,38 @@ public class UpdateSocialLinksConsumer : IConsumer<UpdateSocialLinksRequestContr
 
     public async Task Consume(ConsumeContext<UpdateSocialLinksRequestContract> context)
     {
-        _logger.LogInformation("Received request to update social links for user {UserId}", context.Message.UserId);
+        _logger.LogInformation("Received request to update social link for user {UserId}, type: {Type}", 
+            context.Message.UserId, context.Message.SocialLink.SocialNetworkType);
 
         try
         {
-            var existingLinks = await _socialLinkService.GetSocialLinksByUserIdAsync(context.Message.UserId);
-            var requestedTypes = context.Message.SocialLinks
-                .Select(sl => Enum.Parse<SocialNetworkType>(sl.SocialNetworkType))
-                .ToHashSet();
-
-            // Обработка каждой ссылки из запроса
-            foreach (var linkDto in context.Message.SocialLinks)
+            var linkDto = context.Message.SocialLink;
+            
+            if (!Enum.TryParse<SocialNetworkType>(linkDto.SocialNetworkType, out var type))
             {
-                if (!Enum.TryParse<SocialNetworkType>(linkDto.SocialNetworkType, out var type))
+                _logger.LogWarning("Invalid social network type: {Type}", linkDto.SocialNetworkType);
+                await context.RespondAsync(new UpdateSocialLinksResponseContract
                 {
-                    _logger.LogWarning("Invalid social network type: {Type}", linkDto.SocialNetworkType);
-                    await context.RespondAsync(new UpdateSocialLinksResponseContract
-                    {
-                        Success = false,
-                        Error = $"Invalid social network type: {linkDto.SocialNetworkType}"
-                    });
-                    return;
-                }
+                    Success = false,
+                    Error = $"Invalid social network type: {linkDto.SocialNetworkType}"
+                });
+                return;
+            }
 
-                var existingLink = existingLinks.FirstOrDefault(el => el.SocialNetworkType == type);
+            var existingLinks = await _socialLinkService.GetSocialLinksByUserIdAsync(context.Message.UserId);
+            var existingLink = existingLinks.FirstOrDefault(el => el.SocialNetworkType == type);
 
+            // Если путь пустой или null, это запрос на удаление
+            if (string.IsNullOrWhiteSpace(linkDto.Path))
+            {
                 if (existingLink != null)
                 {
-                    // Обновление существующей ссылки
-                    var (success, error) = await _socialLinkService.UpdateSocialLinkAsync(
-                        context.Message.UserId, type, linkDto.Path);
+                    var (success, error) = await _socialLinkService.DeleteSocialLinkAsync(
+                        context.Message.UserId, type);
 
                     if (!success)
                     {
-                        _logger.LogWarning("Failed to update social link {Type}: {Error}", type, error);
+                        _logger.LogWarning("Failed to delete social link {Type}: {Error}", type, error);
                         await context.RespondAsync(new UpdateSocialLinksResponseContract
                         {
                             Success = false,
@@ -61,60 +59,72 @@ public class UpdateSocialLinksConsumer : IConsumer<UpdateSocialLinksRequestContr
                         });
                         return;
                     }
+                    
+                    _logger.LogInformation("Successfully deleted social link for user {UserId}, type: {Type}", 
+                        context.Message.UserId, type);
                 }
                 else
                 {
-                    // Добавление новой ссылки
-                    var (success, error) = await _socialLinkService.AddSocialLinkAsync(
-                        context.Message.UserId, type, linkDto.Path);
-
-                    if (!success)
-                    {
-                        _logger.LogWarning("Failed to add social link {Type}: {Error}", type, error);
-                        await context.RespondAsync(new UpdateSocialLinksResponseContract
-                        {
-                            Success = false,
-                            Error = error
-                        });
-                        return;
-                    }
+                    // Ссылка уже не существует, считаем успехом
+                    _logger.LogInformation("Social link {Type} already doesn't exist for user {UserId}", 
+                        type, context.Message.UserId);
                 }
             }
-
-            // Удаление ссылок, которых нет в запросе (кроме Twitch)
-            foreach (var existingLink in existingLinks)
+            else if (existingLink != null)
             {
-                if (!requestedTypes.Contains(existingLink.SocialNetworkType) && 
-                    existingLink.SocialNetworkType != SocialNetworkType.Twitch)
-                {
-                    var (success, error) = await _socialLinkService.DeleteSocialLinkAsync(
-                        context.Message.UserId, existingLink.SocialNetworkType);
+                // Обновление существующей ссылки
+                var (success, error) = await _socialLinkService.UpdateSocialLinkAsync(
+                    context.Message.UserId, type, linkDto.Path);
 
-                    if (!success)
+                if (!success)
+                {
+                    _logger.LogWarning("Failed to update social link {Type}: {Error}", type, error);
+                    await context.RespondAsync(new UpdateSocialLinksResponseContract
                     {
-                        _logger.LogWarning("Failed to delete social link {Type}: {Error}", 
-                            existingLink.SocialNetworkType, error);
-                    }
+                        Success = false,
+                        Error = error
+                    });
+                    return;
                 }
+                
+                _logger.LogInformation("Successfully updated social link for user {UserId}, type: {Type}", 
+                    context.Message.UserId, type);
+            }
+            else
+            {
+                // Добавление новой ссылки
+                var (success, error) = await _socialLinkService.AddSocialLinkAsync(
+                    context.Message.UserId, type, linkDto.Path);
+
+                if (!success)
+                {
+                    _logger.LogWarning("Failed to add social link {Type}: {Error}", type, error);
+                    await context.RespondAsync(new UpdateSocialLinksResponseContract
+                    {
+                        Success = false,
+                        Error = error
+                    });
+                    return;
+                }
+                
+                _logger.LogInformation("Successfully added social link for user {UserId}, type: {Type}", 
+                    context.Message.UserId, type);
             }
 
             await context.RespondAsync(new UpdateSocialLinksResponseContract
             {
                 Success = true
             });
-
-            _logger.LogInformation("Successfully updated social links for user {UserId}", context.Message.UserId);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error while updating social links for user {UserId}", context.Message.UserId);
+            _logger.LogError(ex, "Error while updating social link for user {UserId}", context.Message.UserId);
             
             await context.RespondAsync(new UpdateSocialLinksResponseContract
             {
                 Success = false,
-                Error = $"Error updating social links: {ex.Message}"
+                Error = $"Error updating social link: {ex.Message}"
             });
         }
     }
 }
-

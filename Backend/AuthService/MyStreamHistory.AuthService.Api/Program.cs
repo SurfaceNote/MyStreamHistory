@@ -20,6 +20,7 @@ builder.Services.AddInfrastructure(builder.Configuration)
     .AddMassTransit(configureConsumers: configurator =>
     {
         configurator.AddConsumer<TwitchAuthorizeConsumer>();
+        configurator.AddConsumer<RefreshTokenConsumer>();
         configurator.AddConsumer<GetNewUsersConsumer>();
         configurator.AddConsumer<GetAllUsersConsumer>();
         configurator.AddConsumer<GetUserByTwitchIdConsumer>();
@@ -27,6 +28,7 @@ builder.Services.AddInfrastructure(builder.Configuration)
         configurator.AddConsumer<RefreshTwitchAccessTokenConsumer>();
         configurator.AddConsumer<GetAppAccessTokenConsumer>();
         configurator.AddConsumer<GetSocialLinksConsumer>();
+        configurator.AddConsumer<GetSocialLinksByTwitchIdConsumer>();
         configurator.AddConsumer<UpdateSocialLinksConsumer>();
     });
 

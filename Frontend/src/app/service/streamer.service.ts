@@ -9,6 +9,7 @@ import { unwrapData } from "../core/api/api-operators";
 import { StreamSession } from "../models/stream-session.model";
 import { StreamDetails } from "../models/stream-details.model";
 import { ViewerStats } from "../models/viewer-stats.model";
+import { GetSocialLinksResponse } from "../models/social-link.model";
 
 @Injectable({
     providedIn: 'root'
@@ -52,5 +53,11 @@ export class StreamerService {
         const url = API_ENDPOINTS.TOP_VIEWERS(twitchId, limit);
         return this.http.get<ApiResponse<ViewerStats[]>>(url, {withCredentials: true})
             .pipe(unwrapData<ViewerStats[]>());
+    }
+
+    getSocialLinksByTwitchId(twitchId: number): Observable<GetSocialLinksResponse> {
+        const url = API_ENDPOINTS.SOCIAL_LINKS_PUBLIC(twitchId);
+        return this.http.get<ApiResponse<GetSocialLinksResponse>>(url, {withCredentials: true})
+            .pipe(unwrapData<GetSocialLinksResponse>());
     }
 };
