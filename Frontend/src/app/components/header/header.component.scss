@@ -143,10 +143,10 @@ header .auth {
         }
     }
 
-    div {
+    .user-menu {
         display: flex;
         align-items: center;
-        gap: 0.5rem;
+        gap: 1rem;
         color: $text-2-color;
         font-size: 0.875rem;
         
@@ -156,6 +156,32 @@ header .auth {
             
             &:hover {
                 color: $purple-color;
+            }
+        }
+
+        .settings-btn {
+            padding: 0.5rem 0.75rem;
+            background: $purple-color;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            i {
+                color: $text-1-color;
+                font-size: 1rem;
+            }
+
+            &:hover {
+                background: darken($purple-color, 10%);
+                transform: scale(1.05);
+            }
+
+            &:active {
+                transform: scale(0.95);
             }
         }
     }

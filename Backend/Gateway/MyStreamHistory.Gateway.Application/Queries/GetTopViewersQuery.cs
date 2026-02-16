@@ -9,3 +9,5 @@ public class GetTopViewersQuery : IRequest<List<ViewerStatsDto>>
     public int Limit { get; set; } = 100;
 }
 
+
+

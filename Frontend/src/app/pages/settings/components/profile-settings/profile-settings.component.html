@@ -1,0 +1,107 @@
+<div class="profile-settings">
+  <h2 class="section-title">Profile</h2>
+  <p class="section-description">Manage your social media links</p>
+
+  <div *ngIf="globalSuccessMessage" class="alert alert-success">
+    <i class="fa fa-check-circle"></i>
+    {{ globalSuccessMessage }}
+  </div>
+
+  <div *ngIf="isLoading" class="loading">
+    <i class="fa fa-spinner fa-spin"></i>
+    Loading...
+  </div>
+
+  <div *ngIf="!isLoading" class="social-links-list">
+    <div *ngFor="let network of socialNetworks" class="social-link-item">
+      <div class="social-icon">
+        <i class="fab" [ngClass]="network.icon"></i>
+      </div>
+
+      <div class="social-content">
+        <label class="social-label">{{ network.label }}</label>
+        
+        <div class="social-row">
+          <div class="social-input-group">
+            <span class="domain-prefix">{{ network.domain }}</span>
+            
+            <input
+              *ngIf="getLink(network.type) || getLink(network.type)?.isEditing"
+              type="text"
+              class="social-input"
+              [value]="getLink(network.type)?.path || ''"
+              (input)="getLink(network.type)!.path = $any($event.target).value"
+              [placeholder]="network.placeholder"
+              [readonly]="isReadonly(network) || !getLink(network.type)?.isEditing"
+              [class.readonly]="isReadonly(network) || !getLink(network.type)?.isEditing"
+            />
+            
+            <span *ngIf="!getLink(network.type)" class="no-link-text">
+              Not specified
+            </span>
+          </div>
+
+          <div class="social-actions">
+            <!-- If link doesn't exist -->
+            <button 
+              *ngIf="!getLink(network.type) && !isReadonly(network)"
+              class="btn btn-primary"
+              (click)="startAdding(network.type)"
+              [disabled]="getLink(network.type)?.isSaving">
+              <i class="fa fa-plus"></i>
+              Add
+            </button>
+
+            <!-- If link exists and not editing -->
+            <ng-container *ngIf="getLink(network.type) && !getLink(network.type)?.isEditing && !isReadonly(network)">
+              <button 
+                class="btn btn-secondary"
+                (click)="startEditing(network.type)"
+                [disabled]="getLink(network.type)?.isSaving">
+                <i class="fa fa-edit"></i>
+                Edit
+              </button>
+              
+              <button 
+                class="btn btn-danger"
+                (click)="deleteLink(network.type)"
+                [disabled]="getLink(network.type)?.isSaving">
+                <i class="fa fa-trash"></i>
+                Delete
+              </button>
+            </ng-container>
+
+            <!-- If link is being edited -->
+            <ng-container *ngIf="getLink(network.type)?.isEditing && !isReadonly(network)">
+              <button 
+                class="btn btn-success"
+                (click)="saveLink(network.type)"
+                [disabled]="getLink(network.type)?.isSaving || !getLink(network.type)?.path?.trim()">
+                <i class="fa fa-save"></i>
+                Save
+              </button>
+              
+              <button 
+                class="btn btn-secondary"
+                (click)="cancelEditing(network.type)"
+                [disabled]="getLink(network.type)?.isSaving">
+                <i class="fa fa-times"></i>
+                Cancel
+              </button>
+            </ng-container>
+          </div>
+        </div>
+
+        <div *ngIf="getLink(network.type)?.error" class="error-message">
+          <i class="fa fa-exclamation-circle"></i>
+          {{ getLink(network.type)?.error }}
+        </div>
+
+        <div *ngIf="isReadonly(network)" class="readonly-hint">
+          <i class="fa fa-info-circle"></i>
+          This is your main link and cannot be changed
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

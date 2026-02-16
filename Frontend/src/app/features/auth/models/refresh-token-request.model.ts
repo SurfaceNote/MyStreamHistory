@@ -1,4 +1,3 @@
 export interface RefreshTokenRequest{
-    accessToken: string;
-    refreshToken: string;
+    token: string;
 }

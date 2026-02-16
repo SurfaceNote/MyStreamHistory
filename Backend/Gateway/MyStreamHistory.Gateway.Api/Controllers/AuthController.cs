@@ -32,13 +32,20 @@ namespace MyStreamHistory.Gateway.Api.Controllers
         }
 
         [HttpPost("refresh-token")]
-        [AllowExpiredAuthorize]
+        [Authorize]
         [ProducesResponseType(typeof(ApiResultContainer<RefreshTokenResponse>), 200)]
         [ProducesResponseType(typeof(ApiResultContainer), 500)]
         public async Task<ActionResult<ApiResultContainer<RefreshTokenResponse>>> RefreshToken(
-            [FromQuery] RefreshTokenRequest request)
+            [FromBody] RefreshTokenRequest request)
         {
-            var command = mapper.Map<RefreshTokenCommand>(request);
+            var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            
+            if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+            {
+                return this.Fail<RefreshTokenResponse>("invalid_token");
+            }
+            
+            var command = new RefreshTokenCommand(userId, request.Token);
             var refreshResultDto = await mediator.Send(command);
             var refreshTokenResponse = mapper.Map<RefreshTokenResponse>(refreshResultDto);
 

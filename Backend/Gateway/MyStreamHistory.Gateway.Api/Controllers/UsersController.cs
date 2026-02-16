@@ -2,6 +2,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MyStreamHistory.Gateway.Application.DTOs;
 using MyStreamHistory.Gateway.Application.Queries;
 using MyStreamHistory.Shared.Api.Extensions;
 using MyStreamHistory.Shared.Api.Wrappers;
@@ -75,5 +76,18 @@ public class UsersController(IMapper mapper, IMediator mediator) : ApiController
         var topViewers = await mediator.Send(query);
 
         return this.Success(topViewers);
+    }
+
+    [HttpGet("{twitchId}/social-links")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(ApiResultContainer<GetSocialLinksResponseDto>), 200)]
+    [ProducesResponseType(typeof(ApiResultContainer), 404)]
+    [ProducesResponseType(typeof(ApiResultContainer), 500)]
+    public async Task<ActionResult<ApiResultContainer<GetSocialLinksResponseDto>>> GetSocialLinksByTwitchId(
+        [FromRoute] int twitchId)
+    {
+        var query = new GetSocialLinksByTwitchIdQuery(twitchId);
+        var result = await mediator.Send(query);
+        return this.Success(result);
     }
 }

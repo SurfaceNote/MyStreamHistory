@@ -10,5 +10,7 @@
         public const string RegistrationTimeout = "registration_timeout";
         public const string TooManyRequests = "too_many_requests";
         public const string UserNotFound = "user_not_found";
+        public const string InvalidToken = "invalid_token";
+        public const string TokenExpired = "token_expired";
     }
 }

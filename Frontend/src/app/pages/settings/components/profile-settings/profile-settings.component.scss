@@ -1,0 +1,275 @@
+.profile-settings {
+  max-width: 900px;
+}
+
+.section-title {
+  color: #efeff1;
+  font-size: 28px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.section-description {
+  color: #adadb8;
+  font-size: 14px;
+  margin-bottom: 30px;
+}
+
+.alert {
+  padding: 12px 16px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  
+  i {
+    font-size: 18px;
+  }
+  
+  &.alert-success {
+    background: rgba(0, 229, 153, 0.1);
+    border: 1px solid rgba(0, 229, 153, 0.3);
+    color: #00e599;
+  }
+}
+
+.loading {
+  text-align: center;
+  padding: 40px;
+  color: #adadb8;
+  font-size: 16px;
+  
+  i {
+    margin-right: 10px;
+    font-size: 20px;
+  }
+}
+
+.social-links-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.social-link-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 15px;
+  padding: 20px;
+  background: #1f1f23;
+  border-radius: 8px;
+  border: 1px solid #2c2c34;
+  transition: border-color 0.2s ease;
+  
+  &:hover {
+    border-color: #3a3a44;
+  }
+}
+
+.social-icon {
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #2c2c34;
+  border-radius: 8px;
+  flex-shrink: 0;
+  
+  i {
+    font-size: 24px;
+    color: #9147ff;
+  }
+}
+
+.social-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.social-label {
+  display: block;
+  color: #efeff1;
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.social-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.social-input-group {
+  display: flex;
+  align-items: center;
+  background: #0e0e10;
+  border: 1px solid #2c2c34;
+  border-radius: 6px;
+  overflow: hidden;
+  transition: border-color 0.2s ease;
+  flex: 1;
+  min-width: 0;
+  
+  &:focus-within {
+    border-color: #9147ff;
+  }
+}
+
+.domain-prefix {
+  padding: 10px 12px;
+  color: #adadb8;
+  font-size: 14px;
+  background: #18181b;
+  border-right: 1px solid #2c2c34;
+  white-space: nowrap;
+}
+
+.social-input {
+  flex: 1;
+  padding: 10px 12px;
+  background: transparent;
+  border: none;
+  color: #efeff1;
+  font-size: 14px;
+  outline: none;
+  min-width: 0;
+  
+  &::placeholder {
+    color: #53535f;
+  }
+  
+  &.readonly {
+    color: #adadb8;
+    cursor: not-allowed;
+  }
+}
+
+.no-link-text {
+  padding: 10px 12px;
+  color: #53535f;
+  font-size: 14px;
+  font-style: italic;
+}
+
+.social-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.error-message {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: rgba(235, 87, 87, 0.1);
+  border: 1px solid rgba(235, 87, 87, 0.3);
+  border-radius: 6px;
+  color: #eb5757;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  
+  i {
+    font-size: 14px;
+  }
+}
+
+.readonly-hint {
+  margin-top: 8px;
+  color: #adadb8;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  
+  i {
+    color: #9147ff;
+  }
+}
+
+.btn {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  
+  i {
+    font-size: 13px;
+  }
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  
+  &.btn-primary {
+    background: #9147ff;
+    color: #fff;
+    
+    &:hover:not(:disabled) {
+      background: #772ce8;
+    }
+  }
+  
+  &.btn-secondary {
+    background: #2c2c34;
+    color: #efeff1;
+    
+    &:hover:not(:disabled) {
+      background: #3a3a44;
+    }
+  }
+  
+  &.btn-success {
+    background: #00e599;
+    color: #0e0e10;
+    
+    &:hover:not(:disabled) {
+      background: #00cc88;
+    }
+  }
+  
+  &.btn-danger {
+    background: #eb5757;
+    color: #fff;
+    
+    &:hover:not(:disabled) {
+      background: #d94545;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .social-link-item {
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+  .social-icon {
+    align-self: flex-start;
+  }
+  
+  .social-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .social-actions {
+    width: 100%;
+    
+    button {
+      flex: 1;
+    }
+  }
+}

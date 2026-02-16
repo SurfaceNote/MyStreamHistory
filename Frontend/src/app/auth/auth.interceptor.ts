@@ -8,7 +8,11 @@ export function authIntercerptor(req: HttpRequest<unknown>, next: HttpHandlerFn)
     const isAuthRequest = req.url.includes('/auth/twitch/callback') ||
                           req.url.includes('/auth/refresh-token');
 
-    if (isAuthRequest) {
+    // For refresh-token, we still need to add the Authorization header (with expired token)
+    // because Gateway extracts UserId from it
+    const skipTokenCompletely = req.url.includes('/auth/twitch/callback');
+    
+    if (skipTokenCompletely) {
         return next(req);
     }
 
@@ -23,21 +27,27 @@ export function authIntercerptor(req: HttpRequest<unknown>, next: HttpHandlerFn)
 
     return next(authReq).pipe(
         catchError((error) => {
-            if (error.status === 401 && !isAuthRequest) {
+            const isRefreshRequest = req.url.includes('/auth/refresh-token');
+            
+            if (error.status === 401 && !isAuthRequest && !isRefreshRequest) {
+                // Try to refresh the token
                 return authService.refreshToken().pipe(
                     switchMap((newToken) => {
                         if (newToken) {
+                            // Retry the original request with new token
                             const retryReq = req.clone({
                                 headers: req.headers.set('Authorization', `Bearer ${newToken}`),
                             });
                             return next(retryReq);
                         }
-                        authService.logout();
+                        // If refresh failed, logout
+                        authService.logoutLocal();
                         return throwError(() => error);
                     }),
-                    catchError(() => {
-                        authService.logout();
-                        return throwError(() => error);
+                    catchError((refreshError) => {
+                        // If refresh token failed, just logout (no Twitch redirect)
+                        authService.logoutLocal();
+                        return throwError(() => refreshError);
                     })
                 );
             }

@@ -26,6 +26,7 @@ public class AllowExpiredAuthorizeAttribute : AuthorizeAttribute, IAuthorization
         if (string.IsNullOrEmpty(authHeader) || !authHeader.StartsWith("Bearer "))
         {
             context.Result = new UnauthorizedResult();
+            return;
         }
 
         var token = authHeader.Substring("Bearer ".Length).Trim();
@@ -51,9 +52,10 @@ public class AllowExpiredAuthorizeAttribute : AuthorizeAttribute, IAuthorization
             if (!(validatedToken is JwtSecurityToken))
             {
                 context.Result = new UnauthorizedResult();
+                return;
             }
         }
-        catch (Exception)
+        catch
         {
             context.Result = new UnauthorizedResult();
         }

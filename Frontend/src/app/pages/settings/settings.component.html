@@ -1,0 +1,15 @@
+<div class="settings-container">
+  <app-settings-sidebar 
+    [activeSection]="activeSection" 
+    (sectionChange)="onSectionChange($event)">
+  </app-settings-sidebar>
+  
+  <div class="settings-content">
+    <app-profile-settings *ngIf="activeSection === 'profile'"></app-profile-settings>
+    
+    <div *ngIf="activeSection !== 'profile'" class="in-development">
+      <h2>In Development</h2>
+      <p>This section is currently under development and will be available soon.</p>
+    </div>
+  </div>
+</div>

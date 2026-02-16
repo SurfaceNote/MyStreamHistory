@@ -111,18 +111,17 @@ export class AuthService {
             );
         }
 
-        const accessToken = this.getAccessToken();
         const refreshToken = this.getRefreshToken();
 
-        if (!accessToken || !refreshToken) {
+        if (!refreshToken) {
             this.logoutLocal();
-            return throwError(() => new Error('No tokens to refresh'));
+            return throwError(() => new Error('No refresh token available'));
         }
 
         this.isRefreshing = true;
         this.refreshTokenSubject.next(null);
 
-        const body: RefreshTokenRequest = { accessToken, refreshToken };
+        const body: RefreshTokenRequest = { token: refreshToken };
 
         return this.http.
             post<ApiResponse<TokenResponse>>(`${this.apiUrl}/auth/refresh-token`, body, { withCredentials: true })

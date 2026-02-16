@@ -109,7 +109,54 @@ namespace MyStreamHistory.AuthService.Infrastructure.Persistence.Migrations
                     b.ToTable("RefreshToken", (string)null);
                 });
 
+            modelBuilder.Entity("MyStreamHistory.AuthService.Domain.Entities.SocialLink", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("Path")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("SocialNetworkType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "SocialNetworkType")
+                        .IsUnique();
+
+                    b.ToTable("SocialLink", (string)null);
+                });
+
             modelBuilder.Entity("MyStreamHistory.AuthService.Domain.Entities.RefreshToken", b =>
+                {
+                    b.HasOne("MyStreamHistory.AuthService.Domain.Entities.AuthUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("MyStreamHistory.AuthService.Domain.Entities.SocialLink", b =>
                 {
                     b.HasOne("MyStreamHistory.AuthService.Domain.Entities.AuthUser", "User")
                         .WithMany()
