@@ -11,7 +11,12 @@
     </div>
     <div class="auth">
         <app-login-component *ngIf="!isLoggedIn"/>
-        <div *ngIf="isLoggedIn">Hello, <a [routerLink]="['/profile', twitchId]">{{username}}</a></div>
+        <div *ngIf="isLoggedIn" class="user-menu">
+            <div>Hello, <a [routerLink]="['/profile', twitchId]">{{username}}</a></div>
+            <button class="settings-btn" (click)="navigateToSettings()" title="Settings">
+                <i class="fa fa-gear"></i>
+            </button>
+        </div>
         <button *ngIf="isLoggedIn" (click)="logout()">Logout</button>
     </div>
 </header>

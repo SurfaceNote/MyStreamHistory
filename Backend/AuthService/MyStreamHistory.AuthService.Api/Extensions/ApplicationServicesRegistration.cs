@@ -15,6 +15,9 @@ public static class ApplicationServicesRegistration
         services.AddScoped<IAuthUserRepository, AuthUserRepository>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
         services.AddScoped<IJwtTokenService, JwtTokenService>();
+        services.AddScoped<ISocialLinkRepository, SocialLinkRepository>();
+        services.AddScoped<ISocialLinkService, SocialLinkService>();
+        services.AddScoped<ISocialLinkValidationService, SocialLinkValidationService>();
 
         return services;
     }

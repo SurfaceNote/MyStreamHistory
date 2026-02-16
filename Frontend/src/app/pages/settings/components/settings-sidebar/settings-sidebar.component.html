@@ -1,0 +1,16 @@
+<div class="sidebar">
+  <h2 class="sidebar-title">Settings</h2>
+  
+  <nav class="sidebar-nav">
+    <button 
+      *ngFor="let section of sections"
+      class="sidebar-item"
+      [class.active]="section.id === activeSection"
+      [class.disabled]="section.disabled"
+      (click)="selectSection(section.id, section.disabled)">
+      <i class="fa" [ngClass]="section.icon"></i>
+      <span>{{ section.label }}</span>
+      <span *ngIf="section.disabled" class="badge">In Development</span>
+    </button>
+  </nav>
+</div>

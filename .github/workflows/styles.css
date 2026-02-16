@@ -1,0 +1,170 @@
+:root {
+  --bg: #0f0f14;
+  --card: #161621;
+  --text: #e7e7ef;
+  --muted: #9a9ab0;
+  --stroke: rgba(255,255,255,0.08);
+}
+
+* { box-sizing: border-box; }
+
+html, body { height: 100%; }
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  background: transparent;
+  color: var(--text);
+}
+
+.app {
+  height: 100%;
+  background: var(--bg);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.header {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.title {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.meta {
+  font-size: 12px;
+  color: var(--muted);
+  text-align: right;
+}
+
+.table {
+  border: 1px solid var(--stroke);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--card);
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Auto size for # and Points, viewer gets the rest */
+.thead, .row {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr) max-content;
+  gap: 10px;
+  align-items: center;
+  padding: 10px;
+}
+
+.thead {
+  font-size: 12px;
+  color: var(--muted);
+  border-bottom: 1px solid var(--stroke);
+  background: rgba(255,255,255,0.02);
+}
+
+/* # column as narrow as possible */
+.rankHead,
+.rankCell {
+  justify-self: end;
+  padding-right: 2px;
+}
+
+/* Points takes only as much as needed, never wraps */
+.ptsCol {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.tbody {
+  flex: 1;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  min-height: 0;
+
+  /* Dark thin scrollbar */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.18) rgba(0,0,0,0.35);
+}
+
+.tbody::-webkit-scrollbar { width: 6px; height: 6px; }
+.tbody::-webkit-scrollbar-track { background: rgba(0,0,0,0.35); }
+.tbody::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.18); border-radius: 999px; }
+.tbody::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.28); }
+.tbody::-webkit-scrollbar-corner { background: transparent; }
+
+.tbody .row {
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.tbody .row:last-child {
+  border-bottom: none;
+}
+
+.cell { font-size: 13px; }
+.dim { color: var(--muted); }
+.right { text-align: right; }
+
+/* Key for ellipsis: allow this grid item to shrink */
+.cell.viewer {
+  min-width: 0;
+}
+
+.viewer {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  min-width: 0;
+}
+
+.avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.06);
+  flex: 0 0 auto;
+  object-fit: cover;
+}
+
+.nameBox {
+  min-width: 0;
+  flex: 1;
+}
+
+/* 2-line clamp with ellipsis when points column grows */
+.name {
+  font-weight: 650;
+  line-height: 1.15;
+
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+
+  white-space: normal;
+}
+
+.rowMessage {
+  grid-template-columns: 1fr;
+}
+
+.message {
+  color: var(--muted);
+  padding: 14px 2px;
+}
+
+/* Mobile */
+@media (max-width: 360px) {
+  .meta { display: none; }
+}

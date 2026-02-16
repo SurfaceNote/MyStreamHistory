@@ -9,10 +9,12 @@ public class AuthDbContext(DbContextOptions<AuthDbContext> options) : DbContext(
     public Guid Id { get; set; } = Guid.NewGuid();
     public DbSet<AuthUser> Users => Set<AuthUser>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<SocialLink> SocialLinks => Set<SocialLink>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfiguration(new AuthUserConfiguration());
         modelBuilder.ApplyConfiguration(new RefreshTokenConfiguration());
+        modelBuilder.ApplyConfiguration(new SocialLinkConfiguration());
     }
 }

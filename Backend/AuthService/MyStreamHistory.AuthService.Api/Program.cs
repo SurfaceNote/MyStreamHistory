@@ -26,6 +26,8 @@ builder.Services.AddInfrastructure(builder.Configuration)
         configurator.AddConsumer<GetTwitchAccessTokenConsumer>();
         configurator.AddConsumer<RefreshTwitchAccessTokenConsumer>();
         configurator.AddConsumer<GetAppAccessTokenConsumer>();
+        configurator.AddConsumer<GetSocialLinksConsumer>();
+        configurator.AddConsumer<UpdateSocialLinksConsumer>();
     });
 
 builder.Services

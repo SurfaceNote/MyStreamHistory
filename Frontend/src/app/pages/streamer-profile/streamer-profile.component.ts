@@ -7,6 +7,8 @@ import { Subscription } from 'rxjs';
 import { StreamSession } from '../../models/stream-session.model';
 import { ViewerStats } from '../../models/viewer-stats.model';
 import { CommonModule } from '@angular/common';
+import { SettingsService } from '../../service/settings.service';
+import { SocialLink } from '../../models/social-link.model';
 
 @Component({
   selector: 'app-streamer-profile',
@@ -19,11 +21,14 @@ export class StreamerProfileComponent implements OnInit, OnDestroy {
   streamerShortDTO!: StreamerShortDTO;
   recentStreams: StreamSession[] = [];
   topViewers: ViewerStats[] = [];
+  socialLinks: SocialLink[] = [];
   isLoadingStreams: boolean = false;
   isLoadingViewers: boolean = false;
+  isLoadingSocialLinks: boolean = false;
   private routeSub: Subscription | null = null;
 
   private streamerService = inject(StreamerService);
+  private settingsService = inject(SettingsService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
 
@@ -35,8 +40,28 @@ export class StreamerProfileComponent implements OnInit, OnDestroy {
         this.loadStreamer();
         this.loadRecentStreams();
         this.loadTopViewers();
+        this.loadSocialLinks();
       }
     });
+  }
+
+  loadSocialLinks(): void {
+    this.isLoadingSocialLinks = true;
+    this.settingsService.getSocialLinks().subscribe({
+      next: (response) => {
+        this.socialLinks = response.socialLinks;
+        this.isLoadingSocialLinks = false;
+      },
+      error: (err) => {
+        console.error('Error loading social links', err);
+        this.isLoadingSocialLinks = false;
+      }
+    });
+  }
+
+  getSocialLinkUrl(type: string): string | null {
+    const link = this.socialLinks.find(l => l.socialNetworkType === type);
+    return link ? link.fullUrl : null;
   }
 
   ngOnDestroy(): void {

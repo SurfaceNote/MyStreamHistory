@@ -45,4 +45,8 @@ export class HeaderComponent implements OnInit, OnDestroy {
   logout() {
     this.authService.logoutLocal();
   }
+
+  navigateToSettings() {
+    this.router.navigate(['/settings']);
+  }
 }
