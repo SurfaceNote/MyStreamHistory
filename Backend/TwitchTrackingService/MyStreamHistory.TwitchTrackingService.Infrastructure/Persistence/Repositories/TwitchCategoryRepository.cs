@@ -39,5 +39,10 @@ public class TwitchCategoryRepository : ITwitchCategoryRepository
         _context.TwitchCategories.UpdateRange(categories);
         await _context.SaveChangesAsync(cancellationToken);
     }
+
+    public IQueryable<TwitchCategory> Query()
+    {
+        return _context.TwitchCategories.AsQueryable();
+    }
 }
 

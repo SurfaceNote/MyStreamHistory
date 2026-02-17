@@ -14,37 +14,37 @@
                                 <a href="https://www.twitch.tv/{{ streamerShortDTO.displayName }}" target="_blank" rel="noopener noreferrer">
                                     <div class="social-link twitch-background"><i class="fa-brands fa-twitch"></i></div>
                                 </a>
-                                
+
                                 <!-- YouTube -->
                                 <a *ngIf="getSocialLinkUrl('YouTube')" [href]="getSocialLinkUrl('YouTube')!" target="_blank" rel="noopener noreferrer">
                                     <div class="social-link youtube-background"><i class="fa-brands fa-youtube"></i></div>
                                 </a>
-                                
+
                                 <!-- Instagram -->
                                 <a *ngIf="getSocialLinkUrl('Instagram')" [href]="getSocialLinkUrl('Instagram')!" target="_blank" rel="noopener noreferrer">
                                     <div class="social-link instagram-background"><i class="fa-brands fa-instagram"></i></div>
                                 </a>
-                                
+
                                 <!-- Discord -->
                                 <a *ngIf="getSocialLinkUrl('Discord')" [href]="getSocialLinkUrl('Discord')!" target="_blank" rel="noopener noreferrer">
                                     <div class="social-link discord-background"><i class="fa-brands fa-discord"></i></div>
                                 </a>
-                                
+
                                 <!-- Steam -->
                                 <a *ngIf="getSocialLinkUrl('Steam')" [href]="getSocialLinkUrl('Steam')!" target="_blank" rel="noopener noreferrer">
                                     <div class="social-link steam-background"><i class="fa-brands fa-steam"></i></div>
                                 </a>
-                                
+
                                 <!-- VK -->
                                 <a *ngIf="getSocialLinkUrl('VK')" [href]="getSocialLinkUrl('VK')!" target="_blank" rel="noopener noreferrer">
                                     <div class="social-link vk-background"><i class="fa-brands fa-vk"></i></div>
                                 </a>
-                                
+
                                 <!-- Yandex -->
                                 <a *ngIf="getSocialLinkUrl('Yandex')" [href]="getSocialLinkUrl('Yandex')!" target="_blank" rel="noopener noreferrer">
                                     <div class="social-link yandex-background"><i class="fa-brands fa-yandex"></i></div>
                                 </a>
-                                
+
                                 <!-- Telegram -->
                                 <a *ngIf="getSocialLinkUrl('Telegram')" [href]="getSocialLinkUrl('Telegram')!" target="_blank" rel="noopener noreferrer">
                                     <div class="social-link telegram-background"><i class="fa-brands fa-telegram"></i></div>
@@ -53,15 +53,15 @@
                         </div>
                         <div class="meta-stream-item">
                             <span>Made</span>
-                            <span><b>{{ recentStreams.length }}</b> streams</span>
+                            <span><b>{{ statistics?.totalStreamsCount || 0 }}</b> streams</span>
                         </div>
                         <div class="meta-stream-item">
-                            <span>Finished</span>
-                            <span><b>20</b> games</span>
+                            <span>Played</span>
+                            <span><b>{{ statistics?.totalUniqueGamesCount || 0 }}</b> games</span>
                         </div>
                         <div class="meta-stream-item">
                             <span>Streamed</span>
-                            <span><b>350</b> hours</span>
+                            <span><b>{{ statistics?.totalStreamedHours || 0 }}</b> hours</span>
                         </div>
                     </div>
                 </div>
@@ -100,22 +100,22 @@
         <div class="recent-streams-section">
             <div class="block-title">
                 <div class="start-line"></div>
-                <h3>Recent Streams ({{ recentStreams.length }})</h3>
+                <h3>Last 10 Streams ({{ recentStreams.length }})</h3>
                 <div class="end-line"></div>
             </div>
-            
+
             @if (isLoadingStreams) {
                 <div style="padding: 2rem; text-align: center;">
                     <p>Loading streams...</p>
                 </div>
             }
-            
+
             @if (!isLoadingStreams && recentStreams.length === 0) {
                 <div style="padding: 2rem; text-align: center;">
                     <p>No recent streams found</p>
                 </div>
             }
-            
+
             @if (!isLoadingStreams && recentStreams.length > 0) {
                 <div class="streams-list-wrapper">
                     <div class="streams-list-horizontal">
@@ -133,14 +133,14 @@
                                         <span>{{ formatDate(stream.startedAt) }}</span>
                                     </div>
                                 </div>
-                                
+
                                 <div class="stream-content">
                                     <div class="stream-categories">
                                         @if (stream.categories && stream.categories.length > 0) {
                                             <div class="categories-row">
                                                 @for (category of stream.categories; track category.twitchId) {
                                                     <div class="category-box-art">
-                                                        <img [src]="getCategoryBoxArt(category.boxArtUrl, 52, 72)" 
+                                                        <img [src]="getCategoryBoxArt(category.boxArtUrl, 52, 72)"
                                                              [alt]="category.name"
                                                              [title]="category.name">
                                                     </div>
@@ -152,13 +152,13 @@
                                             <span class="game-name no-game">No category</span>
                                         }
                                     </div>
-                                    
+
                                     @if (stream.streamTitle) {
                                         <div class="stream-title">
                                             <span>{{ stream.streamTitle }}</span>
                                         </div>
                                     }
-                                    
+
                                     <div class="stream-stats">
                                         <div class="stat-item">
                                             <i class="fa-regular fa-clock"></i>
@@ -181,231 +181,50 @@
 
         <div class="gray-main-block list-walkthrough-and-viewers">
             <div class="list-walkthrough">
+                <div class="block-title">
+                    <div class="start-line"></div>
+                    <h3>Without category ({{ statistics?.categories?.length || 0 }})</h3>
+                    <div class="end-line"></div>
+                </div>
 
-                <div class="block-title">
-                    <div class="start-line"></div>
-                    <h3>In Progress (3)</h3>
-                    <div class="end-line"></div>
-                </div>
-                <div class="games-table">
-                    <div class="table-head hide-mobile">
-                        <div class="head-game">
-                            <span>GAME</span>
+                @if (isLoadingStatistics) {
+                    <div style="padding: 2rem; text-align: center;">
+                        <p>Loading categories...</p>
+                    </div>
+                }
+
+                @if (!isLoadingStatistics && (!statistics?.categories || (statistics?.categories?.length ?? 0) === 0)) {
+                    <div style="padding: 2rem; text-align: center;">
+                        <p>No categories found</p>
+                    </div>
+                }
+
+                @if (!isLoadingStatistics && statistics?.categories && (statistics?.categories?.length ?? 0) > 0) {
+                    <div class="games-table">
+                        <div class="table-head hide-mobile">
+                            <div class="head-game">
+                                <span>GAME</span>
+                            </div>
+                            <div class="fixed-width">
+                                <div><span>Duration</span></div>
+                            </div>
                         </div>
-                        <div class="fixed-width">
-                            <div><span>First Stream</span></div>
-                            <div><span>Last Stream</span></div>
-                            <div><span>Duration</span></div>
-                            <div><span>Unique viewers</span></div>
+                        <div class="table-body">
+                            @for (category of statistics?.categories; track category.twitchCategoryId) {
+                                <div class="row">
+                                    <div class="game">
+                                        <img [src]="getCategoryBoxArtForStats(category.boxArtUrl, 285, 380)"
+                                            [alt]="'Poster ' + category.name">
+                                        <span>{{ category.name }}</span>
+                                    </div>
+                                    <div class="fixed-width hide-mobile">
+                                        <div><span>{{ category.totalHours }} h.</span></div>
+                                    </div>
+                                </div>
+                            }
                         </div>
                     </div>
-                    <div class="table-body">
-                        <div class="row">
-                            <div class="game">
-                                <img src="https://static-cdn.jtvnw.net/ttv-boxart/511224-285x380.jpg"
-                                    alt="Poster Apex Legends">
-                                <span>Apex Legends</span>
-                            </div>
-                            <div class="fixed-width hide-mobile">
-                                <div><span>01.01.2025</span></div>
-                                <div><span>31.01.25</span></div>
-                                <div><span>105 h.</span></div>
-                                <div><span>32</span></div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="game">
-                                <img src="https://static-cdn.jtvnw.net/ttv-boxart/32399-285x380.jpg"
-                                    alt="Poster Counter-Strike">
-                                <span>Counter-Strike</span>
-                            </div>
-                            <div class="fixed-width hide-mobile">
-                                <div><span>01.01.2025</span></div>
-                                <div><span>31.01.25</span></div>
-                                <div><span>105 h.</span></div>
-                                <div><span>32</span></div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="game">
-                                <img src="https://static-cdn.jtvnw.net/ttv-boxart/32982_IGDB-285x380.jpg"
-                                    alt="Poster Grand Theft Auto V">
-                                <span>Grand Theft Auto V</span>
-                            </div>
-                            <div class="fixed-width hide-mobile">
-                                <div><span>01.01.2025</span></div>
-                                <div><span>31.01.25</span></div>
-                                <div><span>105 h.</span></div>
-                                <div><span>32</span></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="block-title">
-                    <div class="start-line"></div>
-                    <h3>Finished (3)</h3>
-                    <div class="end-line"></div>
-                </div>
-                <div class="games-table">
-                    <div class="table-head hide-mobile">
-                        <div class="head-game">
-                            <span>GAME</span>
-                        </div>
-                        <div class="fixed-width">
-                            <div><span>First Stream</span></div>
-                            <div><span>Last Stream</span></div>
-                            <div><span>Duration</span></div>
-                            <div><span>Unique viewers</span></div>
-                        </div>
-                    </div>
-                    <div class="table-body">
-                        <div class="row">
-                            <div class="game">
-                                <img src="https://static-cdn.jtvnw.net/ttv-boxart/511224-285x380.jpg"
-                                    alt="Poster Apex Legends">
-                                <span>Apex Legends</span>
-                            </div>
-                            <div class="fixed-width hide-mobile">
-                                <div><span>01.01.2025</span></div>
-                                <div><span>31.01.25</span></div>
-                                <div><span>105 h.</span></div>
-                                <div><span>32</span></div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="game">
-                                <img src="https://static-cdn.jtvnw.net/ttv-boxart/32399-285x380.jpg"
-                                    alt="Poster Counter-Strike">
-                                <span>Counter-Strike</span>
-                            </div>
-                            <div class="fixed-width hide-mobile">
-                                <div><span>01.01.2025</span></div>
-                                <div><span>31.01.25</span></div>
-                                <div><span>105 h.</span></div>
-                                <div><span>32</span></div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="game">
-                                <img src="https://static-cdn.jtvnw.net/ttv-boxart/32982_IGDB-285x380.jpg"
-                                    alt="Poster Grand Theft Auto V">
-                                <span>Grand Theft Auto V</span>
-                            </div>
-                            <div class="fixed-width hide-mobile">
-                                <div><span>01.01.2025</span></div>
-                                <div><span>31.01.25</span></div>
-                                <div><span>105 h.</span></div>
-                                <div><span>32</span></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="block-title">
-                    <div class="start-line"></div>
-                    <h3>Abandoned (3)</h3>
-                    <div class="end-line"></div>
-                </div>
-                <div class="games-table">
-                    <div class="table-head hide-mobile">
-                        <div class="head-game">
-                            <span>GAME</span>
-                        </div>
-                        <div class="fixed-width">
-                            <div><span>First Stream</span></div>
-                            <div><span>Last Stream</span></div>
-                            <div><span>Duration</span></div>
-                            <div><span>Unique viewers</span></div>
-                        </div>
-                    </div>
-                    <div class="table-body">
-                        <div class="row">
-                            <div class="game">
-                                <img src="https://static-cdn.jtvnw.net/ttv-boxart/511224-285x380.jpg"
-                                    alt="Poster Apex Legends">
-                                <span>Apex Legends</span>
-                            </div>
-                            <div class="fixed-width hide-mobile">
-                                <div><span>01.01.2025</span></div>
-                                <div><span>31.01.25</span></div>
-                                <div><span>105 h.</span></div>
-                                <div><span>32</span></div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="game">
-                                <img src="https://static-cdn.jtvnw.net/ttv-boxart/32399-285x380.jpg"
-                                    alt="Poster Counter-Strike">
-                                <span>Counter-Strike</span>
-                            </div>
-                            <div class="fixed-width hide-mobile">
-                                <div><span>01.01.2025</span></div>
-                                <div><span>31.01.25</span></div>
-                                <div><span>105 h.</span></div>
-                                <div><span>32</span></div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="game">
-                                <img src="https://static-cdn.jtvnw.net/ttv-boxart/32982_IGDB-285x380.jpg"
-                                    alt="Poster Grand Theft Auto V">
-                                <span>Grand Theft Auto V</span>
-                            </div>
-                            <div class="fixed-width hide-mobile">
-                                <div><span>01.01.2025</span></div>
-                                <div><span>31.01.25</span></div>
-                                <div><span>105 h.</span></div>
-                                <div><span>32</span></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="block-title">
-                    <div class="start-line"></div>
-                    <h3>Without category (3)</h3>
-                    <div class="end-line"></div>
-                </div>
-                <div class="games-table">
-                    <div class="table-head hide-mobile">
-                        <div class="head-game">
-                            <span>GAME</span>
-                        </div>
-                        <div class="fixed-width">
-                            <div><span>Duration</span></div>
-                        </div>
-                    </div>
-                    <div class="table-body">
-                        <div class="row">
-                            <div class="game">
-                                <img src="https://static-cdn.jtvnw.net/ttv-boxart/511224-285x380.jpg"
-                                    alt="Poster Apex Legends">
-                                <span>Apex Legends</span>
-                            </div>
-                            <div class="fixed-width hide-mobile">
-                                <div><span>105 h.</span></div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="game">
-                                <img src="https://static-cdn.jtvnw.net/ttv-boxart/32399-285x380.jpg"
-                                    alt="Poster Counter-Strike">
-                                <span>Counter-Strike</span>
-                            </div>
-                            <div class="fixed-width hide-mobile">
-                                <div><span>105 h.</span></div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="game">
-                                <img src="https://static-cdn.jtvnw.net/ttv-boxart/32982_IGDB-285x380.jpg"
-                                    alt="Poster Grand Theft Auto V">
-                                <span>Grand Theft Auto V</span>
-                            </div>
-                            <div class="fixed-width hide-mobile">
-                                <div><span>105 h.</span></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                }
             </div>
             <div class="viewers-list" style="margin-right: 1rem">
                 <div class="header">

@@ -8,5 +8,6 @@ public interface ITwitchCategoryRepository
     Task<TwitchCategory?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task AddRangeAsync(List<TwitchCategory> categories, CancellationToken cancellationToken = default);
     Task UpdateRangeAsync(List<TwitchCategory> categories, CancellationToken cancellationToken = default);
+    IQueryable<TwitchCategory> Query();
 }
 

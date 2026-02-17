@@ -8,6 +8,7 @@ import { StreamSession } from '../../models/stream-session.model';
 import { ViewerStats } from '../../models/viewer-stats.model';
 import { CommonModule } from '@angular/common';
 import { SocialLink } from '../../models/social-link.model';
+import { StreamerStatistics } from '../../models/streamer-statistics.model';
 
 @Component({
   selector: 'app-streamer-profile',
@@ -21,9 +22,11 @@ export class StreamerProfileComponent implements OnInit, OnDestroy {
   recentStreams: StreamSession[] = [];
   topViewers: ViewerStats[] = [];
   socialLinks: SocialLink[] = [];
+  statistics: StreamerStatistics | null = null;
   isLoadingStreams: boolean = false;
   isLoadingViewers: boolean = false;
   isLoadingSocialLinks: boolean = false;
+  isLoadingStatistics: boolean = false;
   private routeSub: Subscription | null = null;
 
   private streamerService = inject(StreamerService);
@@ -39,6 +42,7 @@ export class StreamerProfileComponent implements OnInit, OnDestroy {
         this.loadRecentStreams();
         this.loadTopViewers();
         this.loadSocialLinks();
+        this.loadStatistics();
       }
     });
   }
@@ -104,7 +108,7 @@ export class StreamerProfileComponent implements OnInit, OnDestroy {
     const durationMs = end.getTime() - start.getTime();
     const hours = Math.floor(durationMs / (1000 * 60 * 60));
     const minutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
-    
+
     if (hours > 0) {
       return `${hours}h ${minutes}m`;
     }
@@ -146,5 +150,25 @@ export class StreamerProfileComponent implements OnInit, OnDestroy {
 
   navigateToStreamDetail(streamId: string): void {
     this.router.navigate(['/stream', streamId]);
+  }
+
+  loadStatistics(): void {
+    this.isLoadingStatistics = true;
+    this.streamerService.getStreamerStatistics(this.twitchId).subscribe({
+      next: (data: StreamerStatistics) => {
+        this.statistics = data;
+        this.isLoadingStatistics = false;
+      },
+      error: (err) => {
+        console.error('Error loading statistics', err);
+        this.isLoadingStatistics = false;
+      }
+    });
+  }
+
+  getCategoryBoxArtForStats(boxArtUrl: string, width: number, height: number): string {
+    return boxArtUrl
+      .replace('{width}', width.toString())
+      .replace('{height}', height.toString());
   }
 }

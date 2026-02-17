@@ -30,6 +30,7 @@ builder.Services.AddInfrastructure(builder.Configuration)
         configurator.AddConsumer<DeleteAllSubscriptionsConsumer>();
         configurator.AddConsumer<SubscribeToAllUsersConsumer>();
         configurator.AddConsumer<GetActiveStreamCategoryConsumer>();
+        configurator.AddConsumer<GetStreamerStatisticsConsumer>();
     })
     .AddTransportBus();
 

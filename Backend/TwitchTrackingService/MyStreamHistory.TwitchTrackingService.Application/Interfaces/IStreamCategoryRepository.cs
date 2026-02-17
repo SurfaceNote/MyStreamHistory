@@ -9,5 +9,6 @@ public interface IStreamCategoryRepository
     Task CreateSegmentAsync(StreamCategory segment, CancellationToken cancellationToken = default);
     Task CloseSegmentAsync(Guid segmentId, DateTime endedAt, CancellationToken cancellationToken = default);
     Task UpdateSegmentEndTimeAsync(Guid segmentId, DateTime endedAt, CancellationToken cancellationToken = default);
+    IQueryable<StreamCategory> Query();
 }
 

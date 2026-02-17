@@ -55,5 +55,10 @@ public class StreamCategoryRepository : IStreamCategoryRepository
             await _context.SaveChangesAsync(cancellationToken);
         }
     }
+
+    public IQueryable<StreamCategory> Query()
+    {
+        return _context.StreamCategories.AsQueryable();
+    }
 }
 
