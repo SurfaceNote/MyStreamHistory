@@ -98,6 +98,7 @@ public class GetStreamerStatisticsConsumer : IConsumer<GetStreamerStatisticsRequ
                 TotalStreamsCount = totalStreamsCount,
                 TotalUniqueGamesCount = totalUniqueGamesCount,
                 TotalStreamedHours = Math.Round(totalStreamedHours, 1),
+                AllGamesTotalHours = Math.Round(totalStreamedHours, 1),
                 Categories = categories
             };
 

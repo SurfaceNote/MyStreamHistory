@@ -6,8 +6,9 @@
   
   <div class="settings-content">
     <app-profile-settings *ngIf="activeSection === 'profile'"></app-profile-settings>
+    <app-playthrough-settings *ngIf="activeSection === 'playthroughs'"></app-playthrough-settings>
     
-    <div *ngIf="activeSection !== 'profile'" class="in-development">
+    <div *ngIf="activeSection !== 'profile' && activeSection !== 'playthroughs'" class="in-development">
       <h2>In Development</h2>
       <p>This section is currently under development and will be available soon.</p>
     </div>

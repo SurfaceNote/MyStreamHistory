@@ -19,5 +19,20 @@ namespace MyStreamHistory.Gateway.Api.Controllers
                 throw new ArgumentException(nameof(UserId), "UserId must be Guid");
             }
         }
+
+        protected int TwitchUserId
+        {
+            get
+            {
+                var twitchUserId = User.FindFirstValue("TwitchId") ?? throw new ArgumentNullException(nameof(TwitchUserId), "TwitchUserId cannot be null");
+
+                if (int.TryParse(twitchUserId, out var parsedTwitchUserId))
+                {
+                    return parsedTwitchUserId;
+                }
+
+                throw new ArgumentException(nameof(TwitchUserId), "TwitchUserId must be int");
+            }
+        }
     }
 }

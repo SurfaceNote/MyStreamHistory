@@ -17,6 +17,7 @@ export const API_ENDPOINTS = {
         `${environment.api_url}/user/${twitchId}/statistics`,
     STREAM_DETAILS: (streamId: string) => `${environment.api_url}/streams/${streamId}`,
     SETTINGS: {
-        SOCIAL_LINKS: `${environment.api_url}/settings/social-links`
+        SOCIAL_LINKS: `${environment.api_url}/settings/social-links`,
+        PLAYTHROUGHS: `${environment.api_url}/settings/playthroughs`
     }
 };

@@ -6,6 +6,8 @@ public interface IStreamCategoryRepository
 {
     Task<StreamCategory?> GetActiveSegmentByStreamIdAsync(Guid streamSessionId, CancellationToken cancellationToken = default);
     Task<List<StreamCategory>> GetByStreamSessionIdAsync(Guid streamSessionId, CancellationToken cancellationToken = default);
+    Task<List<StreamCategory>> GetByTwitchUserIdAsync(int twitchUserId, CancellationToken cancellationToken = default);
+    Task<List<StreamCategory>> GetByIdsAsync(List<Guid> ids, CancellationToken cancellationToken = default);
     Task CreateSegmentAsync(StreamCategory segment, CancellationToken cancellationToken = default);
     Task CloseSegmentAsync(Guid segmentId, DateTime endedAt, CancellationToken cancellationToken = default);
     Task UpdateSegmentEndTimeAsync(Guid segmentId, DateTime endedAt, CancellationToken cancellationToken = default);

@@ -49,5 +49,39 @@ public class SettingsController(IMediator mediator) : ApiControllerBase
         
         return this.Success(result);
     }
+
+    [HttpGet("playthroughs")]
+    [ProducesResponseType(typeof(ApiResultContainer<PlaythroughSettingsDto>), 200)]
+    [ProducesResponseType(typeof(ApiResultContainer), 401)]
+    [ProducesResponseType(typeof(ApiResultContainer), 500)]
+    public async Task<ActionResult<ApiResultContainer<PlaythroughSettingsDto>>> GetPlaythroughs()
+    {
+        var query = new GetPlaythroughSettingsQuery(TwitchUserId);
+        var result = await mediator.Send(query);
+        return this.Success(result);
+    }
+
+    [HttpPost("playthroughs")]
+    [ProducesResponseType(typeof(ApiResultContainer<PlaythroughDto>), 200)]
+    [ProducesResponseType(typeof(ApiResultContainer), 400)]
+    [ProducesResponseType(typeof(ApiResultContainer), 401)]
+    [ProducesResponseType(typeof(ApiResultContainer), 500)]
+    public async Task<ActionResult<ApiResultContainer<PlaythroughDto>>> UpsertPlaythrough(
+        [FromBody] UpsertPlaythroughRequestDto request)
+    {
+        var command = new UpsertPlaythroughCommand(TwitchUserId, request);
+        var result = await mediator.Send(command);
+        return this.Success(result);
+    }
+
+    [HttpDelete("playthroughs/{playthroughId:guid}")]
+    [ProducesResponseType(typeof(ApiResultContainer), 200)]
+    [ProducesResponseType(typeof(ApiResultContainer), 401)]
+    [ProducesResponseType(typeof(ApiResultContainer), 500)]
+    public async Task<ActionResult<ApiResultContainer>> DeletePlaythrough([FromRoute] Guid playthroughId)
+    {
+        await mediator.Send(new DeletePlaythroughCommand(TwitchUserId, playthroughId));
+        return this.Success();
+    }
 }
 

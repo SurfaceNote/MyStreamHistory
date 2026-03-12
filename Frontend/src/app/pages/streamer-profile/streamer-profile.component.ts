@@ -9,6 +9,13 @@ import { ViewerStats } from '../../models/viewer-stats.model';
 import { CommonModule } from '@angular/common';
 import { SocialLink } from '../../models/social-link.model';
 import { StreamerStatistics } from '../../models/streamer-statistics.model';
+import { PlaythroughStatistics } from '../../models/playthrough-statistics.model';
+
+interface PlaythroughStatusSection {
+  status: string;
+  title: string;
+  items: PlaythroughStatistics[];
+}
 
 @Component({
   selector: 'app-streamer-profile',
@@ -45,6 +52,24 @@ export class StreamerProfileComponent implements OnInit, OnDestroy {
         this.loadStatistics();
       }
     });
+  }
+
+  get playthroughSections(): PlaythroughStatusSection[] {
+    const playthroughs = this.statistics?.playthroughs ?? [];
+
+    const sections: Array<{ status: string; title: string }> = [
+      { status: 'Playing', title: 'Playing Now' },
+      { status: 'Planned', title: 'Will Play' },
+      { status: 'Dropped', title: 'Dropped' },
+      { status: 'Completed', title: 'Completed' }
+    ];
+
+    return sections
+      .map(section => ({
+        ...section,
+        items: playthroughs.filter(playthrough => playthrough.status === section.status)
+      }))
+      .filter(section => section.items.length > 0);
   }
 
   loadSocialLinks(): void {

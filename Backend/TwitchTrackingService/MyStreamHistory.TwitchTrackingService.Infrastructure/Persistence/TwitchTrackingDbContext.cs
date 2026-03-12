@@ -13,6 +13,8 @@ public class TwitchTrackingDbContext : DbContext
     public DbSet<EventSubSubscription> EventSubSubscriptions => Set<EventSubSubscription>();
     public DbSet<TwitchCategory> TwitchCategories => Set<TwitchCategory>();
     public DbSet<StreamCategory> StreamCategories => Set<StreamCategory>();
+    public DbSet<Playthrough> Playthroughs => Set<Playthrough>();
+    public DbSet<PlaythroughStreamCategory> PlaythroughStreamCategories => Set<PlaythroughStreamCategory>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -55,6 +57,26 @@ public class TwitchTrackingDbContext : DbContext
             entity.Property(e => e.IgdbId).HasMaxLength(50);
         });
 
+        modelBuilder.Entity<Playthrough>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.TwitchUserId);
+            entity.HasIndex(e => new { e.TwitchUserId, e.TwitchCategoryId });
+
+            entity.Property(e => e.Title).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.Status)
+                .HasConversion<string>()
+                .HasMaxLength(30)
+                .IsRequired();
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
+
+            entity.HasOne(e => e.TwitchCategory)
+                .WithMany(c => c.Playthroughs)
+                .HasForeignKey(e => e.TwitchCategoryId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
         modelBuilder.Entity<StreamCategory>(entity =>
         {
             entity.HasKey(e => e.Id);
@@ -70,6 +92,24 @@ public class TwitchTrackingDbContext : DbContext
             entity.HasOne(e => e.TwitchCategory)
                 .WithMany(c => c.StreamCategories)
                 .HasForeignKey(e => e.TwitchCategoryId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<PlaythroughStreamCategory>(entity =>
+        {
+            entity.HasKey(e => new { e.PlaythroughId, e.StreamCategoryId });
+            entity.HasIndex(e => e.StreamCategoryId);
+
+            entity.Property(e => e.AddedAt).HasDefaultValueSql("now()");
+
+            entity.HasOne(e => e.Playthrough)
+                .WithMany(p => p.PlaythroughStreamCategories)
+                .HasForeignKey(e => e.PlaythroughId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.StreamCategory)
+                .WithMany(sc => sc.PlaythroughStreamCategories)
+                .HasForeignKey(e => e.StreamCategoryId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }

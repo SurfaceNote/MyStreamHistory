@@ -64,6 +64,72 @@ namespace MyStreamHistory.TwitchTrackingService.Infrastructure.Persistence.Migra
                     b.ToTable("EventSubSubscriptions");
                 });
 
+            modelBuilder.Entity("MyStreamHistory.TwitchTrackingService.Domain.Entities.Playthrough", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("AutoAddNewStreams")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("TwitchCategoryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("TwitchUserId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TwitchCategoryId");
+
+                    b.HasIndex("TwitchUserId");
+
+                    b.HasIndex("TwitchUserId", "TwitchCategoryId");
+
+                    b.ToTable("Playthroughs");
+                });
+
+            modelBuilder.Entity("MyStreamHistory.TwitchTrackingService.Domain.Entities.PlaythroughStreamCategory", b =>
+                {
+                    b.Property<Guid>("PlaythroughId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("StreamCategoryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("AddedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.HasKey("PlaythroughId", "StreamCategoryId");
+
+                    b.HasIndex("StreamCategoryId");
+
+                    b.ToTable("PlaythroughStreamCategories");
+                });
+
             modelBuilder.Entity("MyStreamHistory.TwitchTrackingService.Domain.Entities.StreamCategory", b =>
                 {
                     b.Property<Guid>("Id")
@@ -183,6 +249,36 @@ namespace MyStreamHistory.TwitchTrackingService.Infrastructure.Persistence.Migra
                     b.ToTable("TwitchCategories");
                 });
 
+            modelBuilder.Entity("MyStreamHistory.TwitchTrackingService.Domain.Entities.Playthrough", b =>
+                {
+                    b.HasOne("MyStreamHistory.TwitchTrackingService.Domain.Entities.TwitchCategory", "TwitchCategory")
+                        .WithMany("Playthroughs")
+                        .HasForeignKey("TwitchCategoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("TwitchCategory");
+                });
+
+            modelBuilder.Entity("MyStreamHistory.TwitchTrackingService.Domain.Entities.PlaythroughStreamCategory", b =>
+                {
+                    b.HasOne("MyStreamHistory.TwitchTrackingService.Domain.Entities.Playthrough", "Playthrough")
+                        .WithMany("PlaythroughStreamCategories")
+                        .HasForeignKey("PlaythroughId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("MyStreamHistory.TwitchTrackingService.Domain.Entities.StreamCategory", "StreamCategory")
+                        .WithMany("PlaythroughStreamCategories")
+                        .HasForeignKey("StreamCategoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Playthrough");
+
+                    b.Navigation("StreamCategory");
+                });
+
             modelBuilder.Entity("MyStreamHistory.TwitchTrackingService.Domain.Entities.StreamCategory", b =>
                 {
                     b.HasOne("MyStreamHistory.TwitchTrackingService.Domain.Entities.StreamSession", "StreamSession")
@@ -202,6 +298,16 @@ namespace MyStreamHistory.TwitchTrackingService.Infrastructure.Persistence.Migra
                     b.Navigation("TwitchCategory");
                 });
 
+            modelBuilder.Entity("MyStreamHistory.TwitchTrackingService.Domain.Entities.Playthrough", b =>
+                {
+                    b.Navigation("PlaythroughStreamCategories");
+                });
+
+            modelBuilder.Entity("MyStreamHistory.TwitchTrackingService.Domain.Entities.StreamCategory", b =>
+                {
+                    b.Navigation("PlaythroughStreamCategories");
+                });
+
             modelBuilder.Entity("MyStreamHistory.TwitchTrackingService.Domain.Entities.StreamSession", b =>
                 {
                     b.Navigation("StreamCategories");
@@ -209,6 +315,8 @@ namespace MyStreamHistory.TwitchTrackingService.Infrastructure.Persistence.Migra
 
             modelBuilder.Entity("MyStreamHistory.TwitchTrackingService.Domain.Entities.TwitchCategory", b =>
                 {
+                    b.Navigation("Playthroughs");
+
                     b.Navigation("StreamCategories");
                 });
 #pragma warning restore 612, 618

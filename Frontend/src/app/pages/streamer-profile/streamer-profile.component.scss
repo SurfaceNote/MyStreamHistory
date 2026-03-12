@@ -521,37 +521,15 @@ main {
   padding: 0 2rem;
 
   .table-head {
-    display: flex;
+    display: grid;
     width: 100%;
+    grid-template-columns: minmax(280px, 2.2fr) repeat(4, minmax(120px, 1fr));
     padding: 0.75rem 0;
-    justify-content: space-between;
     align-items: center;
     border-radius: 0.75rem;
-
-    .head-game {
-      display: flex;
-      width: 20rem;
-      align-items: center;
-      gap: 0.75rem;
-      min-width: 5rem;
-      margin-left: 2rem;
-    }
-
-    .fixed-width {
-      display: flex;
-      align-items: center;
-      gap: 1.5rem;
-      justify-content: end;
-      flex-grow: 1;
-      padding-right: 2rem;
-
-      div {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        width: 120px;
-      }
-    }
+    column-gap: 1rem;
+    padding-left: 2rem;
+    padding-right: 2rem;
 
     span {
       color: $text-2-color;
@@ -573,10 +551,11 @@ main {
     width: 100%;
 
     .row {
-      display: flex;
+      display: grid;
       width: 100%;
+      grid-template-columns: minmax(280px, 2.2fr) repeat(4, minmax(120px, 1fr));
+      column-gap: 1rem;
       padding: 0.75rem 1.25rem;
-      justify-content: space-between;
       align-items: center;
       border-radius: 0.75rem;
       background: $bg-2-color;
@@ -588,6 +567,18 @@ main {
         gap: 0.75rem;
         flex-shrink: 0;
 
+        .playthrough-meta {
+          display: flex;
+          flex-direction: column;
+          gap: 0.2rem;
+
+          small {
+            color: $text-4-color;
+            font-size: 0.75rem;
+            font-weight: 500;
+          }
+        }
+
         img {
           width: 2.8rem;
           height: 3.8rem;
@@ -596,19 +587,10 @@ main {
         }
       }
 
-      .fixed-width {
+      .table-cell {
         display: flex;
         align-items: center;
-        gap: 1.5rem;
-        justify-content: end;
-        flex-grow: 1;
-
-        div {
-          display: flex;
-          align-items: center;
-          gap: 0.75rem;
-          width: 120px;
-        }
+        min-width: 0;
       }
 
       span {
@@ -620,6 +602,239 @@ main {
       }
     }
   }
+}
+
+.summary-table {
+  .row {
+    grid-template-columns: minmax(280px, 2.2fr) minmax(120px, 1fr);
+  }
+}
+
+.status-section {
+  margin-top: 2rem;
+}
+
+.playthrough-section-title {
+  margin-top: 0;
+}
+
+.playthrough-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 0 2rem;
+}
+
+.playthrough-metrics-head-wrap {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 2rem;
+  margin-bottom: 0.55rem;
+}
+
+.metric-grid {
+  display: grid;
+  column-gap: 0.85rem;
+}
+
+.metric-grid-playthrough {
+  grid-template-columns: 9rem 9rem 7rem 7rem;
+  width: calc(9rem + 9rem + 7rem + 7rem + 2.55rem);
+}
+
+.metric-grid-summary {
+  grid-template-columns: 7rem;
+  width: 7rem;
+}
+
+.playthrough-metrics-head,
+.summary-metrics-head {
+  align-items: center;
+}
+
+.playthrough-metrics-head {
+  span {
+    color: $text-4-color;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    text-align: left;
+    justify-self: start;
+    padding-left: 0.7rem;
+  }
+}
+
+.summary-metrics-head {
+  width: 100%;
+
+  span {
+    color: $text-4-color;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    text-align: right;
+    justify-self: end;
+    padding-left: 0;
+  }
+}
+
+.playthrough-metrics-head-wrap,
+.summary-metrics-head-wrap {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1rem;
+  align-items: center;
+  padding: 0 2rem;
+  margin-bottom: 0.55rem;
+}
+
+.summary-metrics-head-wrap {
+  width: 100%;
+  grid-template-columns: minmax(280px, 2.2fr) minmax(120px, 1fr);
+  gap: 1rem;
+  box-sizing: border-box;
+}
+
+.summary-metrics-head-spacer {
+  display: none;
+}
+
+.summary-metrics-head {
+  grid-column: 2;
+  justify-self: stretch;
+}
+
+.playthrough-card {
+  border-radius: 0.95rem;
+  background: $bg-1-color;
+  padding: 1rem;
+}
+
+.playthrough-card-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1rem;
+  align-items: center;
+}
+
+.playthrough-card-left {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  min-width: 0;
+  width: auto;
+
+  .playthrough-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    min-width: 0;
+
+    span {
+      color: $text-2-color;
+      font-size: 0.98rem;
+      font-weight: 700;
+      line-height: 1.25;
+      display: block;
+      word-break: break-word;
+    }
+
+    small {
+      color: $text-4-color;
+      font-size: 0.78rem;
+      font-weight: 500;
+      line-height: 1.2;
+      display: block;
+    }
+  }
+
+  img {
+    width: 4.2rem;
+    height: 5.6rem;
+    border-radius: 0.35rem;
+    object-fit: cover;
+    flex-shrink: 0;
+  }
+}
+
+.playthrough-card-right {
+  margin-left: 0;
+  flex: 0 0 auto;
+  justify-self: end;
+}
+
+.playthrough-stat {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+
+  .stat-value {
+    color: $text-1-color;
+    font-size: 0.92rem;
+    font-weight: 600;
+    line-height: 1.35;
+    word-break: break-word;
+  }
+}
+
+.summary-title {
+  margin-top: 1rem;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 168px));
+  justify-content: start;
+  gap: 0.85rem;
+  width: 100%;
+  padding: 0 2rem 2rem;
+  box-sizing: border-box;
+}
+
+.summary-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  padding: 0.75rem;
+  border-radius: 0.9rem;
+  background: $bg-1-color;
+  min-width: 0;
+
+  img {
+    width: 100%;
+    aspect-ratio: 285 / 380;
+    object-fit: cover;
+    border-radius: 0.65rem;
+    background: $bg-2-color;
+  }
+}
+
+.summary-card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.summary-card-title {
+  color: $text-2-color;
+  font-size: 0.88rem;
+  font-weight: 700;
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+.summary-card-hours {
+  color: $text-4-color;
+  font-size: 0.76rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
 .viewers-list {
@@ -838,6 +1053,33 @@ main {
   .viewers-list {
     min-width: 20rem;
     max-width: 24rem;
+  }
+}
+
+@media screen and (max-width: 999px) {
+  .playthrough-metrics-head-wrap {
+    display: none !important;
+  }
+
+  .playthrough-card-main {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .playthrough-card-left {
+    min-width: 0;
+    max-width: none;
+  }
+
+  .playthrough-card-right {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(140px, 1fr));
+    width: 100%;
+  }
+
+  .summary-grid {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    padding: 0 1rem 2rem;
   }
 }
 

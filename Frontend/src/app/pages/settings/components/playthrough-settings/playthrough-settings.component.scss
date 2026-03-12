@@ -1,0 +1,290 @@
+.playthrough-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+
+  h2 {
+    margin: 0 0 8px;
+    font-size: 30px;
+  }
+
+  p {
+    margin: 0;
+    color: #adadb8;
+    max-width: 680px;
+    line-height: 1.5;
+  }
+}
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: minmax(320px, 440px) 1fr;
+  gap: 20px;
+}
+
+.form-card,
+.list-card,
+.state-card,
+.empty-card {
+  background: linear-gradient(180deg, rgba(34, 34, 40, 0.92), rgba(24, 24, 27, 0.98));
+  border: 1px solid #2f2f39;
+  border-radius: 16px;
+}
+
+.form-card,
+.list-card,
+.state-card {
+  padding: 24px;
+}
+
+.form-card h3,
+.list-card h3 {
+  margin: 0 0 20px;
+  font-size: 20px;
+}
+
+.field,
+.checkbox-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.field span,
+.checkbox-field span {
+  color: #d7d7dc;
+  font-size: 14px;
+}
+
+.field input,
+.field select {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid #3b3b46;
+  background: #111114;
+  color: #efeff1;
+}
+
+.checkbox-field {
+  flex-direction: row;
+  align-items: center;
+}
+
+.segment-picker {
+  margin-top: 12px;
+  padding: 16px;
+  border: 1px solid #343440;
+  border-radius: 14px;
+  background: #121216;
+}
+
+.segment-picker-header,
+.playthrough-title,
+.playthrough-top {
+  display: flex;
+  gap: 12px;
+}
+
+.segment-picker-header {
+  align-items: center;
+  margin-bottom: 14px;
+
+  img {
+    width: 52px;
+    height: 70px;
+    object-fit: cover;
+    border-radius: 10px;
+  }
+
+  h4 {
+    margin: 0 0 4px;
+  }
+
+  p {
+    margin: 0;
+    color: #9a9aa7;
+  }
+}
+
+.segment-option,
+.segment-summary-item {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 12px 0;
+  border-top: 1px solid #24242c;
+}
+
+.segment-option:first-of-type,
+.segment-summary-item:first-of-type {
+  border-top: none;
+}
+
+.segment-option div,
+.segment-summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.segment-option span,
+.segment-summary-item span {
+  color: #9a9aa7;
+  font-size: 13px;
+}
+
+.actions {
+  margin-top: 20px;
+}
+
+.playthrough-item {
+  padding: 18px;
+  border: 1px solid #32323b;
+  border-radius: 14px;
+  background: #111114;
+}
+
+.playthrough-item + .playthrough-item {
+  margin-top: 14px;
+}
+
+.playthrough-top {
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.playthrough-title img {
+  width: 52px;
+  height: 70px;
+  object-fit: cover;
+  border-radius: 10px;
+}
+
+.playthrough-title h4 {
+  margin: 0 0 6px;
+}
+
+.playthrough-title p {
+  margin: 0;
+  color: #adadb8;
+}
+
+.playthrough-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.badges {
+  display: flex;
+  gap: 8px;
+  margin: 14px 0;
+  flex-wrap: wrap;
+}
+
+.badge {
+  display: inline-flex;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #22222a;
+  color: #d7d7dc;
+  font-size: 12px;
+}
+
+.badge.active {
+  background: rgba(0, 173, 111, 0.18);
+  color: #6ce5b6;
+}
+
+.segment-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.segment-summary-item {
+  padding: 12px;
+  border: 1px solid #24242c;
+  border-radius: 12px;
+  background: #18181d;
+}
+
+.message {
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-size: 14px;
+}
+
+.message.error {
+  background: rgba(255, 77, 77, 0.16);
+  color: #ff9d9d;
+}
+
+.message.success {
+  background: rgba(0, 173, 111, 0.16);
+  color: #7fe7be;
+}
+
+.empty-card,
+.state-card {
+  color: #adadb8;
+}
+
+.empty-card {
+  padding: 18px;
+}
+
+.primary-btn,
+.secondary-btn,
+.danger-btn {
+  border: none;
+  border-radius: 10px;
+  padding: 11px 16px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.primary-btn {
+  background: #00a36a;
+  color: #fff;
+}
+
+.secondary-btn {
+  background: #2b2b35;
+  color: #efeff1;
+}
+
+.danger-btn {
+  background: rgba(255, 77, 77, 0.18);
+  color: #ffb0b0;
+}
+
+.small {
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+@media (max-width: 1024px) {
+  .settings-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .section-header,
+  .playthrough-top {
+    flex-direction: column;
+  }
+
+  .playthrough-actions {
+    width: 100%;
+  }
+}

@@ -10,5 +10,6 @@ public class TwitchCategory
     
     // Navigation properties
     public ICollection<StreamCategory> StreamCategories { get; set; } = new List<StreamCategory>();
+    public ICollection<Playthrough> Playthroughs { get; set; } = new List<Playthrough>();
 }
 

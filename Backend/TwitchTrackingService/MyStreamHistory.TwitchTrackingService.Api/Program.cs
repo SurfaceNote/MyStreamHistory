@@ -31,6 +31,9 @@ builder.Services.AddInfrastructure(builder.Configuration)
         configurator.AddConsumer<SubscribeToAllUsersConsumer>();
         configurator.AddConsumer<GetActiveStreamCategoryConsumer>();
         configurator.AddConsumer<GetStreamerStatisticsConsumer>();
+        configurator.AddConsumer<GetPlaythroughSettingsConsumer>();
+        configurator.AddConsumer<UpsertPlaythroughConsumer>();
+        configurator.AddConsumer<DeletePlaythroughConsumer>();
     })
     .AddTransportBus();
 

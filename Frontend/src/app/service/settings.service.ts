@@ -1,9 +1,9 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
 import { API_ENDPOINTS } from '../constants/api-endpoints';
 import { GetSocialLinksResponse, UpdateSocialLinksRequest, UpdateSocialLinksResponse } from '../models/social-link.model';
+import { Playthrough, PlaythroughSettings, UpsertPlaythroughRequest } from '../models/playthrough.model';
 import { ApiResponse } from '../core/api/api-response.model';
 import { unwrapData } from '../core/api/api-operators';
 
@@ -27,6 +27,29 @@ export class SettingsService {
     ).pipe(
       unwrapData<UpdateSocialLinksResponse>()
     );
+  }
+
+  getPlaythroughs(): Observable<PlaythroughSettings> {
+    return this.http.get<ApiResponse<PlaythroughSettings>>(API_ENDPOINTS.SETTINGS.PLAYTHROUGHS)
+      .pipe(
+        unwrapData<PlaythroughSettings>()
+      );
+  }
+
+  savePlaythrough(request: UpsertPlaythroughRequest): Observable<Playthrough> {
+    return this.http.post<ApiResponse<Playthrough>>(
+      API_ENDPOINTS.SETTINGS.PLAYTHROUGHS,
+      request
+    ).pipe(
+      unwrapData<Playthrough>()
+    );
+  }
+
+  deletePlaythrough(playthroughId: string): Observable<void> {
+    return this.http.delete<ApiResponse<void>>(`${API_ENDPOINTS.SETTINGS.PLAYTHROUGHS}/${playthroughId}`)
+      .pipe(
+        unwrapData<void>()
+      );
   }
 }
 

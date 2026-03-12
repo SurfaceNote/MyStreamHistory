@@ -11,6 +11,7 @@ public class CategoryTrackingService : ICategoryTrackingService
     private readonly ITwitchCategoryRepository _categoryRepository;
     private readonly IStreamCategoryRepository _streamCategoryRepository;
     private readonly IStreamSessionRepository _streamSessionRepository;
+    private readonly IPlaythroughService _playthroughService;
     private readonly ITwitchApiClient _twitchApiClient;
     private readonly IPublishEndpoint _publishEndpoint;
     private readonly ILogger<CategoryTrackingService> _logger;
@@ -19,6 +20,7 @@ public class CategoryTrackingService : ICategoryTrackingService
         ITwitchCategoryRepository categoryRepository,
         IStreamCategoryRepository streamCategoryRepository,
         IStreamSessionRepository streamSessionRepository,
+        IPlaythroughService playthroughService,
         ITwitchApiClient twitchApiClient,
         IPublishEndpoint publishEndpoint,
         ILogger<CategoryTrackingService> logger)
@@ -26,6 +28,7 @@ public class CategoryTrackingService : ICategoryTrackingService
         _categoryRepository = categoryRepository;
         _streamCategoryRepository = streamCategoryRepository;
         _streamSessionRepository = streamSessionRepository;
+        _playthroughService = playthroughService;
         _twitchApiClient = twitchApiClient;
         _publishEndpoint = publishEndpoint;
         _logger = logger;
@@ -149,6 +152,11 @@ public class CategoryTrackingService : ICategoryTrackingService
                     };
 
                     await _streamCategoryRepository.CreateSegmentAsync(newSegment, cancellationToken);
+                    await _playthroughService.AutoAttachStreamCategoryAsync(
+                        streamSession.TwitchUserId,
+                        newSegment.Id,
+                        category.Id,
+                        cancellationToken);
                     segmentsCreated++;
                     
                     _logger.LogDebug("Created new segment for stream {StreamSessionId}, category {CategoryName}", 
@@ -174,6 +182,11 @@ public class CategoryTrackingService : ICategoryTrackingService
                     };
 
                     await _streamCategoryRepository.CreateSegmentAsync(newSegment, cancellationToken);
+                    await _playthroughService.AutoAttachStreamCategoryAsync(
+                        streamSession.TwitchUserId,
+                        newSegment.Id,
+                        category.Id,
+                        cancellationToken);
                     segmentsCreated++;
                     
                     _logger.LogInformation("Category changed for stream {StreamSessionId}: {OldCategory} -> {NewCategory}", 
@@ -277,6 +290,11 @@ public class CategoryTrackingService : ICategoryTrackingService
                 };
 
                 await _streamCategoryRepository.CreateSegmentAsync(newSegment, cancellationToken);
+                await _playthroughService.AutoAttachStreamCategoryAsync(
+                    streamSession.TwitchUserId,
+                    newSegment.Id,
+                    category.Id,
+                    cancellationToken);
                 
                 _logger.LogInformation("Created new category segment for stream {StreamSessionId}, category {CategoryName}", 
                     streamSessionId, category.Name);
@@ -302,6 +320,11 @@ public class CategoryTrackingService : ICategoryTrackingService
                 };
 
                 await _streamCategoryRepository.CreateSegmentAsync(newSegment, cancellationToken);
+                await _playthroughService.AutoAttachStreamCategoryAsync(
+                    streamSession.TwitchUserId,
+                    newSegment.Id,
+                    category.Id,
+                    cancellationToken);
                 
                 _logger.LogInformation("Category changed for stream {StreamSessionId}: {OldCategory} -> {NewCategory}", 
                     streamSessionId, activeSegment.TwitchCategory?.Name ?? "Unknown", category.Name);

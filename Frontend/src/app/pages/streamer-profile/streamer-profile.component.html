@@ -100,7 +100,7 @@
         <div class="recent-streams-section">
             <div class="block-title">
                 <div class="start-line"></div>
-                <h3>Last 10 Streams ({{ recentStreams.length }})</h3>
+                <h3>Last 10 Streams</h3>
                 <div class="end-line"></div>
             </div>
 
@@ -181,54 +181,96 @@
 
         <div class="gray-main-block list-walkthrough-and-viewers">
             <div class="list-walkthrough">
-                <div class="block-title">
+                @if (isLoadingStatistics) {
+                    <div style="padding: 2rem; text-align: center;">
+                        <p>Loading playthroughs...</p>
+                    </div>
+                }
+
+                @if (!isLoadingStatistics && (!statistics?.playthroughs || (statistics?.playthroughs?.length ?? 0) === 0)) {
+                    <div style="padding: 2rem; text-align: center;">
+                        <p>No playthroughs found</p>
+                    </div>
+                }
+
+                @if (!isLoadingStatistics && playthroughSections.length > 0) {
+                    @for (section of playthroughSections; track section.status) {
+                        <div class="status-section">
+                            <div class="block-title playthrough-section-title">
+                                <div class="start-line"></div>
+                                <h3>{{ section.title }} ({{ section.items.length }})</h3>
+                                <div class="end-line"></div>
+                            </div>
+
+                            <div class="playthrough-metrics-head-wrap hide-mobile">
+                                <div class="playthrough-metrics-head-spacer"></div>
+                                <div class="metric-grid metric-grid-playthrough playthrough-metrics-head">
+                                    <span>First Stream</span>
+                                    <span>Last Stream</span>
+                                    <span>Unique Viewers</span>
+                                    <span>Duration</span>
+                                </div>
+                            </div>
+
+                            <div class="playthrough-cards">
+                                @for (playthrough of section.items; track playthrough.playthroughId) {
+                                    <article class="playthrough-card">
+                                        <div class="playthrough-card-main">
+                                            <div class="playthrough-card-left">
+                                                <img [src]="getCategoryBoxArtForStats(playthrough.boxArtUrl, 285, 380)"
+                                                    [alt]="'Poster ' + playthrough.gameName">
+                                                <div class="playthrough-meta">
+                                                    <span>{{ playthrough.gameName }}</span>
+                                                    <small>{{ playthrough.title }}</small>
+                                                </div>
+                                            </div>
+
+                                            <div class="metric-grid metric-grid-playthrough playthrough-card-right">
+                                                <div class="playthrough-stat">
+                                                    <span class="stat-value">{{ playthrough.firstStreamStartedAt ? (playthrough.firstStreamStartedAt | date:'mediumDate') : 'No data' }}</span>
+                                                </div>
+                                                <div class="playthrough-stat">
+                                                    <span class="stat-value">{{ playthrough.lastStreamStartedAt ? (playthrough.lastStreamStartedAt | date:'mediumDate') : 'No data' }}</span>
+                                                </div>
+                                                <div class="playthrough-stat">
+                                                    <span class="stat-value">{{ playthrough.uniqueViewersCount }}</span>
+                                                </div>
+                                                <div class="playthrough-stat">
+                                                    <span class="stat-value">{{ playthrough.totalHours }} h.</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </article>
+                                }
+                            </div>
+                        </div>
+                    }
+                }
+
+                <div class="block-title summary-title">
                     <div class="start-line"></div>
-                    <h3>Without category ({{ statistics?.categories?.length || 0 }})</h3>
+                    <h3>All Games Summary</h3>
                     <div class="end-line"></div>
                 </div>
 
-                @if (isLoadingStatistics) {
-                    <div style="padding: 2rem; text-align: center;">
-                        <p>Loading categories...</p>
-                    </div>
-                }
-
-                @if (!isLoadingStatistics && (!statistics?.categories || (statistics?.categories?.length ?? 0) === 0)) {
-                    <div style="padding: 2rem; text-align: center;">
-                        <p>No categories found</p>
-                    </div>
-                }
-
-                @if (!isLoadingStatistics && statistics?.categories && (statistics?.categories?.length ?? 0) > 0) {
-                    <div class="games-table">
-                        <div class="table-head hide-mobile">
-                            <div class="head-game">
-                                <span>GAME</span>
-                            </div>
-                            <div class="fixed-width">
-                                <div><span>Duration</span></div>
-                            </div>
-                        </div>
-                        <div class="table-body">
-                            @for (category of statistics?.categories; track category.twitchCategoryId) {
-                                <div class="row">
-                                    <div class="game">
-                                        <img [src]="getCategoryBoxArtForStats(category.boxArtUrl, 285, 380)"
-                                            [alt]="'Poster ' + category.name">
-                                        <span>{{ category.name }}</span>
-                                    </div>
-                                    <div class="fixed-width hide-mobile">
-                                        <div><span>{{ category.totalHours }} h.</span></div>
-                                    </div>
+                @if (!isLoadingStatistics && statistics) {
+                    <div class="summary-grid">
+                        @for (category of statistics.categories; track category.twitchCategoryId) {
+                            <article class="summary-card">
+                                <img [src]="getCategoryBoxArtForStats(category.boxArtUrl, 285, 380)"
+                                    [alt]="'Poster ' + category.name">
+                                <div class="summary-card-meta">
+                                    <span class="summary-card-title">{{ category.name }}</span>
+                                    <span class="summary-card-hours">{{ category.totalHours }} h.</span>
                                 </div>
-                            }
-                        </div>
+                            </article>
+                        }
                     </div>
                 }
             </div>
             <div class="viewers-list" style="margin-right: 1rem">
                 <div class="header">
-                    <span><b>TOP-100 Viewers ({{ topViewers.length }})</b></span>
+                    <span><b>TOP-100 Viewers</b></span>
                 </div>
 
                 @if (isLoadingViewers) {

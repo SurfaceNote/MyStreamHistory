@@ -48,11 +48,14 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<IEventSubSubscriptionRepository, EventSubSubscriptionRepository>();
         services.AddScoped<ITwitchCategoryRepository, TwitchCategoryRepository>();
         services.AddScoped<IStreamCategoryRepository, StreamCategoryRepository>();
+        services.AddScoped<IPlaythroughRepository, PlaythroughRepository>();
+        services.AddScoped<IPlaythroughStreamCategoryRepository, PlaythroughStreamCategoryRepository>();
 
         // Add Application Services
         services.AddScoped<IStreamSessionService, StreamSessionService>();
         services.AddScoped<ISubscriptionSyncService, SubscriptionSyncService>();
         services.AddScoped<ICategoryTrackingService, CategoryTrackingService>();
+        services.AddScoped<IPlaythroughService, PlaythroughService>();
         services.AddScoped<IUserProfileService, Application.Services.UserProfileService>();
 
         return services;

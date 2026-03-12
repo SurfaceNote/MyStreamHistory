@@ -1,0 +1,116 @@
+<div class="playthrough-settings">
+  <div class="section-header">
+    <div>
+      <h2>Playthroughs</h2>
+      <p>Group stream game segments into reusable playthrough folders and choose which one auto-collects new streams.</p>
+    </div>
+
+    <button type="button" class="secondary-btn" (click)="startCreate()">New Playthrough</button>
+  </div>
+
+  <div *ngIf="errorMessage" class="message error">{{ errorMessage }}</div>
+  <div *ngIf="successMessage" class="message success">{{ successMessage }}</div>
+
+  <div *ngIf="isLoading" class="state-card">Loading playthrough settings...</div>
+
+  <div *ngIf="!isLoading" class="settings-grid">
+    <section class="form-card">
+      <h3>{{ form.id ? 'Edit Playthrough' : 'Create Playthrough' }}</h3>
+
+      <label class="field">
+        <span>Folder Name</span>
+        <input type="text" [(ngModel)]="form.title" placeholder="Optional title" maxlength="200">
+      </label>
+
+      <label class="field">
+        <span>Game</span>
+        <select [(ngModel)]="form.twitchCategoryId">
+          <option value="" disabled>Select a game</option>
+          <option *ngFor="let game of gameOptions; trackBy: trackByGame" [value]="game.twitchCategoryId">
+            {{ game.name }} ({{ game.streamCategories.length }} segments)
+          </option>
+        </select>
+      </label>
+
+      <label class="field">
+        <span>Status</span>
+        <select [(ngModel)]="form.status">
+          <option *ngFor="let option of statusOptions" [value]="option.value">{{ option.label }}</option>
+        </select>
+      </label>
+
+      <label class="checkbox-field">
+        <input type="checkbox" [(ngModel)]="form.autoAddNewStreams">
+        <span>Auto-add new streams for this game to the current playthrough</span>
+      </label>
+
+      <div class="segment-picker" *ngIf="selectedGame; else noGameSelected">
+        <div class="segment-picker-header">
+          <img *ngIf="selectedGameImageUrl" [src]="selectedGameImageUrl" [alt]="selectedGame.name">
+          <div>
+            <h4>{{ selectedGame.name }}</h4>
+            <p>Select existing stream categories for this playthrough.</p>
+          </div>
+        </div>
+
+        <label *ngFor="let streamCategory of selectedGame.streamCategories" class="segment-option">
+          <input
+            type="checkbox"
+            [checked]="isSelected(streamCategory.streamCategoryId)"
+            (change)="toggleStreamCategory(streamCategory.streamCategoryId, $any($event.target).checked)">
+          <div>
+            <span>{{ formatStreamCategoryDate(streamCategory.categoryStartedAt) }}</span>
+          </div>
+        </label>
+      </div>
+
+      <ng-template #noGameSelected>
+        <div class="empty-card">
+          {{ form.id ? 'No stream categories are available for this playthrough.' : 'No unassigned stream categories are available. Create a stream history segment first or free one from another playthrough.' }}
+        </div>
+      </ng-template>
+
+      <div class="actions">
+        <button type="button" class="primary-btn" (click)="save()" [disabled]="isSaving || !gameOptions.length">
+          {{ isSaving ? 'Saving...' : (form.id ? 'Save Changes' : 'Create Playthrough') }}
+        </button>
+      </div>
+    </section>
+
+    <section class="list-card">
+      <h3>Existing Playthroughs</h3>
+
+      <div *ngIf="!settings.playthroughs.length" class="empty-card">
+        No playthroughs yet.
+      </div>
+
+      <article *ngFor="let playthrough of settings.playthroughs; trackBy: trackByPlaythrough" class="playthrough-item">
+        <div class="playthrough-top">
+          <div class="playthrough-title">
+            <img *ngIf="playthrough.boxArtUrl" [src]="playthrough.boxArtUrl" [alt]="playthrough.gameName">
+            <div>
+              <h4>{{ playthrough.title }}</h4>
+              <p>{{ playthrough.gameName }} | {{ playthrough.status }}</p>
+            </div>
+          </div>
+
+          <div class="playthrough-actions">
+            <button type="button" class="secondary-btn small" (click)="startEdit(playthrough)">Edit</button>
+            <button type="button" class="danger-btn small" (click)="delete(playthrough)">Delete</button>
+          </div>
+        </div>
+
+        <div class="badges">
+          <span class="badge">{{ playthrough.streamCategories.length }} segments</span>
+          <span class="badge active" *ngIf="playthrough.autoAddNewStreams">Auto Add Enabled</span>
+        </div>
+
+        <div class="segment-summary" *ngIf="playthrough.streamCategories.length">
+          <div *ngFor="let streamCategory of playthrough.streamCategories" class="segment-summary-item">
+            <span>{{ formatStreamCategoryDate(streamCategory.categoryStartedAt) }}</span>
+          </div>
+        </div>
+      </article>
+    </section>
+  </div>
+</div>

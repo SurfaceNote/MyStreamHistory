@@ -11,5 +11,6 @@ public class StreamCategory
     // Navigation properties
     public StreamSession StreamSession { get; set; } = null!;
     public TwitchCategory TwitchCategory { get; set; } = null!;
+    public ICollection<PlaythroughStreamCategory> PlaythroughStreamCategories { get; set; } = new List<PlaythroughStreamCategory>();
 }
 

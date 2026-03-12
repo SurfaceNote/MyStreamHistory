@@ -30,6 +30,26 @@ public class StreamCategoryRepository : IStreamCategoryRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<List<StreamCategory>> GetByTwitchUserIdAsync(int twitchUserId, CancellationToken cancellationToken = default)
+    {
+        return await _context.StreamCategories
+            .AsNoTracking()
+            .Include(sc => sc.StreamSession)
+            .Include(sc => sc.TwitchCategory)
+            .Where(sc => sc.StreamSession.TwitchUserId == twitchUserId)
+            .OrderByDescending(sc => sc.StartedAt)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<List<StreamCategory>> GetByIdsAsync(List<Guid> ids, CancellationToken cancellationToken = default)
+    {
+        return await _context.StreamCategories
+            .Include(sc => sc.StreamSession)
+            .Include(sc => sc.TwitchCategory)
+            .Where(sc => ids.Contains(sc.Id))
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task CreateSegmentAsync(StreamCategory segment, CancellationToken cancellationToken = default)
     {
         await _context.StreamCategories.AddAsync(segment, cancellationToken);
