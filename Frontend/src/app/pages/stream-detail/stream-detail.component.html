@@ -22,7 +22,7 @@
       </div>
       <div class="meta-item">
         <span class="meta-label">Duration</span>
-        <span class="meta-value">{{ formatTotalMinutes(streamDetails.startedAt, streamDetails.endedAt) }} minutes</span>
+        <span class="meta-value">{{ formatMinutes(formatTotalMinutes(streamDetails.startedAt, streamDetails.endedAt)) }}</span>
       </div>
     </div>
   </div>
@@ -46,7 +46,7 @@
               <div class="category-stat">
                 <span class="stat-icon">⏱</span>
                 <span class="stat-label">Duration</span>
-                <span class="stat-value">{{ category.durationMinutes }} minutes</span>
+                <span class="stat-value">{{ formatMinutes(category.durationMinutes) }}</span>
               </div>
               <div class="category-stat">
                 <span class="stat-icon">👁</span>
