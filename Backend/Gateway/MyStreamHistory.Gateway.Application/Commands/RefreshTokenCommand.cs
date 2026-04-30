@@ -4,4 +4,4 @@ using MyStreamHistory.Shared.Api.DTOs;
 
 namespace MyStreamHistory.Gateway.Application.Commands;
 
-public record RefreshTokenCommand(Guid UserId, string Token) : IRequest<RefreshTokenResultDto>;
+public record RefreshTokenCommand(string Token, string? CreatedByIp) : IRequest<RefreshTokenResultDto>;
