@@ -4,4 +4,5 @@ public class TwitchAuthorizeRequestContract
 {
     public string Code { get; init; } = null!;
     public string State { get; init; } = null!;
+    public string? CreatedByIp { get; init; }
 }

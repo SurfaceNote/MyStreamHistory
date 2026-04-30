@@ -3,6 +3,6 @@
     public sealed class EmptyResponse
     {
         public static readonly EmptyResponse Instance = new();
-        private EmptyResponse() { }
+        public EmptyResponse() { }
     }
 }

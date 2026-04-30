@@ -17,18 +17,43 @@ public class RefreshTokenConsumer(
 {
     public async Task Consume(ConsumeContext<RefreshTokenRequestContract> context)
     {
-        var existingToken = await refreshTokenRepository.GetByUserIdAndTokenAsync(
-            context.Message.UserId, 
-            context.Message.Token);
+        var now = DateTime.UtcNow;
+        if (!jwtTokenService.TryReadRefreshTokenId(context.Message.Token, out var tokenId))
+        {
+            throw new AppException(ErrorCodes.InvalidToken);
+        }
+
+        var tokenHash = jwtTokenService.HashRefreshToken(context.Message.Token);
+        var existingToken = await refreshTokenRepository.GetByTokenIdAndHashAsync(
+            tokenId,
+            tokenHash,
+            context.CancellationToken);
+
+        var expiredTokens = await refreshTokenRepository.GetExpiredAsync(now, context.CancellationToken);
+        var expiredTokensToRemove = expiredTokens
+            .Where(rt => rt.TokenId != tokenId)
+            .ToList();
+
+        if (expiredTokensToRemove.Count > 0)
+        {
+            refreshTokenRepository.RemoveRange(expiredTokensToRemove);
+        }
 
         if (existingToken == null)
         {
             throw new AppException(ErrorCodes.InvalidToken);
         }
 
-        if (existingToken.ExpiresAt < DateTime.UtcNow)
+        if (existingToken.RevokedAt != null || existingToken.ReplacedByTokenId != null)
         {
-            refreshTokenRepository.Remove(existingToken);
+            await RevokeFamilyAsync(existingToken.TokenFamilyId, now, context.CancellationToken);
+            await unitOfWork.SaveChangesAsync();
+            throw new AppException(ErrorCodes.InvalidToken);
+        }
+
+        if (existingToken.ExpiresAt < now)
+        {
+            existingToken.RevokedAt = now;
             await unitOfWork.SaveChangesAsync();
             throw new AppException(ErrorCodes.TokenExpired);
         }
@@ -38,15 +63,21 @@ public class RefreshTokenConsumer(
             throw new AppException(ErrorCodes.UserNotFound);
         }
 
-        // Remove old refresh token
-        refreshTokenRepository.Remove(existingToken);
+        var newRefreshTokenId = Guid.NewGuid();
+        var newRefreshTokenValue = jwtTokenService.GenerateRefreshToken(newRefreshTokenId);
+        
+        existingToken.RevokedAt = now;
+        existingToken.ReplacedByTokenId = newRefreshTokenId;
 
-        // Create new refresh token
         var newRefreshToken = new RefreshToken
         {
-            Token = jwtTokenService.GenerateRefreshToken(),
+            TokenId = newRefreshTokenId,
+            TokenFamilyId = existingToken.TokenFamilyId,
+            TokenHash = jwtTokenService.HashRefreshToken(newRefreshTokenValue),
             UserId = existingToken.UserId,
-            ExpiresAt = DateTime.UtcNow.AddDays(365)
+            CreatedAt = now,
+            ExpiresAt = now.AddDays(365),
+            CreatedByIp = context.Message.CreatedByIp
         };
 
         await refreshTokenRepository.AddAsync(newRefreshToken);
@@ -58,7 +89,17 @@ public class RefreshTokenConsumer(
         await context.RespondAsync(new RefreshTokenResponseContract
         {
             AccessToken = newAccessToken,
-            RefreshToken = newRefreshToken.Token
+            RefreshToken = newRefreshTokenValue
         });
+    }
+
+    private async Task RevokeFamilyAsync(Guid tokenFamilyId, DateTime revokedAt, CancellationToken cancellationToken)
+    {
+        var tokenFamily = await refreshTokenRepository.GetByFamilyIdAsync(tokenFamilyId, cancellationToken);
+
+        foreach (var refreshToken in tokenFamily.Where(rt => rt.RevokedAt == null))
+        {
+            refreshToken.RevokedAt = revokedAt;
+        }
     }
 }
