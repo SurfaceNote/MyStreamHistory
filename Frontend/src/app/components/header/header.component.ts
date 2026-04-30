@@ -18,12 +18,14 @@ export class HeaderComponent implements OnInit, OnDestroy {
   private router = inject(Router);
   username: string | null = null;
   twitchId: string | null = null;
+  isAdmin: boolean = false;
   private subscriptions: Subscription = new Subscription();
 
   ngOnInit(): void {
     this.isLoggedIn = this.authService.isLoggedIn();
     this.username = this.authService.getUsernameFromToken();
     this.twitchId = this.authService.getTwitchIdFromToken();
+    this.isAdmin = this.authService.isAdmin();
 
     this.subscriptions.add(
       this.authService.getAccessTokenObservable().subscribe(token => {
@@ -31,6 +33,9 @@ export class HeaderComponent implements OnInit, OnDestroy {
         if (this.isLoggedIn) {
           this.username = this.authService.getUsernameFromToken();
           this.twitchId = this.authService.getTwitchIdFromToken();
+          this.isAdmin = this.authService.isAdmin();
+        } else {
+          this.isAdmin = false;
         }
       })
     );
@@ -47,10 +52,14 @@ export class HeaderComponent implements OnInit, OnDestroy {
   }
 
   logout() {
-    this.authService.logoutLocal();
+    this.authService.logout();
   }
 
   navigateToSettings() {
     this.router.navigate(['/settings']);
+  }
+
+  navigateToAdmin() {
+    this.router.navigate(['/admin']);
   }
 }

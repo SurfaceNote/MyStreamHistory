@@ -21,6 +21,7 @@ builder.Services.AddInfrastructure(builder.Configuration)
     {
         configurator.AddConsumer<TwitchAuthorizeConsumer>();
         configurator.AddConsumer<RefreshTokenConsumer>();
+        configurator.AddConsumer<LogoutConsumer>();
         configurator.AddConsumer<GetNewUsersConsumer>();
         configurator.AddConsumer<GetAllUsersConsumer>();
         configurator.AddConsumer<GetUserByTwitchIdConsumer>();

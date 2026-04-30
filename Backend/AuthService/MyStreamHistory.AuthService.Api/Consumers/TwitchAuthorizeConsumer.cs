@@ -60,11 +60,17 @@ public class TwitchAuthorizeConsumer(
             await authUserRepository.UpdateAsync(user);
         }
 
+        var refreshTokenId = Guid.NewGuid();
+        var refreshTokenValue = jwtTokenService.GenerateRefreshToken(refreshTokenId);
         var refreshToken = new RefreshToken
         {
-            Token = jwtTokenService.GenerateRefreshToken(),
+            TokenId = refreshTokenId,
+            TokenFamilyId = Guid.NewGuid(),
+            TokenHash = jwtTokenService.HashRefreshToken(refreshTokenValue),
             UserId = user.Id,
-            ExpiresAt = DateTime.UtcNow.AddDays(365)
+            CreatedAt = DateTime.UtcNow,
+            ExpiresAt = DateTime.UtcNow.AddDays(365),
+            CreatedByIp = context.Message.CreatedByIp
         };
         
         await refreshTokenRepository.AddAsync(refreshToken);
@@ -85,7 +91,7 @@ public class TwitchAuthorizeConsumer(
         await context.RespondAsync(new TwitchAuthorizeResponseContract
         {
             AccessToken = jwtTokenService.GenerateAccessToken(user),
-            RefreshToken = refreshToken.Token
+            RefreshToken = refreshTokenValue
         });
         
         

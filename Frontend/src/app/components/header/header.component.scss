@@ -159,7 +159,8 @@ header .auth {
             }
         }
 
-        .settings-btn {
+        .settings-btn,
+        .admin-btn {
             padding: 0.5rem 0.75rem;
             background: $purple-color;
             border: none;
@@ -182,6 +183,14 @@ header .auth {
 
             &:active {
                 transform: scale(0.95);
+            }
+        }
+
+        .admin-btn {
+            background: #2b6cb0;
+
+            &:hover {
+                background: #245a93;
             }
         }
     }

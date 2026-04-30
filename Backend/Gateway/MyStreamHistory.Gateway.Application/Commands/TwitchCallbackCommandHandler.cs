@@ -25,7 +25,8 @@ namespace MyStreamHistory.Gateway.Application.Commands
                         new TwitchAuthorizeRequestContract
                         {
                             Code = request.Code,
-                            State = request.State
+                            State = request.State,
+                            CreatedByIp = request.CreatedByIp
                         });
 
             if (response.IsSuccess)

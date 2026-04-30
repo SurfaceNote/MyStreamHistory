@@ -5,7 +5,6 @@ import { catchError, filter, map, take, tap } from "rxjs/operators";
 import { Router } from "@angular/router";
 import { environment } from "../../environments/environment";
 import { TokenResponse } from "../features/auth/models/token-response.model";
-import { RefreshTokenRequest } from "../features/auth/models/refresh-token-request.model";
 import { ApiResponse } from "../core/api/api-response.model";
 import { unwrapData } from "../core/api/api-operators";
 
@@ -16,7 +15,6 @@ export class AuthService {
     private readonly apiUrl = environment.api_url;
     private readonly redirectUri = `${environment.url}/callback`;
     private readonly accessTokenKey = 'access_token';
-    private readonly refreshTokenKey = 'refresh_token';
     private readonly clientId = environment.clientId;
     private isRefreshing = false;
     private refreshTokenSubject = new BehaviorSubject<string | null>(null);
@@ -27,16 +25,17 @@ export class AuthService {
     private router = inject(Router);
 
     private setTokens(tokens: TokenResponse): void {
-        localStorage.setItem(this.accessTokenKey, tokens.accessToken);
-        localStorage.setItem(this.refreshTokenKey, tokens.refreshToken);
+        sessionStorage.setItem(this.accessTokenKey, tokens.accessToken);
+        localStorage.removeItem('refresh_token');
 
         this.tokenSubject.next(tokens.accessToken);
         this.usernameSubject.next(this.getUsernameFromToken());
     }
 
     private clearTokens(): void {
+        sessionStorage.removeItem(this.accessTokenKey);
         localStorage.removeItem(this.accessTokenKey);
-        localStorage.removeItem(this.refreshTokenKey);
+        localStorage.removeItem('refresh_token');
         this.tokenSubject.next(null);
         this.usernameSubject.next(null);
     }
@@ -88,11 +87,7 @@ export class AuthService {
     }
 
     getAccessToken(): string | null {
-        return localStorage.getItem(this.accessTokenKey);
-    }
-
-    getRefreshToken(): string | null {
-        return localStorage.getItem(this.refreshTokenKey);
+        return sessionStorage.getItem(this.accessTokenKey);
     }
 
     getAccessTokenObservable(): Observable<string | null> {
@@ -111,20 +106,11 @@ export class AuthService {
             );
         }
 
-        const refreshToken = this.getRefreshToken();
-
-        if (!refreshToken) {
-            this.logoutLocal();
-            return throwError(() => new Error('No refresh token available'));
-        }
-
         this.isRefreshing = true;
         this.refreshTokenSubject.next(null);
 
-        const body: RefreshTokenRequest = { token: refreshToken };
-
         return this.http.
-            post<ApiResponse<TokenResponse>>(`${this.apiUrl}/auth/refresh-token`, body, { withCredentials: true })
+            post<ApiResponse<TokenResponse>>(`${this.apiUrl}/auth/refresh-token`, {}, { withCredentials: true })
             .pipe(
                 unwrapData<TokenResponse>(),
                 tap((tokens) => {
@@ -169,6 +155,20 @@ export class AuthService {
         return payload?.TwitchId ?? null;
     }
 
+    isAdmin(): boolean {
+        const token = this.getAccessToken();
+
+        if (!token) {
+            return false;
+        }
+
+        const payload = this.decodeJwtPayload(token);
+        const roleClaim = payload?.role ?? payload?.['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'];
+        const roles = Array.isArray(roleClaim) ? roleClaim : [roleClaim];
+
+        return roles.some((role) => role === 'admin');
+    }
+
     logoutLocal(): void {
         this.clearTokens();
         this.router.navigate(['/']);
@@ -188,14 +188,14 @@ export class AuthService {
     logout(): void {
         this.http.post(`${this.apiUrl}/auth/logout`, {}, {withCredentials: true}).subscribe({
             next: () => {
-                localStorage.removeItem(this.accessTokenKey);
+                this.clearTokens();
                 this.tokenSubject.next(null);
                 this.usernameSubject.next(null);
                 this.router.navigate(['/']);
             },
             error: (err) => {
                 console.error('Logout failed', err);
-                localStorage.removeItem(this.accessTokenKey);
+                this.clearTokens();
                 this.router.navigate(['/']);
             }
         })

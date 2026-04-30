@@ -6,11 +6,12 @@ import { AuthService } from "./auth.service";
 export function authIntercerptor(req: HttpRequest<unknown>, next: HttpHandlerFn): Observable<HttpEvent<unknown>>{
     const authService = inject(AuthService);
     const isAuthRequest = req.url.includes('/auth/twitch/callback') ||
-                          req.url.includes('/auth/refresh-token');
+                          req.url.includes('/auth/refresh-token') ||
+                          req.url.includes('/auth/logout');
 
-    // For refresh-token, we still need to add the Authorization header (with expired token)
-    // because Gateway extracts UserId from it
-    const skipTokenCompletely = req.url.includes('/auth/twitch/callback');
+    const skipTokenCompletely = req.url.includes('/auth/twitch/callback') ||
+                                req.url.includes('/auth/refresh-token') ||
+                                req.url.includes('/auth/logout');
     
     if (skipTokenCompletely) {
         return next(req);

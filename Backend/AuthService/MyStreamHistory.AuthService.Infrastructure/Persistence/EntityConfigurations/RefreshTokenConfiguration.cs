@@ -12,9 +12,13 @@ public class RefreshTokenConfiguration : IEntityTypeConfiguration<RefreshToken>
         
         builder.HasKey(x => x.Id);
 
-        builder.Property(x => x.Token).IsRequired();
+        builder.Property(x => x.TokenHash).IsRequired();
 
-        builder.HasIndex(x => x.Token).IsUnique();
+        builder.HasIndex(x => x.TokenId).IsUnique();
+        builder.HasIndex(x => x.TokenHash).IsUnique();
+        builder.HasIndex(x => x.TokenFamilyId);
+        builder.HasIndex(x => x.UserId);
+        builder.HasIndex(x => x.ExpiresAt);
 
         builder.HasOne(x => x.User)
             .WithMany()

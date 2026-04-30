@@ -13,6 +13,9 @@
         <app-login-component *ngIf="!isLoggedIn"/>
         <div *ngIf="isLoggedIn" class="user-menu">
             <div>Hello, <a [routerLink]="['/profile', twitchId]">{{username}}</a></div>
+            <button *ngIf="isAdmin" class="admin-btn" (click)="navigateToAdmin()" title="Admin diagnostics">
+                <i class="fa fa-shield"></i>
+            </button>
             <button class="settings-btn" (click)="navigateToSettings()" title="Settings">
                 <i class="fa fa-gear"></i>
             </button>

@@ -1,13 +1,17 @@
 using System.Text;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using MyStreamHistory.Gateway.Api.Extenstions;
 using MyStreamHistory.Gateway.Application.Options;
+using MyStreamHistory.Shared.Api.Authorization;
 using MyStreamHistory.Shared.Api.Extensions;
 using MyStreamHistory.Shared.Infrastructure;
 using MyStreamHistory.Shared.Infrastructure.Logging;
 using MyStreamHistory.Shared.Infrastructure.Transport;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -65,7 +69,7 @@ builder.Services.AddCors(options =>
 builder.Services.AddCors(o =>
 {
     o.AddPolicy("ExtDev", p => p
-        .WithOrigins("https://*.trycloudflare.com", "https://0fowmr0pl34smxhy55n0wj5fx5o9mn.ext-twitch.tv")
+        .WithOrigins("https://*.trycloudflare.com", "https://techrepublic-downtown-said-anywhere.trycloudflare.com", "https://0fowmr0pl34smxhy55n0wj5fx5o9mn.ext-twitch.tv")
         .SetIsOriginAllowedToAllowWildcardSubdomains()
         .AllowAnyHeader()
         .AllowAnyMethod());
@@ -144,11 +148,41 @@ builder.Services.AddAuthentication(options =>
         };
     });
 
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddPolicy(PolicyNames.DiagnosticsAdmin, httpContext =>
+    {
+        var permitLimit = builder.Configuration.GetValue<int?>("Diagnostics:RateLimit:PermitLimit") ?? 10;
+        var windowMinutes = builder.Configuration.GetValue<int?>("Diagnostics:RateLimit:WindowMinutes") ?? 1;
+        var partitionKey = httpContext.User.FindFirst("sub")?.Value
+            ?? httpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+            ?? httpContext.Connection.RemoteIpAddress?.ToString()
+            ?? "anonymous";
+
+        return RateLimitPartition.GetFixedWindowLimiter(partitionKey, _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = permitLimit,
+            Window = TimeSpan.FromMinutes(windowMinutes),
+            QueueLimit = 0,
+            AutoReplenishment = true
+        });
+    });
+});
+
 builder.Services.AddAuthorization(options =>
 {
-    options.AddPolicy("AllowExpiredJwt", policy =>
+    options.AddPolicy(PolicyNames.AllowExpiredJwt, policy =>
     {
         policy.RequireAuthenticatedUser();
+    });
+
+    options.AddPolicy(PolicyNames.DiagnosticsAdmin, policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.RequireRole("admin");
+        policy.RequireAssertion(context =>
+            !builder.Environment.IsProduction()
+            || builder.Configuration.GetValue<bool>("Diagnostics:EnableInProduction"));
     });
 });
 
@@ -164,6 +198,7 @@ app.UseCors("ExtDev");
 app.UseRouting();
 
 app.UseAuthentication();
+app.UseRateLimiter();
 app.UseAuthorization();
 
 app.UseGlobalExceptionHandler();
