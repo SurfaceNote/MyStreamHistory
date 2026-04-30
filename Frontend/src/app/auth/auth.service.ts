@@ -155,6 +155,20 @@ export class AuthService {
         return payload?.TwitchId ?? null;
     }
 
+    isAdmin(): boolean {
+        const token = this.getAccessToken();
+
+        if (!token) {
+            return false;
+        }
+
+        const payload = this.decodeJwtPayload(token);
+        const roleClaim = payload?.role ?? payload?.['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'];
+        const roles = Array.isArray(roleClaim) ? roleClaim : [roleClaim];
+
+        return roles.some((role) => role === 'admin');
+    }
+
     logoutLocal(): void {
         this.clearTokens();
         this.router.navigate(['/']);

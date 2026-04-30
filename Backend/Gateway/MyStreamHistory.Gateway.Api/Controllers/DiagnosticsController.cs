@@ -2,8 +2,10 @@ using System.Security.Claims;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using MyStreamHistory.Gateway.Application.Commands;
 using MyStreamHistory.Gateway.Application.Queries;
+using MyStreamHistory.Shared.Api.Authorization;
 using MyStreamHistory.Shared.Api.Extensions;
 using MyStreamHistory.Shared.Api.Wrappers;
 using MyStreamHistory.Shared.Base.Contracts.Diagnostics.Responses;
@@ -15,8 +17,14 @@ namespace MyStreamHistory.Gateway.Api.Controllers;
 /// </summary>
 [ApiController]
 [Route("diagnostics")]
+[Authorize(Policy = PolicyNames.DiagnosticsAdmin)]
+[EnableRateLimiting(PolicyNames.DiagnosticsAdmin)]
 public class DiagnosticsController : ApiControllerBase
 {
+    private const string ConfirmationHeaderName = "X-Diagnostics-Confirmation";
+    private const string DeleteAllEventSubSubscriptionsConfirmation = "delete-all-eventsub-subscriptions";
+    private const string CleanupAllChatSubscriptionsConfirmation = "cleanup-all-chat-subscriptions";
+
     private readonly IMediator _mediator;
     private readonly ILogger<DiagnosticsController> _logger;
 
@@ -28,12 +36,9 @@ public class DiagnosticsController : ApiControllerBase
 
     /// <summary>
     /// Get all current EventSub subscriptions.
-    /// TEMPORARY: Only accessible by user "kination" during development.
-    /// This restriction will be replaced with proper role-based authorization in production.
     /// </summary>
     /// <returns>List of all active EventSub subscriptions with details</returns>
     [HttpGet("eventsub-subscriptions")]
-    [Authorize]
     [ProducesResponseType(typeof(ApiResultContainer<EventSubSubscriptionsDto>), 200)]
     [ProducesResponseType(typeof(ApiResultContainer), 401)]
     [ProducesResponseType(typeof(ApiResultContainer), 403)]
@@ -41,107 +46,69 @@ public class DiagnosticsController : ApiControllerBase
     public async Task<ActionResult<ApiResultContainer<EventSubSubscriptionsDto>>> GetEventSubSubscriptions(
         CancellationToken cancellationToken)
     {
-        // TEMPORARY: Hardcoded username check for development only
-        // TODO: Replace with proper admin role check in production
-        var userName = User.FindFirstValue("UserName");
-        
-        if (string.IsNullOrEmpty(userName))
-        {
-            _logger.LogWarning("Unauthorized access attempt to eventsub-subscriptions: UserName claim not found");
-            return Unauthorized("Invalid authentication token: UserName claim not found");
-        }
-
-        if (userName != "kination")
-        {
-            _logger.LogWarning("Access denied to eventsub-subscriptions for user: {UserName}", userName);
-            return StatusCode(403, new 
-            { 
-                message = "Access denied. This diagnostic endpoint is restricted during development.",
-                note = "This is a temporary restriction while the application is in development.",
-                userName
-            });
-        }
-
         try
         {
+            var user = GetAuditUser();
             var query = new GetEventSubSubscriptionsQuery();
             var subscriptions = await _mediator.Send(query, cancellationToken);
 
-            _logger.LogInformation("User {UserName} accessed EventSub subscriptions. Total: {Total}, Cost: {Cost}/{MaxCost}", 
-                userName, subscriptions.Total, subscriptions.TotalCost, subscriptions.MaxTotalCost);
+            _logger.LogInformation("Diagnostics admin {UserId} accessed EventSub subscriptions. Total: {Total}, Cost: {Cost}/{MaxCost}", 
+                user.UserId, subscriptions.Total, subscriptions.TotalCost, subscriptions.MaxTotalCost);
 
             return this.Success(subscriptions);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error while fetching EventSub subscriptions for user {UserName}", userName);
+            _logger.LogError(ex, "Error while fetching EventSub subscriptions for diagnostics admin {UserId}", GetAuditUser().UserId);
             return StatusCode(500, "An error occurred while processing your request");
         }
     }
 
     /// <summary>
     /// Delete all EventSub subscriptions.
-    /// TEMPORARY: Only accessible by user "kination" during development.
     /// WARNING: This will unsubscribe from ALL events for ALL users!
     /// </summary>
     /// <returns>Number of deleted subscriptions</returns>
     [HttpDelete("eventsub-subscriptions")]
-    [Authorize]
     [ProducesResponseType(typeof(ApiResultContainer<DeleteAllSubscriptionsResponseContract>), 200)]
+    [ProducesResponseType(typeof(ApiResultContainer), 400)]
     [ProducesResponseType(typeof(ApiResultContainer), 401)]
     [ProducesResponseType(typeof(ApiResultContainer), 403)]
     [ProducesResponseType(typeof(ApiResultContainer), 500)]
     public async Task<ActionResult<ApiResultContainer<DeleteAllSubscriptionsResponseContract>>> DeleteAllSubscriptions(
         CancellationToken cancellationToken)
     {
-        // TEMPORARY: Hardcoded username check for development only
-        // TODO: Replace with proper admin role check in production
-        var userName = User.FindFirstValue("UserName");
-        
-        if (string.IsNullOrEmpty(userName))
+        if (!HasConfirmation(DeleteAllEventSubSubscriptionsConfirmation))
         {
-            _logger.LogWarning("Unauthorized access attempt to delete-all-subscriptions: UserName claim not found");
-            return Unauthorized("Invalid authentication token: UserName claim not found");
-        }
-
-        if (userName != "kination")
-        {
-            _logger.LogWarning("Access denied to delete-all-subscriptions for user: {UserName}", userName);
-            return StatusCode(403, new 
-            { 
-                message = "Access denied. This diagnostic endpoint is restricted during development.",
-                note = "This is a temporary restriction while the application is in development.",
-                userName
-            });
+            return MissingConfirmation(DeleteAllEventSubSubscriptionsConfirmation);
         }
 
         try
         {
-            _logger.LogWarning("User {UserName} is deleting ALL EventSub subscriptions", userName);
+            var user = GetAuditUser();
+            LogDestructiveAudit("DeleteAllEventSubSubscriptions", user);
             
             var command = new DeleteAllSubscriptionsCommand();
             var result = await _mediator.Send(command, cancellationToken);
 
-            _logger.LogWarning("User {UserName} deleted {DeletedCount} EventSub subscriptions", 
-                userName, result.DeletedCount);
+            _logger.LogWarning("Diagnostics admin {UserId} deleted {DeletedCount} EventSub subscriptions. CorrelationId: {CorrelationId}", 
+                user.UserId, result.DeletedCount, GetCorrelationId());
 
             return this.Success(result);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error while deleting all subscriptions for user {UserName}", userName);
+            _logger.LogError(ex, "Error while deleting all EventSub subscriptions for diagnostics admin {UserId}", GetAuditUser().UserId);
             return StatusCode(500, "An error occurred while processing your request");
         }
     }
 
     /// <summary>
     /// Subscribe to all registered users (stream.online and stream.offline events).
-    /// TEMPORARY: Only accessible by user "kination" during development.
     /// This will create subscriptions for ALL users in the system.
     /// </summary>
     /// <returns>Subscription results with success/fail counts</returns>
     [HttpPost("eventsub-subscriptions/subscribe-all")]
-    [Authorize]
     [ProducesResponseType(typeof(ApiResultContainer<SubscribeToAllUsersResponseContract>), 200)]
     [ProducesResponseType(typeof(ApiResultContainer), 401)]
     [ProducesResponseType(typeof(ApiResultContainer), 403)]
@@ -149,54 +116,32 @@ public class DiagnosticsController : ApiControllerBase
     public async Task<ActionResult<ApiResultContainer<SubscribeToAllUsersResponseContract>>> SubscribeToAllUsers(
         CancellationToken cancellationToken)
     {
-        // TEMPORARY: Hardcoded username check for development only
-        // TODO: Replace with proper admin role check in production
-        var userName = User.FindFirstValue("UserName");
-        
-        if (string.IsNullOrEmpty(userName))
-        {
-            _logger.LogWarning("Unauthorized access attempt to subscribe-all: UserName claim not found");
-            return Unauthorized("Invalid authentication token: UserName claim not found");
-        }
-
-        if (userName != "kination")
-        {
-            _logger.LogWarning("Access denied to subscribe-all for user: {UserName}", userName);
-            return StatusCode(403, new 
-            { 
-                message = "Access denied. This diagnostic endpoint is restricted during development.",
-                note = "This is a temporary restriction while the application is in development.",
-                userName
-            });
-        }
-
         try
         {
-            _logger.LogInformation("User {UserName} is subscribing to ALL users", userName);
+            var user = GetAuditUser();
+            _logger.LogInformation("Diagnostics admin {UserId} is subscribing to ALL users", user.UserId);
             
             var command = new SubscribeToAllUsersCommand();
             var result = await _mediator.Send(command, cancellationToken);
 
-            _logger.LogInformation("User {UserName} subscribed to {UserCount} users. Success: {SuccessCount}, Failed: {FailCount}", 
-                userName, result.UserCount, result.SuccessCount, result.FailCount);
+            _logger.LogInformation("Diagnostics admin {UserId} subscribed to {UserCount} users. Success: {SuccessCount}, Failed: {FailCount}", 
+                user.UserId, result.UserCount, result.SuccessCount, result.FailCount);
 
             return this.Success(result);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error while subscribing to all users for user {UserName}", userName);
+            _logger.LogError(ex, "Error while subscribing to all users for diagnostics admin {UserId}", GetAuditUser().UserId);
             return StatusCode(500, "An error occurred while processing your request");
         }
     }
 
     /// <summary>
     /// Get all chat message EventSub subscriptions from ViewerService.
-    /// TEMPORARY: Only accessible by user "kination" during development.
     /// This shows subscriptions to channel.chat.message events.
     /// </summary>
     /// <returns>List of all chat message subscriptions</returns>
     [HttpGet("chat-subscriptions")]
-    [Authorize]
     [ProducesResponseType(typeof(ApiResultContainer<GetChatSubscriptionsResponseContract>), 200)]
     [ProducesResponseType(typeof(ApiResultContainer), 401)]
     [ProducesResponseType(typeof(ApiResultContainer), 403)]
@@ -204,97 +149,107 @@ public class DiagnosticsController : ApiControllerBase
     public async Task<ActionResult<ApiResultContainer<GetChatSubscriptionsResponseContract>>> GetChatSubscriptions(
         CancellationToken cancellationToken)
     {
-        // TEMPORARY: Hardcoded username check for development only
-        // TODO: Replace with proper admin role check in production
-        var userName = User.FindFirstValue("UserName");
-        
-        if (string.IsNullOrEmpty(userName))
-        {
-            _logger.LogWarning("Unauthorized access attempt to chat-subscriptions: UserName claim not found");
-            return Unauthorized("Invalid authentication token: UserName claim not found");
-        }
-
-        if (userName != "kination")
-        {
-            _logger.LogWarning("Access denied to chat-subscriptions for user: {UserName}", userName);
-            return StatusCode(403, new 
-            { 
-                message = "Access denied. This diagnostic endpoint is restricted during development.",
-                note = "This is a temporary restriction while the application is in development.",
-                userName
-            });
-        }
-
         try
         {
+            var user = GetAuditUser();
             var query = new GetChatSubscriptionsQuery();
             var subscriptions = await _mediator.Send(query, cancellationToken);
 
-            _logger.LogInformation("User {UserName} accessed chat subscriptions. Count: {Count}", 
-                userName, subscriptions.Count);
+            _logger.LogInformation("Diagnostics admin {UserId} accessed chat subscriptions. Count: {Count}", 
+                user.UserId, subscriptions.Count);
 
             return this.Success(subscriptions);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error while fetching chat subscriptions for user {UserName}", userName);
+            _logger.LogError(ex, "Error while fetching chat subscriptions for diagnostics admin {UserId}", GetAuditUser().UserId);
             return StatusCode(500, "An error occurred while processing your request");
         }
     }
 
     /// <summary>
     /// Cleanup all chat message EventSub subscriptions from ViewerService.
-    /// TEMPORARY: Only accessible by user "kination" during development.
     /// WARNING: This will unsubscribe from ALL channel.chat.message events!
     /// </summary>
     /// <returns>Number of deleted subscriptions</returns>
     [HttpDelete("chat-subscriptions")]
-    [Authorize]
     [ProducesResponseType(typeof(ApiResultContainer<CleanupChatSubscriptionsResponseContract>), 200)]
+    [ProducesResponseType(typeof(ApiResultContainer), 400)]
     [ProducesResponseType(typeof(ApiResultContainer), 401)]
     [ProducesResponseType(typeof(ApiResultContainer), 403)]
     [ProducesResponseType(typeof(ApiResultContainer), 500)]
     public async Task<ActionResult<ApiResultContainer<CleanupChatSubscriptionsResponseContract>>> CleanupChatSubscriptions(
         CancellationToken cancellationToken)
     {
-        // TEMPORARY: Hardcoded username check for development only
-        // TODO: Replace with proper admin role check in production
-        var userName = User.FindFirstValue("UserName");
-        
-        if (string.IsNullOrEmpty(userName))
+        if (!HasConfirmation(CleanupAllChatSubscriptionsConfirmation))
         {
-            _logger.LogWarning("Unauthorized access attempt to cleanup-chat-subscriptions: UserName claim not found");
-            return Unauthorized("Invalid authentication token: UserName claim not found");
-        }
-
-        if (userName != "kination")
-        {
-            _logger.LogWarning("Access denied to cleanup-chat-subscriptions for user: {UserName}", userName);
-            return StatusCode(403, new 
-            { 
-                message = "Access denied. This diagnostic endpoint is restricted during development.",
-                note = "This is a temporary restriction while the application is in development.",
-                userName
-            });
+            return MissingConfirmation(CleanupAllChatSubscriptionsConfirmation);
         }
 
         try
         {
-            _logger.LogWarning("User {UserName} is cleaning up ALL chat subscriptions", userName);
+            var user = GetAuditUser();
+            LogDestructiveAudit("CleanupAllChatSubscriptions", user);
             
             var command = new CleanupChatSubscriptionsCommand();
             var result = await _mediator.Send(command, cancellationToken);
 
-            _logger.LogWarning("User {UserName} cleaned up {DeletedCount} chat subscriptions", 
-                userName, result.DeletedCount);
+            _logger.LogWarning("Diagnostics admin {UserId} cleaned up {DeletedCount} chat subscriptions. CorrelationId: {CorrelationId}", 
+                user.UserId, result.DeletedCount, GetCorrelationId());
 
             return this.Success(result);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error while cleaning up chat subscriptions for user {UserName}", userName);
+            _logger.LogError(ex, "Error while cleaning up chat subscriptions for diagnostics admin {UserId}", GetAuditUser().UserId);
             return StatusCode(500, "An error occurred while processing your request");
         }
     }
+
+    private bool HasConfirmation(string expectedValue)
+    {
+        return Request.Headers.TryGetValue(ConfirmationHeaderName, out var values)
+               && values.Any(value => string.Equals(value, expectedValue, StringComparison.Ordinal));
+    }
+
+    private BadRequestObjectResult MissingConfirmation(string expectedValue)
+    {
+        return BadRequest(new
+        {
+            message = "Destructive diagnostics action requires explicit confirmation.",
+            requiredHeader = ConfirmationHeaderName,
+            requiredValue = expectedValue
+        });
+    }
+
+    private void LogDestructiveAudit(string action, AuditUser user)
+    {
+        _logger.LogWarning(
+            "AUDIT Diagnostics destructive action {Action} requested by UserId {UserId}, TwitchId {TwitchId}, UserName {UserName}, CorrelationId {CorrelationId}, RemoteIp {RemoteIp}",
+            action,
+            user.UserId,
+            user.TwitchId,
+            user.UserName,
+            GetCorrelationId(),
+            HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown");
+    }
+
+    private string GetCorrelationId()
+    {
+        return Request.Headers.TryGetValue("X-Correlation-ID", out var values)
+               && !string.IsNullOrWhiteSpace(values.FirstOrDefault())
+            ? values.First()!
+            : HttpContext.TraceIdentifier;
+    }
+
+    private AuditUser GetAuditUser()
+    {
+        return new AuditUser(
+            User.FindFirstValue("sub") ?? User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "unknown",
+            User.FindFirstValue("TwitchId") ?? "unknown",
+            User.FindFirstValue("UserName") ?? "unknown");
+    }
+
+    private sealed record AuditUser(string UserId, string TwitchId, string UserName);
 }
 
