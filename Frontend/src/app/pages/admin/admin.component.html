@@ -1,0 +1,132 @@
+<main class="admin-page">
+  <section class="admin-header">
+    <div>
+      <p class="eyebrow">Admin</p>
+      <h1>Diagnostics</h1>
+    </div>
+
+    <button class="icon-button" type="button" (click)="refreshDiagnostics()" [disabled]="loading || !isAdmin" title="Refresh diagnostics">
+      <i class="fa fa-refresh" [class.spinning]="isActionRunning('refresh')"></i>
+    </button>
+  </section>
+
+  <section *ngIf="!isAdmin" class="access-state">
+    <h2>Access restricted</h2>
+    <p>This page requires an admin JWT role.</p>
+  </section>
+
+  <ng-container *ngIf="isAdmin">
+    <div *ngIf="errorMessage" class="alert error">{{ errorMessage }}</div>
+    <div *ngIf="successMessage" class="alert success">{{ successMessage }}</div>
+
+    <section class="metrics-grid">
+      <div class="metric">
+        <span>EventSub total</span>
+        <strong>{{ eventSubSubscriptions?.total ?? 0 }}</strong>
+      </div>
+      <div class="metric">
+        <span>EventSub cost</span>
+        <strong>{{ eventSubSubscriptions?.totalCost ?? 0 }} / {{ eventSubSubscriptions?.maxTotalCost ?? 0 }}</strong>
+      </div>
+      <div class="metric">
+        <span>Chat subscriptions</span>
+        <strong>{{ chatSubscriptions?.count ?? 0 }}</strong>
+      </div>
+    </section>
+
+    <section class="admin-section">
+      <div class="section-title">
+        <h2>EventSub Subscriptions</h2>
+        <button type="button" (click)="subscribeToAllUsers()" [disabled]="!!actionInProgress">
+          <i class="fa fa-plus"></i>
+          Subscribe all users
+        </button>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Type</th>
+              <th>Status</th>
+              <th>Broadcaster</th>
+              <th>Transport</th>
+              <th>Cost</th>
+              <th>Created</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let subscription of eventSubSubscriptions?.data">
+              <td>
+                <code>{{ subscription.type }}</code>
+                <span class="muted">v{{ subscription.version }}</span>
+              </td>
+              <td><span class="status">{{ subscription.status }}</span></td>
+              <td>{{ subscription.condition.broadcasterUserId || '-' }}</td>
+              <td>{{ subscription.transport.method }}</td>
+              <td>{{ subscription.cost }}</td>
+              <td>{{ subscription.createdAt | date:'short' }}</td>
+            </tr>
+            <tr *ngIf="!eventSubSubscriptions?.data?.length">
+              <td colspan="6" class="empty">No EventSub subscriptions returned.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="danger-zone">
+        <div>
+          <h3>Delete all EventSub subscriptions</h3>
+          <p>Requires exact confirmation and sends backend audit data with a correlation id.</p>
+        </div>
+        <input type="text" [(ngModel)]="deleteEventSubInput" [placeholder]="deleteEventSubConfirmation">
+        <button class="danger" type="button" (click)="deleteAllEventSubSubscriptions()" [disabled]="!!actionInProgress || deleteEventSubInput !== deleteEventSubConfirmation">
+          <i class="fa fa-trash"></i>
+          Delete all
+        </button>
+      </div>
+    </section>
+
+    <section class="admin-section">
+      <div class="section-title">
+        <h2>Chat Subscriptions</h2>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Status</th>
+              <th>Broadcaster</th>
+              <th>Subscription id</th>
+              <th>Created</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let subscription of chatSubscriptions?.subscriptions">
+              <td><span class="status">{{ subscription.status }}</span></td>
+              <td>{{ subscription.broadcasterUserId || '-' }}</td>
+              <td><code>{{ subscription.id }}</code></td>
+              <td>{{ subscription.createdAt | date:'short' }}</td>
+            </tr>
+            <tr *ngIf="!chatSubscriptions?.subscriptions?.length">
+              <td colspan="4" class="empty">No chat subscriptions returned.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="danger-zone">
+        <div>
+          <h3>Cleanup all chat subscriptions</h3>
+          <p>Removes every channel.chat.message subscription through the diagnostics endpoint.</p>
+        </div>
+        <input type="text" [(ngModel)]="cleanupChatInput" [placeholder]="cleanupChatConfirmation">
+        <button class="danger" type="button" (click)="cleanupChatSubscriptions()" [disabled]="!!actionInProgress || cleanupChatInput !== cleanupChatConfirmation">
+          <i class="fa fa-trash"></i>
+          Cleanup
+        </button>
+      </div>
+    </section>
+  </ng-container>
+</main>

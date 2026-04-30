@@ -14,6 +14,10 @@ public class JwtTokenService(IConfiguration configuration) : IJwtTokenService
 {
     public string GenerateAccessToken(AuthUser user)
     {
+        var adminTwitchIds = configuration
+            .GetSection("Jwt:AdminTwitchIds")
+            .Get<int[]>() ?? [];
+
         var claimList = new List<Claim>
         {
             new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
@@ -21,6 +25,11 @@ public class JwtTokenService(IConfiguration configuration) : IJwtTokenService
             new("UserName", user.DisplayName),
             new("TwitchId", user.TwitchId.ToString()),
         };
+
+        if (adminTwitchIds.Contains(user.TwitchId))
+        {
+            claimList.Add(new Claim("role", "admin"));
+        }
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["Jwt:Key"]!));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
