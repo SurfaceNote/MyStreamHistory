@@ -210,6 +210,9 @@ public class ViewerDataProcessingService : IViewerDataProcessingService
                 {
                     if (twitchUsersDict.TryGetValue(viewer.TwitchUserId, out var twitchUser))
                     {
+                        var needsSyncTimestampUpdate = !viewer.LastDataSyncAt.HasValue
+                            || (now - viewer.LastDataSyncAt.Value) > DataSyncInterval;
+
                         // Check if data has changed
                         var hasChanges = false;
 
@@ -239,7 +242,7 @@ public class ViewerDataProcessingService : IViewerDataProcessingService
                         // Always update LastDataSyncAt
                         viewer.LastDataSyncAt = now;
 
-                        if (hasChanges || !viewer.LastDataSyncAt.HasValue)
+                        if (hasChanges || needsSyncTimestampUpdate)
                         {
                             updatedViewers.Add(viewer);
                         }
