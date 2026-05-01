@@ -202,7 +202,6 @@ app.UseRateLimiter();
 app.UseAuthorization();
 
 app.UseGlobalExceptionHandler();
-app.UseAppExceptionHandler();
 
 if (app.Environment.IsDevelopment())
 {

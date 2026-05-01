@@ -116,82 +116,55 @@ public class ViewerDataProcessingService : IViewerDataProcessingService
         // Check if we need to sync viewer data (for viewers that haven't been synced or synced long ago)
         await SyncViewerDataIfNeededAsync(viewers, accessToken, cancellationToken);
 
-        // Prepare updates
+        // Prepare snapshot deltas. Repositories apply them atomically with ON CONFLICT.
         var categoryUpdates = new List<ViewerCategoryWatch>();
         var statsUpdates = new List<ViewerStats>();
         var now = DateTime.UtcNow;
 
         foreach (var viewer in viewers)
         {
-            // Get existing watch record
-            var watch = await _categoryWatchRepository.GetByViewerAndCategoryAsync(viewer.Id, streamSnapshot.CurrentCategoryId.Value, cancellationToken);
-            
-            if (watch == null)
-            {
-                watch = new ViewerCategoryWatch
-                {
-                    Id = Guid.NewGuid(),
-                    ViewerId = viewer.Id,
-                    StreamCategoryId = streamSnapshot.CurrentCategoryId.Value,
-                    MinutesWatched = 0,
-                    ChatPoints = 0,
-                    Experience = 0,
-                    LastUpdatedAt = now
-                };
-            }
-
-            // Increment minutes watched
-            watch.MinutesWatched += 1;
-
-            // Add chat points if viewer sent messages
             var chatPointsToAdd = 0m;
             if (streamSnapshot.ChatMessages.TryGetValue(viewer.TwitchUserId, out var characterCount))
             {
                 chatPointsToAdd = (decimal)characterCount / 140;
-                watch.ChatPoints += chatPointsToAdd;
             }
 
-            // Calculate experience for category watch
-            watch.Experience = Math.Round(watch.ChatPoints / 4 + (decimal)watch.MinutesWatched / 30, 2);
-            watch.LastUpdatedAt = now;
+            var watch = new ViewerCategoryWatch
+            {
+                Id = Guid.NewGuid(),
+                ViewerId = viewer.Id,
+                StreamCategoryId = streamSnapshot.CurrentCategoryId.Value,
+                MinutesWatched = 1,
+                ChatPoints = chatPointsToAdd,
+                Experience = Math.Round(chatPointsToAdd / 4 + 1m / 30, 2),
+                LastUpdatedAt = now
+            };
             categoryUpdates.Add(watch);
 
-            // Get or create viewer stats (aggregated by streamer)
-            var stats = await _viewerStatsRepository.GetByViewerAndStreamerAsync(viewer.Id, twitchUserId, cancellationToken);
-            
-            if (stats == null)
+            var stats = new ViewerStats
             {
-                stats = new ViewerStats
-                {
-                    Id = Guid.NewGuid(),
-                    ViewerId = viewer.Id,
-                    StreamerTwitchUserId = twitchUserId,
-                    MinutesWatched = 0,
-                    EarnedMsgPoints = 0,
-                    Experience = 0,
-                    LastUpdatedAt = now
-                };
-            }
-
-            // Update aggregated stats
-            stats.MinutesWatched += 1;
-            stats.EarnedMsgPoints += chatPointsToAdd;
-            stats.Experience = Math.Round(stats.EarnedMsgPoints / 4 + (decimal)stats.MinutesWatched / 30, 2);
-            stats.LastUpdatedAt = now;
+                Id = Guid.NewGuid(),
+                ViewerId = viewer.Id,
+                StreamerTwitchUserId = twitchUserId,
+                MinutesWatched = 1,
+                EarnedMsgPoints = chatPointsToAdd,
+                Experience = Math.Round(chatPointsToAdd / 4 + 1m / 30, 2),
+                LastUpdatedAt = now
+            };
             statsUpdates.Add(stats);
         }
 
         // Bulk upsert category watches
         if (categoryUpdates.Any())
         {
-            await _categoryWatchRepository.BulkUpsertAsync(categoryUpdates, cancellationToken);
+            await _categoryWatchRepository.BulkIncrementAsync(categoryUpdates, cancellationToken);
             _logger.LogInformation("Updated {Count} viewer category records for TwitchUserId: {TwitchUserId}", categoryUpdates.Count, twitchUserId);
         }
 
         // Bulk upsert viewer stats
         if (statsUpdates.Any())
         {
-            await _viewerStatsRepository.BulkUpsertAsync(statsUpdates, cancellationToken);
+            await _viewerStatsRepository.BulkIncrementAsync(statsUpdates, cancellationToken);
             _logger.LogInformation("Updated {Count} viewer stats records for TwitchUserId: {TwitchUserId}", statsUpdates.Count, twitchUserId);
         }
     }
