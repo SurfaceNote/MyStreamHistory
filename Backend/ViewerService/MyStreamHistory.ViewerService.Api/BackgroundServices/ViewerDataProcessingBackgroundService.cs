@@ -9,6 +9,8 @@ public class ViewerDataProcessingBackgroundService : BackgroundService
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<ViewerDataProcessingBackgroundService> _logger;
     private readonly Channel<DataCollectionSnapshot> _processingQueue;
+    private DateTime _lastBootstrapAttempt = DateTime.MinValue;
+    private static readonly TimeSpan BootstrapRetryInterval = TimeSpan.FromMinutes(5);
 
     public ViewerDataProcessingBackgroundService(
         IServiceProvider serviceProvider,
@@ -27,6 +29,8 @@ public class ViewerDataProcessingBackgroundService : BackgroundService
     {
         _logger.LogInformation("ViewerDataProcessingBackgroundService started");
 
+        await BootstrapActiveStreamsAsync(stoppingToken);
+
         // Start both tasks in parallel
         var collectionTask = DataCollectionLoopAsync(stoppingToken);
         var processingTask = DataProcessingLoopAsync(stoppingToken);
@@ -42,10 +46,15 @@ public class ViewerDataProcessingBackgroundService : BackgroundService
         {
             try
             {
+                if (ShouldRetryBootstrap())
+                {
+                    await BootstrapActiveStreamsAsync(stoppingToken);
+                }
+
                 var snapshot = CreateDataSnapshot();
                 await _processingQueue.Writer.WriteAsync(snapshot, stoppingToken);
                 
-                _logger.LogDebug("Data snapshot created at {Timestamp} with {Count} streams", 
+                _logger.LogInformation("Data snapshot created at {Timestamp} with {Count} streams",
                     snapshot.Timestamp, snapshot.StreamSnapshots.Count);
             }
             catch (Exception ex)
@@ -88,6 +97,35 @@ public class ViewerDataProcessingBackgroundService : BackgroundService
         var duration = DateTime.UtcNow - startTime;
         
         _logger.LogInformation("Processed snapshot in {Duration}ms", duration.TotalMilliseconds);
+    }
+
+    private async Task BootstrapActiveStreamsAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            _lastBootstrapAttempt = DateTime.UtcNow;
+
+            using var scope = _serviceProvider.CreateScope();
+            var bootstrapService = scope.ServiceProvider.GetRequiredService<IActiveStreamBootstrapService>();
+            await bootstrapService.BootstrapActiveStreamsAsync(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error bootstrapping active viewer streams");
+        }
+    }
+
+    private bool ShouldRetryBootstrap()
+    {
+        if (DateTime.UtcNow - _lastBootstrapAttempt < BootstrapRetryInterval)
+        {
+            return false;
+        }
+
+        using var scope = _serviceProvider.CreateScope();
+        var bufferService = scope.ServiceProvider.GetRequiredService<IChatMessageBufferService>();
+
+        return bufferService.GetActiveStreamCount() == 0;
     }
 }
 

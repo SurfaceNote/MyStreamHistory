@@ -18,6 +18,16 @@ public class ChatMessageBufferService : IChatMessageBufferService
         };
     }
 
+    public bool IsStreamActive(string twitchUserId)
+    {
+        return _streamBuffers.ContainsKey(twitchUserId);
+    }
+
+    public int GetActiveStreamCount()
+    {
+        return _streamBuffers.Count;
+    }
+
     public void AddChatMessage(string twitchUserId, string chatterUserId, int characterCount)
     {
         if (!_streamBuffers.TryGetValue(twitchUserId, out var buffer))
