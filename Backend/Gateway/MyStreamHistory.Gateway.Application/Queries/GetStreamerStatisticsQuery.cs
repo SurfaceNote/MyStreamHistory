@@ -6,5 +6,6 @@ namespace MyStreamHistory.Gateway.Application.Queries;
 public class GetStreamerStatisticsQuery : IRequest<StreamerStatisticsDto>
 {
     public int TwitchUserId { get; set; }
+    public string Period { get; set; } = "30d";
 }
 

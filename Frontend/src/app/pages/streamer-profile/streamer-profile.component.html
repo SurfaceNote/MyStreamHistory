@@ -97,6 +97,96 @@
             </div>
         </div>
 
+        <section class="dashboard-section">
+            <div class="dashboard-header">
+                <div>
+                    <span class="eyebrow">Profile Stats</span>
+                    <h2>Streaming Overview</h2>
+                </div>
+                <div class="period-control" role="group" aria-label="Dashboard period">
+                    @for (period of dashboardPeriods; track period.value) {
+                        <button
+                            type="button"
+                            [class.active]="selectedDashboardPeriod === period.value"
+                            (click)="selectDashboardPeriod(period.value)">
+                            {{ period.label }}
+                        </button>
+                    }
+                </div>
+            </div>
+
+            @if (isLoadingStatistics) {
+                <div class="dashboard-state">
+                    <p>Loading dashboard...</p>
+                </div>
+            }
+
+            @if (!isLoadingStatistics && statistics?.dashboard; as dashboard) {
+                <div class="dashboard-cards">
+                    @for (card of dashboardSummaryCards; track card.label) {
+                        <article class="dashboard-card">
+                            <span>{{ card.label }}</span>
+                            <strong>{{ card.value }}</strong>
+                            <small>{{ card.hint }}</small>
+                        </article>
+                    }
+                </div>
+
+                <div class="dashboard-grid">
+                    <article class="chart-panel chart-panel-wide">
+                        <div class="panel-head">
+                            <div>
+                                <h3>Hours Live</h3>
+                                <span>{{ selectedPeriodLabel }}</span>
+                            </div>
+                        </div>
+
+                        @if (hasSeriesPoints(dashboard.streamedHoursByDay)) {
+                            <div class="chart-canvas-wrap chart-canvas-wrap-large">
+                                <canvas #streamedHoursChart aria-label="Streamed hours by day"></canvas>
+                            </div>
+                        } @else {
+                            <div class="empty-chart">
+                                <span>No streamed hours in this period</span>
+                            </div>
+                        }
+                    </article>
+
+                    <article class="chart-panel top-games-panel">
+                        <div class="panel-head">
+                            <div>
+                                <h3>Game Mix</h3>
+                                <span>By streamed hours</span>
+                            </div>
+                        </div>
+
+                        @if (dashboard.topCategories.length > 0) {
+                            <div class="game-mix-content">
+                                <div class="chart-canvas-wrap doughnut-wrap">
+                                    <canvas #topGamesChart aria-label="Top games by streamed hours"></canvas>
+                                </div>
+                                <div class="game-mix-list" aria-label="Game mix list">
+                                    @for (category of dashboard.topCategories; track category.twitchCategoryId) {
+                                        <div class="game-mix-row">
+                                            <img [src]="getCategoryBoxArtForStats(category.boxArtUrl, 80, 106)" [alt]="category.name">
+                                            <div>
+                                                <strong>{{ category.name }}</strong>
+                                                <span>{{ formatNumber(category.totalHours) }} h</span>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        } @else {
+                            <div class="empty-chart">
+                                <span>No games in this period</span>
+                            </div>
+                        }
+                    </article>
+                </div>
+            }
+        </section>
+
         <div class="recent-streams-section">
             <div class="block-title">
                 <div class="start-line"></div>
