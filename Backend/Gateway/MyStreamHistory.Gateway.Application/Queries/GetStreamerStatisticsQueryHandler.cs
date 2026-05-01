@@ -28,7 +28,8 @@ public class GetStreamerStatisticsQueryHandler : IRequestHandler<GetStreamerStat
             BaseFailedResponseContract>(
             new GetStreamerStatisticsRequestContract
             {
-                TwitchUserId = request.TwitchUserId
+                TwitchUserId = request.TwitchUserId,
+                Period = request.Period
             },
             cancellationToken);
 
@@ -123,7 +124,46 @@ public class GetStreamerStatisticsQueryHandler : IRequestHandler<GetStreamerStat
             }).ToList(),
             Playthroughs = playthroughs
                 .OrderByDescending(p => p.LastStreamStartedAt ?? DateTime.MinValue)
-                .ToList()
+                .ToList(),
+            Dashboard = new StreamerDashboardDto
+            {
+                Period = response.Success!.Dashboard.Period,
+                From = response.Success!.Dashboard.From,
+                To = response.Success!.Dashboard.To,
+                TotalStreamsCount = response.Success!.Dashboard.TotalStreamsCount,
+                TotalUniqueGamesCount = response.Success!.Dashboard.TotalUniqueGamesCount,
+                TotalStreamedHours = response.Success!.Dashboard.TotalStreamedHours,
+                StreamedHoursByDay = response.Success!.Dashboard.StreamedHoursByDay.Select(p => new TimeSeriesPointDto
+                {
+                    Date = p.Date,
+                    Value = p.Value
+                }).ToList(),
+                StreamedHoursByWeek = response.Success!.Dashboard.StreamedHoursByWeek.Select(p => new TimeSeriesPointDto
+                {
+                    Date = p.Date,
+                    Value = p.Value
+                }).ToList(),
+                ChatPointsByDay = response.Success!.Dashboard.ChatPointsByDay.Select(p => new TimeSeriesPointDto
+                {
+                    Date = p.Date,
+                    Value = p.Value
+                }).ToList(),
+                ViewerCountByDay = response.Success!.Dashboard.ViewerCountByDay.Select(p => new TimeSeriesPointDto
+                {
+                    Date = p.Date,
+                    Value = p.Value
+                }).ToList(),
+                TopCategories = response.Success!.Dashboard.TopCategories.Select(c => new CategoryAnalyticsDto
+                {
+                    TwitchCategoryId = c.TwitchCategoryId,
+                    TwitchId = c.TwitchId,
+                    Name = c.Name,
+                    BoxArtUrl = c.BoxArtUrl,
+                    TotalHours = c.TotalHours,
+                    StreamsCount = c.StreamsCount,
+                    AverageViewers = c.AverageViewers
+                }).ToList()
+            }
         };
     }
 }

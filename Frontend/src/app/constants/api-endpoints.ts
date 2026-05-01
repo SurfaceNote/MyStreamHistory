@@ -13,8 +13,8 @@ export const API_ENDPOINTS = {
         `${environment.api_url}/user/${twitchId}/top-viewers?limit=${limit}`,
     SOCIAL_LINKS_PUBLIC: (twitchId: number) =>
         `${environment.api_url}/user/${twitchId}/social-links`,
-    STREAMER_STATISTICS: (twitchId: number) =>
-        `${environment.api_url}/user/${twitchId}/statistics`,
+    STREAMER_STATISTICS: (twitchId: number, period: string = '30d') =>
+        `${environment.api_url}/user/${twitchId}/statistics?period=${period}`,
     STREAM_DETAILS: (streamId: string) => `${environment.api_url}/streams/${streamId}`,
     SETTINGS: {
         SOCIAL_LINKS: `${environment.api_url}/settings/social-links`,
