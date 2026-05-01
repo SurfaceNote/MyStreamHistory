@@ -19,6 +19,7 @@ public static class ApplicationServicesRegistration
         services.AddSingleton<IChatMessageBufferService, ChatMessageBufferService>();
         services.AddScoped<IViewerTrackingService, ViewerTrackingService>();
         services.AddScoped<IViewerDataProcessingService, ViewerDataProcessingService>();
+        services.AddScoped<IActiveStreamBootstrapService, ActiveStreamBootstrapService>();
         
         // Infrastructure Services
         services.AddHttpClient<ITwitchChatApiClient, TwitchChatApiClient>();
