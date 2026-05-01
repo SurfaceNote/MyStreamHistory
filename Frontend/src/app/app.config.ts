@@ -1,11 +1,10 @@
-import { ApplicationConfig, provideAppInitializer, provideZoneChangeDetection } from '@angular/core';
+import { ApplicationConfig, provideZoneChangeDetection } from '@angular/core';
 import { provideRouter, withInMemoryScrolling } from '@angular/router';
 
 import { routes } from './app.routes';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { authIntercerptor } from './auth/auth.interceptor';
 import { provideClientHydration } from '@angular/platform-browser';
-import { appInitializer } from './core/app-initializer';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -18,11 +17,6 @@ export const appConfig: ApplicationConfig = {
       })
     ),
     provideHttpClient(withInterceptors([authIntercerptor])),
-    provideClientHydration(),
-    {
-      provide: provideAppInitializer,
-      useFactory: appInitializer,
-      multi: true
-    }
+    provideClientHydration()
   ]
 };

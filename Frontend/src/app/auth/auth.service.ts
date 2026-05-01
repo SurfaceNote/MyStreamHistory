@@ -25,7 +25,8 @@ export class AuthService {
     private router = inject(Router);
 
     private setTokens(tokens: TokenResponse): void {
-        sessionStorage.setItem(this.accessTokenKey, tokens.accessToken);
+        localStorage.setItem(this.accessTokenKey, tokens.accessToken);
+        sessionStorage.removeItem(this.accessTokenKey);
         localStorage.removeItem('refresh_token');
 
         this.tokenSubject.next(tokens.accessToken);
@@ -87,7 +88,7 @@ export class AuthService {
     }
 
     getAccessToken(): string | null {
-        return sessionStorage.getItem(this.accessTokenKey);
+        return localStorage.getItem(this.accessTokenKey);
     }
 
     getAccessTokenObservable(): Observable<string | null> {
