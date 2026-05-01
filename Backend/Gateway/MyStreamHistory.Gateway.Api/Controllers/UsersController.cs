@@ -96,9 +96,10 @@ public class UsersController(IMapper mapper, IMediator mediator) : ApiController
     [ProducesResponseType(typeof(ApiResultContainer<StreamerStatisticsDto>), 200)]
     [ProducesResponseType(typeof(ApiResultContainer), 500)]
     public async Task<ActionResult<ApiResultContainer<StreamerStatisticsDto>>> GetStreamerStatistics(
-        [FromRoute] int twitchId)
+        [FromRoute] int twitchId,
+        [FromQuery] string period = "30d")
     {
-        var query = new GetStreamerStatisticsQuery { TwitchUserId = twitchId };
+        var query = new GetStreamerStatisticsQuery { TwitchUserId = twitchId, Period = period };
         var result = await mediator.Send(query);
         return this.Success(result);
     }

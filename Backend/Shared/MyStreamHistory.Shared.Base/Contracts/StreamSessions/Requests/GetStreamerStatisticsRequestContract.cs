@@ -3,5 +3,6 @@
 public class GetStreamerStatisticsRequestContract
 {
     public int TwitchUserId { get; set; }
+    public string Period { get; set; } = "30d";
 }
 
