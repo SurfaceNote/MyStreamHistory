@@ -56,6 +56,12 @@ export class StreamerService {
             .pipe(unwrapData<ViewerStats[]>());
     }
 
+    getViewerStats(twitchId: number, viewerTwitchId: string): Observable<ViewerStats> {
+        const url = API_ENDPOINTS.VIEWER_STATS(twitchId, viewerTwitchId);
+        return this.http.get<ApiResponse<ViewerStats>>(url, {withCredentials: true})
+            .pipe(unwrapData<ViewerStats>());
+    }
+
     getSocialLinksByTwitchId(twitchId: number): Observable<GetSocialLinksResponse> {
         const url = API_ENDPOINTS.SOCIAL_LINKS_PUBLIC(twitchId);
         return this.http.get<ApiResponse<GetSocialLinksResponse>>(url, {withCredentials: true})

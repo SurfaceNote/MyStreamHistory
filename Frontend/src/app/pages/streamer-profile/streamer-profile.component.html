@@ -370,7 +370,8 @@
                 @if (!isLoadingViewers && topViewers.length > 0) {
                     <div class="list">
                         @for (viewer of topViewers; track viewer.id; let i = $index) {
-                            <div class="viewer-row">
+                            <button type="button" class="viewer-row" (click)="navigateToViewerStats(viewer)"
+                                    [attr.aria-label]="'View ' + (viewer.viewer?.displayName || 'viewer') + ' statistics'">
                                 <div class="number">
                                     <span>{{ i + 1 }}</span>
                                 </div>
@@ -390,7 +391,7 @@
                                         </div>
                                     </div>
                                 </div>
-                            </div>
+                            </button>
                         }
                     </div>
                 }

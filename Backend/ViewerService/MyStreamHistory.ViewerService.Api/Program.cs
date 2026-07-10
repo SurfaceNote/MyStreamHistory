@@ -26,6 +26,7 @@ builder.Services.AddInfrastructure(builder.Configuration)
         configurator.AddConsumer<StreamCategoryChangedConsumer>();
         configurator.AddConsumer<GetStreamViewersConsumer>();
         configurator.AddConsumer<GetTopViewersConsumer>();
+        configurator.AddConsumer<GetStreamerViewerStatsConsumer>();
         configurator.AddConsumer<GetChatSubscriptionsConsumer>();
         configurator.AddConsumer<CleanupChatSubscriptionsConsumer>();
     })

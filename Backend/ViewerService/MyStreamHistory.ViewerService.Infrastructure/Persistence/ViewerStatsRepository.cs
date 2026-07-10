@@ -21,6 +21,19 @@ public class ViewerStatsRepository : IViewerStatsRepository
             .FirstOrDefaultAsync(s => s.ViewerId == viewerId && s.StreamerTwitchUserId == streamerTwitchUserId, cancellationToken);
     }
 
+    public async Task<ViewerStats?> GetByViewerTwitchIdAndStreamerAsync(
+        string viewerTwitchUserId,
+        string streamerTwitchUserId,
+        CancellationToken cancellationToken = default)
+    {
+        return await _context.ViewerStats
+            .Include(s => s.Viewer)
+            .FirstOrDefaultAsync(
+                s => s.Viewer.TwitchUserId == viewerTwitchUserId
+                    && s.StreamerTwitchUserId == streamerTwitchUserId,
+                cancellationToken);
+    }
+
     public async Task<List<ViewerStats>> GetByViewerIdsAndStreamerAsync(List<Guid> viewerIds, string streamerTwitchUserId, CancellationToken cancellationToken = default)
     {
         var distinctViewerIds = viewerIds.Distinct().ToList();

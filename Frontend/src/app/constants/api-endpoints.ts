@@ -11,6 +11,8 @@ export const API_ENDPOINTS = {
         `${environment.api_url}/user/${twitchId}/recent-streams?count=${count}`,
     TOP_VIEWERS: (twitchId: number, limit: number = 100) =>
         `${environment.api_url}/user/${twitchId}/top-viewers?limit=${limit}`,
+    VIEWER_STATS: (twitchId: number, viewerTwitchId: string) =>
+        `${environment.api_url}/user/${twitchId}/viewers/${encodeURIComponent(viewerTwitchId)}`,
     SOCIAL_LINKS_PUBLIC: (twitchId: number) =>
         `${environment.api_url}/user/${twitchId}/social-links`,
     STREAMER_STATISTICS: (twitchId: number, period: string = '30d') =>

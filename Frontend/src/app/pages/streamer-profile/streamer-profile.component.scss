@@ -1160,6 +1160,23 @@ main {
       align-items: center;
       gap: 12px;
       border-radius: 4px;
+      border: 0;
+      color: inherit;
+      font: inherit;
+      text-align: left;
+      background: transparent;
+      cursor: pointer;
+      transition: background-color 0.2s ease, transform 0.2s ease;
+
+      &:hover,
+      &:focus-visible {
+        background: $bg-4-color;
+      }
+
+      &:focus-visible {
+        outline: 2px solid $purple-color;
+        outline-offset: 2px;
+      }
 
       .number {
         display: flex;

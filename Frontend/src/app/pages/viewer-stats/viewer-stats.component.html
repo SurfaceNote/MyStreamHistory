@@ -1,0 +1,150 @@
+<main class="viewer-stats-page">
+  @if (isLoading) {
+    <div class="state-card">
+      <div class="spinner"></div>
+      <p>Loading viewer statistics...</p>
+    </div>
+  }
+
+  @if (!isLoading && error) {
+    <div class="state-card error-card">
+      <h1>Statistics unavailable</h1>
+      <p>{{ error }}</p>
+      <div class="state-actions">
+        <button type="button" class="primary-button" (click)="loadStats()">Try again</button>
+        <button type="button" class="secondary-button" (click)="navigateBack()">Back to streamer</button>
+      </div>
+    </div>
+  }
+
+  @if (!isLoading && stats && streamer) {
+    <div class="page-shell">
+      <button type="button" class="back-button" (click)="navigateBack()">
+        <span aria-hidden="true">&#8249;</span> Back to {{ streamer.displayName }}
+      </button>
+
+      <section class="profile-card">
+        <div class="identity">
+          <img [src]="stats.viewer?.profileImageUrl || getDefaultAvatar()"
+               [alt]="(stats.viewer?.displayName || 'Viewer') + ' avatar'">
+          <div>
+            <span class="eyebrow">Viewer statistics at {{ streamer.displayName }}</span>
+            <div class="viewer-title-row">
+              <h1>{{ stats.viewer?.displayName || 'Unknown viewer' }}</h1>
+              @if (stats.top100Rank) {
+                <span class="rank-badge">#{{ stats.top100Rank }} in TOP-100</span>
+              }
+            </div>
+            <p>&#64;{{ stats.viewer?.login || stats.viewer?.twitchUserId }}</p>
+          </div>
+        </div>
+
+        <div class="streamer-chip">
+          <img [src]="streamer.avatar" [alt]="streamer.displayName + ' avatar'">
+          <div>
+            <span>Channel</span>
+            <strong>{{ streamer.displayName }}</strong>
+          </div>
+        </div>
+      </section>
+
+      <section class="metrics-grid" aria-label="Viewer statistics">
+        <article class="metric-card accent-card">
+          <span class="metric-label">Watch time</span>
+          <strong>{{ formatWatchTime(stats.minutesWatched) }}</strong>
+          <small>{{ stats.minutesWatched | number }} minutes total</small>
+        </article>
+        <article class="metric-card">
+          <span class="metric-label">Streams watched</span>
+          <strong>{{ stats.streamsWatched | number }}</strong>
+          <small>Unique broadcasts visited</small>
+        </article>
+        <article class="metric-card">
+          <span class="metric-label">Broadcast watched</span>
+          <strong>{{ stats.watchedPercentage | number:'1.0-1' }}%</strong>
+          <small>Of attended streams by duration</small>
+        </article>
+        <article class="metric-card">
+          <span class="metric-label">Message points</span>
+          <strong>{{ stats.earnedMsgPoints | number:'1.0-2' }}</strong>
+          <small>Earned from chat activity</small>
+        </article>
+        <article class="metric-card">
+          <span class="metric-label">Experience</span>
+          <strong>{{ stats.experience | number:'1.0-2' }}</strong>
+          <small>Activity score on this channel</small>
+        </article>
+      </section>
+
+      <section class="details-card">
+        <div>
+          <span>First watched stream</span>
+          <strong>{{ stats.firstWatchedAt ? formatDate(stats.firstWatchedAt) : 'No history yet' }}</strong>
+        </div>
+        <div>
+          <span>Last view</span>
+          <strong>{{ stats.lastWatchedAt ? formatDate(stats.lastWatchedAt) : formatDate(stats.lastUpdatedAt) }}</strong>
+        </div>
+      </section>
+
+      @if (stats.favoriteCategories.length > 0) {
+        <section class="content-section">
+          <div class="section-heading">
+            <div>
+              <span class="eyebrow">Most watched</span>
+              <h2>Favorite categories</h2>
+            </div>
+          </div>
+          <div class="categories-grid">
+            @for (category of stats.favoriteCategories; track category.twitchCategoryId) {
+              <article class="category-card">
+                <img [src]="getCategoryBoxArt(category.boxArtUrl, 180, 240)" [alt]="category.name + ' cover'">
+                <div>
+                  <h3>{{ category.name }}</h3>
+                  <strong>{{ formatWatchTime(category.minutesWatched) }}</strong>
+                  <small>{{ category.streamsCount }} streams</small>
+                </div>
+              </article>
+            }
+          </div>
+        </section>
+      }
+
+      @if (stats.recentStreams.length > 0) {
+        <section class="content-section">
+          <div class="section-heading">
+            <div>
+              <span class="eyebrow">Latest activity</span>
+              <h2>Recent streams</h2>
+            </div>
+          </div>
+          <div class="history-list">
+            @for (stream of stats.recentStreams; track stream.streamSessionId) {
+              <button type="button" class="history-row" (click)="navigateToStream(stream.streamSessionId)">
+                <div class="history-main">
+                  <strong>{{ stream.streamTitle || 'Untitled stream' }}</strong>
+                  <span>{{ formatDate(stream.startedAt) }}</span>
+                  <small>{{ stream.categories.join(' · ') || 'No category' }}</small>
+                </div>
+                <div class="history-watch-time">
+                  <strong>{{ formatWatchTime(stream.minutesWatched) }}</strong>
+                  <span>of {{ formatWatchTime(stream.durationMinutes) }}</span>
+                </div>
+                <div class="history-progress">
+                  <div class="progress-label">
+                    <span>Watched</span>
+                    <strong>{{ stream.watchedPercentage | number:'1.0-1' }}%</strong>
+                  </div>
+                  <div class="progress-track">
+                    <span [style.width.%]="stream.watchedPercentage"></span>
+                  </div>
+                </div>
+                <span class="row-arrow" aria-hidden="true">&#8250;</span>
+              </button>
+            }
+          </div>
+        </section>
+      }
+    </div>
+  }
+</main>

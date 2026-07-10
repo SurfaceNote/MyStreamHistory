@@ -5,6 +5,7 @@ namespace MyStreamHistory.ViewerService.Application.Interfaces;
 public interface IViewerStatsRepository
 {
     Task<ViewerStats?> GetByViewerAndStreamerAsync(Guid viewerId, string streamerTwitchUserId, CancellationToken cancellationToken = default);
+    Task<ViewerStats?> GetByViewerTwitchIdAndStreamerAsync(string viewerTwitchUserId, string streamerTwitchUserId, CancellationToken cancellationToken = default);
     Task<List<ViewerStats>> GetByViewerIdsAndStreamerAsync(List<Guid> viewerIds, string streamerTwitchUserId, CancellationToken cancellationToken = default);
     Task<List<ViewerStats>> GetTopViewersByStreamerAsync(string streamerTwitchUserId, int limit = 100, CancellationToken cancellationToken = default);
     Task<List<ViewerStats>> GetByViewerIdAsync(Guid viewerId, CancellationToken cancellationToken = default);

@@ -246,6 +246,14 @@ public class ViewerDataProcessingServiceTests
             throw new NotSupportedException();
         }
 
+        public Task<ViewerStats?> GetByViewerTwitchIdAndStreamerAsync(
+            string viewerTwitchUserId,
+            string streamerTwitchUserId,
+            CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException();
+        }
+
         public Task<List<ViewerStats>> GetByViewerIdsAndStreamerAsync(
             List<Guid> viewerIds,
             string streamerTwitchUserId,

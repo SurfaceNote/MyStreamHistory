@@ -61,6 +61,17 @@ export class StreamDetailComponent implements OnInit, OnDestroy {
     }
   }
 
+  navigateToViewerStats(viewer: StreamViewer): void {
+    if (this.streamDetails) {
+      this.router.navigate([
+        '/profile',
+        this.streamDetails.twitchUserId,
+        'viewer',
+        viewer.twitchUserId
+      ]);
+    }
+  }
+
   formatDate(date: Date): string {
     const d = new Date(date);
     return d.toLocaleDateString('en-US', { 

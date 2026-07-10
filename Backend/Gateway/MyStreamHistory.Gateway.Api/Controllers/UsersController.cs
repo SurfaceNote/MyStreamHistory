@@ -78,6 +78,22 @@ public class UsersController(IMapper mapper, IMediator mediator) : ApiController
         return this.Success(topViewers);
     }
 
+    [HttpGet("{twitchId}/viewers/{viewerTwitchId}")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(ApiResultContainer<ViewerStatsDto>), 200)]
+    [ProducesResponseType(typeof(ApiResultContainer), 404)]
+    [ProducesResponseType(typeof(ApiResultContainer), 500)]
+    public async Task<ActionResult<ApiResultContainer<ViewerStatsDto>>> GetViewerStats(
+        [FromRoute] int twitchId,
+        [FromRoute] string viewerTwitchId)
+    {
+        var stats = await mediator.Send(new GetStreamerViewerStatsQuery(
+            twitchId.ToString(),
+            viewerTwitchId));
+
+        return this.Success(stats);
+    }
+
     [HttpGet("{twitchId}/social-links")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(ApiResultContainer<GetSocialLinksResponseDto>), 200)]

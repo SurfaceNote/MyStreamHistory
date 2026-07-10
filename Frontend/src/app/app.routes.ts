@@ -5,9 +5,11 @@ import { StreamDetailComponent } from './pages/stream-detail/stream-detail.compo
 import { SettingsComponent } from './pages/settings/settings.component';
 import { AdminComponent } from './pages/admin/admin.component';
 import { authGuard } from './auth/auth.guard';
+import { ViewerStatsComponent } from './pages/viewer-stats/viewer-stats.component';
 
 export const routes: Routes = [
     { path: 'callback', component: CallbackComponent },
+    { path: 'profile/:twitchId/viewer/:viewerTwitchId', component: ViewerStatsComponent },
     { path: 'profile/:twitchId', component: StreamerProfileComponent },
     { path: 'stream/:streamId', component: StreamDetailComponent },
     { path: 'settings', component: SettingsComponent, canActivate: [authGuard] },

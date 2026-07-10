@@ -250,6 +250,13 @@ export class StreamerProfileComponent implements OnInit, AfterViewInit, OnDestro
     this.router.navigate(['/stream', streamId]);
   }
 
+  navigateToViewerStats(viewer: ViewerStats): void {
+    const viewerTwitchId = viewer.viewer?.twitchUserId;
+    if (viewerTwitchId) {
+      this.router.navigate(['/profile', this.twitchId, 'viewer', viewerTwitchId]);
+    }
+  }
+
   loadStatistics(): void {
     this.isLoadingStatistics = true;
     this.streamerService.getStreamerStatistics(this.twitchId, this.selectedDashboardPeriod).subscribe({

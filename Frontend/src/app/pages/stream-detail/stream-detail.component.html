@@ -63,7 +63,9 @@
     <div class="viewers-section">
       <h2 class="section-title">Viewers <span class="viewers-count">({{ streamDetails.viewers.length }})</span></h2>
       <div class="viewers-list">
-        <div class="viewer-card" *ngFor="let viewer of streamDetails.viewers; let i = index">
+        <button type="button" class="viewer-card" *ngFor="let viewer of streamDetails.viewers; let i = index"
+                (click)="navigateToViewerStats(viewer)"
+                [attr.aria-label]="'View ' + viewer.displayName + ' statistics'">
           <div class="viewer-rank">{{ i + 1 }}</div>
           <img 
             [src]="viewer.profileImageUrl || getTwitchProfileImage(viewer.twitchUserId)" 
@@ -77,7 +79,7 @@
               <span class="viewer-stat-item">{{ formatPoints(viewer.chatPoints) }} msg pts</span>
             </div>
           </div>
-        </div>
+        </button>
       </div>
     </div>
   </div>

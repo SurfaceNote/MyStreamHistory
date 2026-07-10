@@ -240,9 +240,22 @@
   gap: 0.75rem;
   border-bottom: 1px solid $bg-3-color;
   transition: background 0.2s ease;
+  width: 100%;
+  border-top: 0;
+  border-right: 0;
+  border-left: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
   
   &:hover {
     background: lighten($bg-2-color, 3%);
+  }
+
+  &:focus-visible {
+    outline: 2px solid $purple-color;
+    outline-offset: -2px;
   }
 
   &:first-child {
