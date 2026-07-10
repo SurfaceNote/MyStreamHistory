@@ -5,6 +5,7 @@ import { forkJoin, Subscription } from 'rxjs';
 import { StreamerShortDTO } from '../../models/streamer-short.dto';
 import { ViewerStats } from '../../models/viewer-stats.model';
 import { StreamerService } from '../../service/streamer.service';
+import { SeoService } from '../../service/seo.service';
 
 @Component({
   selector: 'app-viewer-stats',
@@ -24,6 +25,7 @@ export class ViewerStatsComponent implements OnInit, OnDestroy {
   private streamerService = inject(StreamerService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
+  private seo = inject(SeoService);
 
   ngOnInit(): void {
     this.routeSubscription = this.route.paramMap.subscribe(params => {
@@ -54,6 +56,13 @@ export class ViewerStatsComponent implements OnInit, OnDestroy {
       next: result => {
         this.streamer = result.streamer;
         this.stats = result.stats;
+        const viewerName = result.stats.viewer?.displayName || 'Viewer';
+        this.seo.update({
+          title: `${viewerName} — Viewer Stats for ${result.streamer.displayName} | MyStreamHistory`,
+          description: `Private viewer activity and watch statistics for ${result.streamer.displayName}.`,
+          image: result.stats.viewer?.profileImageUrl || result.streamer.avatar,
+          noIndex: true
+        });
         this.isLoading = false;
       },
       error: error => {

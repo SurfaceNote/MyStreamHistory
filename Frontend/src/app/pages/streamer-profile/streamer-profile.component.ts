@@ -10,6 +10,7 @@ import { SocialLink } from '../../models/social-link.model';
 import { StreamerDashboardPeriod, StreamerStatistics, TimeSeriesPoint } from '../../models/streamer-statistics.model';
 import { PlaythroughStatistics } from '../../models/playthrough-statistics.model';
 import { Chart, registerables } from 'chart.js';
+import { SeoService } from '../../service/seo.service';
 
 Chart.register(...registerables);
 
@@ -58,6 +59,7 @@ export class StreamerProfileComponent implements OnInit, AfterViewInit, OnDestro
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private changeDetector = inject(ChangeDetectorRef);
+  private seo = inject(SeoService);
 
   ngOnInit(): void {
     this.routeSub = this.route.paramMap.subscribe(params => {
@@ -154,6 +156,12 @@ export class StreamerProfileComponent implements OnInit, AfterViewInit, OnDestro
     this.streamerService.getStreamerByTwitchId(this.twitchId).subscribe({
       next: (data: StreamerShortDTO) => {
         this.streamerShortDTO = data;
+        this.seo.update({
+          title: `${data.displayName} — Twitch Stream Stats | MyStreamHistory`,
+          description: `Explore ${data.displayName}'s Twitch stream history, games, audience activity and channel performance.`,
+          image: data.avatar,
+          type: 'profile'
+        });
       },
       error: (err) => {
         console.error('Error loading streamer', err);

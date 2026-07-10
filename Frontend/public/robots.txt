@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /settings
+Disallow: /callback
+Disallow: /*/viewer/
+
+Sitemap: https://mystreamhistory.com/sitemap.xml

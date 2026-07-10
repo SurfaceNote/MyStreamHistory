@@ -8,12 +8,12 @@ import { authGuard } from './auth/auth.guard';
 import { ViewerStatsComponent } from './pages/viewer-stats/viewer-stats.component';
 
 export const routes: Routes = [
-    { path: 'callback', component: CallbackComponent },
-    { path: 'profile/:twitchId/viewer/:viewerTwitchId', component: ViewerStatsComponent },
-    { path: 'profile/:twitchId', component: StreamerProfileComponent },
-    { path: 'stream/:streamId', component: StreamDetailComponent },
-    { path: 'settings', component: SettingsComponent, canActivate: [authGuard] },
-    { path: 'admin', component: AdminComponent, canActivate: [authGuard] },
+    { path: 'callback', component: CallbackComponent, data: { seo: { title: 'Signing in — MyStreamHistory', description: 'Completing Twitch sign-in.', noIndex: true } } },
+    { path: 'profile/:twitchId/viewer/:viewerTwitchId', component: ViewerStatsComponent, data: { seo: { title: 'Viewer Statistics — MyStreamHistory', description: 'Detailed Twitch viewer activity and watch statistics.', noIndex: true } } },
+    { path: 'profile/:twitchId', component: StreamerProfileComponent, data: { seo: { title: 'Streamer Profile — MyStreamHistory', description: 'Twitch streamer history, games, audience and channel performance.', type: 'profile' } } },
+    { path: 'stream/:streamId', component: StreamDetailComponent, data: { seo: { title: 'Stream Details — MyStreamHistory', description: 'Stream timeline, categories and audience statistics.', type: 'article' } } },
+    { path: 'settings', component: SettingsComponent, canActivate: [authGuard], data: { seo: { title: 'Settings — MyStreamHistory', description: 'Manage your MyStreamHistory profile and preferences.', noIndex: true } } },
+    { path: 'admin', component: AdminComponent, canActivate: [authGuard], data: { seo: { title: 'Administration — MyStreamHistory', description: 'MyStreamHistory administration tools.', noIndex: true } } },
     {
         path: '',
         loadChildren: () => import('./pages/home/home.module').then(m => m.HomeModule)

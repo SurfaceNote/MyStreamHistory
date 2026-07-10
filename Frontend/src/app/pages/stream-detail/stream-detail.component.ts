@@ -4,6 +4,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { StreamerService } from '../../service/streamer.service';
 import { StreamDetails, CategoryDetails, StreamViewer } from '../../models/stream-details.model';
+import { SeoService } from '../../service/seo.service';
 
 @Component({
   selector: 'app-stream-detail',
@@ -21,6 +22,7 @@ export class StreamDetailComponent implements OnInit, OnDestroy {
   private streamerService = inject(StreamerService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
+  private seo = inject(SeoService);
 
   ngOnInit(): void {
     this.routeSub = this.route.paramMap.subscribe(params => {
@@ -45,6 +47,12 @@ export class StreamDetailComponent implements OnInit, OnDestroy {
     this.streamerService.getStreamDetails(this.streamId).subscribe({
       next: (data: StreamDetails) => {
         this.streamDetails = data;
+        this.seo.update({
+          title: `Stream ${this.formatDateShort(data.startedAt)} — ${data.streamerDisplayName} | MyStreamHistory`,
+          description: `View ${data.streamerDisplayName}'s stream details, categories, duration and audience statistics on MyStreamHistory.`,
+          image: data.streamerAvatarUrl || undefined,
+          type: 'article'
+        });
         this.isLoading = false;
       },
       error: (err) => {
