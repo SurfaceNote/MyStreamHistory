@@ -2,7 +2,7 @@ import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, inject, OnDest
 import { ActivatedRoute, Router } from '@angular/router';
 import { StreamerService } from '../../service/streamer.service';
 import { StreamerShortDTO } from '../../models/streamer-short.dto';
-import { Subscription } from 'rxjs';
+import { catchError, finalize, forkJoin, map, of, Subscription, switchMap } from 'rxjs';
 import { StreamSession } from '../../models/stream-session.model';
 import { ViewerStats } from '../../models/viewer-stats.model';
 import { CommonModule } from '@angular/common';
@@ -163,14 +163,34 @@ export class StreamerProfileComponent implements OnInit, AfterViewInit, OnDestro
 
   loadRecentStreams(): void {
     this.isLoadingStreams = true;
-    this.streamerService.getRecentStreams(this.twitchId, 10).subscribe({
+    this.streamerService.getRecentStreams(this.twitchId, 10).pipe(
+      switchMap((streams: StreamSession[]) => {
+        if (streams.length === 0) {
+          return of([] as StreamSession[]);
+        }
+
+        return forkJoin(streams.map(stream =>
+          this.streamerService.getStreamDetails(stream.id).pipe(
+            map(details => ({
+              ...stream,
+              uniqueViewersCount: details.viewers.length
+            })),
+            catchError(err => {
+              console.error(`Error loading unique viewers for stream ${stream.id}`, err);
+              return of({ ...stream, uniqueViewersCount: 0 });
+            })
+          )
+        ));
+      }),
+      finalize(() => {
+        this.isLoadingStreams = false;
+      })
+    ).subscribe({
       next: (data: StreamSession[]) => {
         this.recentStreams = data;
-        this.isLoadingStreams = false;
       },
       error: (err) => {
         console.error('Error loading recent streams', err);
-        this.isLoadingStreams = false;
       }
     });
   }

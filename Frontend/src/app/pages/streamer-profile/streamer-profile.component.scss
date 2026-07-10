@@ -732,27 +732,11 @@ main {
         }
       }
 
-      .stream-title {
-        min-height: 2.5rem;
-        max-height: 2.5rem;
-        overflow: hidden;
-        
-        span {
-          color: $text-3-color;
-          font-size: 0.875rem;
-          font-weight: 500;
-          display: -webkit-box;
-          -webkit-line-clamp: 2;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-      }
-
       .stream-stats {
         display: flex;
-        gap: 1rem;
+        justify-content: space-between;
         align-items: center;
+        width: 100%;
 
         .stat-item {
           display: flex;

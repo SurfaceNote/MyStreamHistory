@@ -243,23 +243,15 @@
                                         }
                                     </div>
 
-                                    @if (stream.streamTitle) {
-                                        <div class="stream-title">
-                                            <span>{{ stream.streamTitle }}</span>
-                                        </div>
-                                    }
-
                                     <div class="stream-stats">
                                         <div class="stat-item">
                                             <i class="fa-regular fa-clock"></i>
                                             <span>{{ formatDuration(stream.startedAt, stream.endedAt) }}</span>
                                         </div>
-                                        @if (stream.isLive && stream.viewerCount !== null && stream.viewerCount !== undefined) {
-                                            <div class="stat-item">
-                                                <i class="fa-regular fa-eye"></i>
-                                                <span>{{ stream.viewerCount }} viewers</span>
-                                            </div>
-                                        }
+                                        <div class="stat-item">
+                                            <i class="fa-regular fa-eye"></i>
+                                            <span>{{ stream.uniqueViewersCount ?? 0 }}</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
