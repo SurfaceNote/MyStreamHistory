@@ -28,8 +28,6 @@ public class TwitchApiClient : ITwitchApiClient
 
     public async Task<string?> CreateEventSubSubscriptionAsync(int broadcasterUserId, string eventType, CancellationToken cancellationToken = default)
     {
-        await EnsureAppAccessTokenAsync(cancellationToken);
-
         var payload = new
         {
             type = eventType,
@@ -46,14 +44,14 @@ public class TwitchApiClient : ITwitchApiClient
             }
         };
 
-        using var request = new HttpRequestMessage(HttpMethod.Post, _options.EventSubEndpoint);
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _appAccessToken);
-        request.Headers.Add("Client-Id", _options.ClientId);
-        request.Content = JsonContent.Create(payload);
-
         try
         {
-            using var response = await _httpClient.SendAsync(request, cancellationToken);
+            using var response = await SendWithTokenRetryAsync(token =>
+            {
+                var request = CreateHelixRequest(HttpMethod.Post, _options.EventSubEndpoint, token);
+                request.Content = JsonContent.Create(payload);
+                return request;
+            }, cancellationToken);
             
             if (!response.IsSuccessStatusCode)
             {
@@ -81,15 +79,11 @@ public class TwitchApiClient : ITwitchApiClient
 
     public async Task<List<int>> GetExistingSubscriptionsAsync(CancellationToken cancellationToken = default)
     {
-        await EnsureAppAccessTokenAsync(cancellationToken);
-
-        using var request = new HttpRequestMessage(HttpMethod.Get, _options.EventSubEndpoint);
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _appAccessToken);
-        request.Headers.Add("Client-Id", _options.ClientId);
-
         try
         {
-            using var response = await _httpClient.SendAsync(request, cancellationToken);
+            using var response = await SendWithTokenRetryAsync(
+                token => CreateHelixRequest(HttpMethod.Get, _options.EventSubEndpoint, token),
+                cancellationToken);
             
             if (!response.IsSuccessStatusCode)
             {
@@ -127,15 +121,11 @@ public class TwitchApiClient : ITwitchApiClient
 
     public async Task<EventSubSubscriptionsDto> GetEventSubSubscriptionsAsync(CancellationToken cancellationToken = default)
     {
-        await EnsureAppAccessTokenAsync(cancellationToken);
-
-        using var request = new HttpRequestMessage(HttpMethod.Get, _options.EventSubEndpoint);
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _appAccessToken);
-        request.Headers.Add("Client-Id", _options.ClientId);
-
         try
         {
-            using var response = await _httpClient.SendAsync(request, cancellationToken);
+            using var response = await SendWithTokenRetryAsync(
+                token => CreateHelixRequest(HttpMethod.Get, _options.EventSubEndpoint, token),
+                cancellationToken);
             
             if (!response.IsSuccessStatusCode)
             {
@@ -161,15 +151,11 @@ public class TwitchApiClient : ITwitchApiClient
 
     public async Task DeleteSubscriptionAsync(string subscriptionId, CancellationToken cancellationToken = default)
     {
-        await EnsureAppAccessTokenAsync(cancellationToken);
-
-        using var request = new HttpRequestMessage(HttpMethod.Delete, $"{_options.EventSubEndpoint}?id={subscriptionId}");
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _appAccessToken);
-        request.Headers.Add("Client-Id", _options.ClientId);
-
         try
         {
-            using var response = await _httpClient.SendAsync(request, cancellationToken);
+            using var response = await SendWithTokenRetryAsync(
+                token => CreateHelixRequest(HttpMethod.Delete, $"{_options.EventSubEndpoint}?id={subscriptionId}", token),
+                cancellationToken);
             
             if (response.IsSuccessStatusCode)
             {
@@ -194,8 +180,6 @@ public class TwitchApiClient : ITwitchApiClient
             return new List<TwitchStreamDto>();
         }
 
-        await EnsureAppAccessTokenAsync(cancellationToken);
-
         var allStreams = new List<TwitchStreamDto>();
 
         // Split userIds into batches of 100 (Twitch API limit)
@@ -214,11 +198,9 @@ public class TwitchApiClient : ITwitchApiClient
                 var userIdsParam = string.Join("&", batch.Select(id => $"user_id={id}"));
                 var url = $"https://api.twitch.tv/helix/streams?{userIdsParam}";
 
-                using var request = new HttpRequestMessage(HttpMethod.Get, url);
-                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _appAccessToken);
-                request.Headers.Add("Client-Id", _options.ClientId);
-
-                using var response = await _httpClient.SendAsync(request, cancellationToken);
+                using var response = await SendWithTokenRetryAsync(
+                    token => CreateHelixRequest(HttpMethod.Get, url, token),
+                    cancellationToken);
 
                 if (!response.IsSuccessStatusCode)
                 {
@@ -254,8 +236,6 @@ public class TwitchApiClient : ITwitchApiClient
             return new List<TwitchGameDataDto>();
         }
 
-        await EnsureAppAccessTokenAsync(cancellationToken);
-
         var allGames = new List<TwitchGameDataDto>();
 
         // Split gameIds into batches of 100 (Twitch API limit)
@@ -274,11 +254,9 @@ public class TwitchApiClient : ITwitchApiClient
                 var gameIdsParam = string.Join("&", batch.Select(id => $"id={id}"));
                 var url = $"https://api.twitch.tv/helix/games?{gameIdsParam}";
 
-                using var request = new HttpRequestMessage(HttpMethod.Get, url);
-                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _appAccessToken);
-                request.Headers.Add("Client-Id", _options.ClientId);
-
-                using var response = await _httpClient.SendAsync(request, cancellationToken);
+                using var response = await SendWithTokenRetryAsync(
+                    token => CreateHelixRequest(HttpMethod.Get, url, token),
+                    cancellationToken);
 
                 if (!response.IsSuccessStatusCode)
                 {
@@ -468,23 +446,63 @@ public class TwitchApiClient : ITwitchApiClient
             _tokenExpiresAt, expiresIn);
     }
 
-    private async Task<T?> ExecuteWithTokenRetryAsync<T>(Func<Task<T>> operation, CancellationToken cancellationToken)
+    private HttpRequestMessage CreateHelixRequest(HttpMethod method, string url, string accessToken)
     {
+        var request = new HttpRequestMessage(method, url);
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+        request.Headers.Add("Client-Id", _options.ClientId);
+        return request;
+    }
+
+    private async Task<HttpResponseMessage> SendWithTokenRetryAsync(
+        Func<string, HttpRequestMessage> requestFactory,
+        CancellationToken cancellationToken)
+    {
+        await EnsureAppAccessTokenAsync(cancellationToken);
+
+        var rejectedToken = _appAccessToken
+            ?? throw new InvalidOperationException("Twitch app access token is not available");
+
+        using (var request = requestFactory(rejectedToken))
+        {
+            var response = await _httpClient.SendAsync(request, cancellationToken);
+            if (response.StatusCode != System.Net.HttpStatusCode.Unauthorized)
+            {
+                return response;
+            }
+
+            response.Dispose();
+        }
+
+        _logger.LogWarning("Received 401 Unauthorized from Twitch. Refreshing app access token and retrying request once");
+
+        await RefreshRejectedTokenAsync(rejectedToken, cancellationToken);
+
+        var refreshedToken = _appAccessToken
+            ?? throw new InvalidOperationException("Twitch app access token is not available after refresh");
+
+        using var retryRequest = requestFactory(refreshedToken);
+        return await _httpClient.SendAsync(retryRequest, cancellationToken);
+    }
+
+    private async Task RefreshRejectedTokenAsync(string rejectedToken, CancellationToken cancellationToken)
+    {
+        await _tokenLock.WaitAsync(cancellationToken);
         try
         {
-            return await operation();
-        }
-        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-        {
-            _logger.LogWarning("Received 401 Unauthorized. Token may have expired. Refreshing token and retrying...");
-            
-            // Force token refresh
+            // Another concurrent request may already have refreshed this token.
+            if (!string.Equals(_appAccessToken, rejectedToken, StringComparison.Ordinal))
+            {
+                return;
+            }
+
             _appAccessToken = null;
             _tokenExpiresAt = DateTime.MinValue;
-            await EnsureAppAccessTokenAsync(cancellationToken);
-            
-            // Retry operation once with new token
-            return await operation();
+            await RefreshAppAccessTokenAsync(cancellationToken);
+        }
+        finally
+        {
+            _tokenLock.Release();
         }
     }
 }
