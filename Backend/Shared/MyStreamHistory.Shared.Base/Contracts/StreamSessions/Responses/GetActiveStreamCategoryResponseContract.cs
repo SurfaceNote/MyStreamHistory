@@ -7,5 +7,6 @@ public class GetActiveStreamCategoryResponseContract
     public Guid? StreamSessionId { get; set; }
     public Guid? StreamCategoryId { get; set; }
     public string? CategoryName { get; set; }
+    public bool IsLiveConfirmed { get; set; }
 }
 

@@ -12,19 +12,13 @@ namespace MyStreamHistory.TwitchTrackingService.Api.Consumers;
 public class GetStreamerStatisticsConsumer : IConsumer<GetStreamerStatisticsRequestContract>
 {
     private readonly IStreamSessionRepository _streamSessionRepository;
-    private readonly ITwitchCategoryRepository _twitchCategoryRepository;
-    private readonly IStreamCategoryRepository _streamCategoryRepository;
     private readonly ILogger<GetStreamerStatisticsConsumer> _logger;
 
     public GetStreamerStatisticsConsumer(
         IStreamSessionRepository streamSessionRepository,
-        ITwitchCategoryRepository twitchCategoryRepository,
-        IStreamCategoryRepository streamCategoryRepository,
         ILogger<GetStreamerStatisticsConsumer> logger)
     {
         _streamSessionRepository = streamSessionRepository;
-        _twitchCategoryRepository = twitchCategoryRepository;
-        _streamCategoryRepository = streamCategoryRepository;
         _logger = logger;
     }
 
@@ -37,6 +31,7 @@ public class GetStreamerStatisticsConsumer : IConsumer<GetStreamerStatisticsRequ
         {
             // Get all stream sessions for the user
             var allSessions = await _streamSessionRepository.Query()
+                .AsNoTracking()
                 .Where(s => s.TwitchUserId == context.Message.TwitchUserId)
                 .Include(s => s.StreamCategories)
                     .ThenInclude(sc => sc.TwitchCategory)
@@ -54,50 +49,31 @@ public class GetStreamerStatisticsConsumer : IConsumer<GetStreamerStatisticsRequ
                 .Where(s => s.EndedAt.HasValue)
                 .Sum(s => (s.EndedAt!.Value - s.StartedAt).TotalHours);
 
-            // Get all unique category IDs from stream categories
-            var uniqueCategoryIds = allSessions
+            var categories = allSessions
                 .SelectMany(s => s.StreamCategories)
-                .Select(sc => sc.TwitchCategoryId)
-                .Distinct()
+                .GroupBy(sc => new
+                {
+                    sc.TwitchCategoryId,
+                    sc.TwitchCategory.TwitchId,
+                    sc.TwitchCategory.Name,
+                    sc.TwitchCategory.BoxArtUrl,
+                    sc.TwitchCategory.IgdbId
+                })
+                .Select(g => new CategoryStatisticsDto
+                {
+                    TwitchCategoryId = g.Key.TwitchCategoryId,
+                    TwitchId = g.Key.TwitchId,
+                    Name = g.Key.Name,
+                    BoxArtUrl = g.Key.BoxArtUrl,
+                    IgdbId = g.Key.IgdbId,
+                    TotalHours = Math.Round(g
+                        .Where(sc => sc.EndedAt.HasValue)
+                        .Sum(sc => (sc.EndedAt!.Value - sc.StartedAt).TotalHours), 1)
+                })
+                .OrderByDescending(c => c.TotalHours)
                 .ToList();
 
-            var totalUniqueGamesCount = uniqueCategoryIds.Count;
-
-            // Get category details with time spent
-            var categories = new List<CategoryStatisticsDto>();
-            
-            foreach (var categoryId in uniqueCategoryIds)
-            {
-                var category = await _twitchCategoryRepository.Query()
-                    .FirstOrDefaultAsync(c => c.Id == categoryId, context.CancellationToken);
-
-                if (category == null)
-                    continue;
-
-                // Calculate total hours for this category
-                var categoryStreamCategories = await _streamCategoryRepository.Query()
-                    .Where(sc => sc.TwitchCategoryId == categoryId)
-                    .Include(sc => sc.StreamSession)
-                    .Where(sc => sc.StreamSession.TwitchUserId == context.Message.TwitchUserId)
-                    .ToListAsync(context.CancellationToken);
-
-                var totalHours = categoryStreamCategories
-                    .Where(sc => sc.EndedAt.HasValue)
-                    .Sum(sc => (sc.EndedAt!.Value - sc.StartedAt).TotalHours);
-
-                categories.Add(new CategoryStatisticsDto
-                {
-                    TwitchCategoryId = category.Id,
-                    TwitchId = category.TwitchId,
-                    Name = category.Name,
-                    BoxArtUrl = category.BoxArtUrl,
-                    IgdbId = category.IgdbId,
-                    TotalHours = Math.Round(totalHours, 1)
-                });
-            }
-
-            // Sort categories by total hours descending
-            categories = categories.OrderByDescending(c => c.TotalHours).ToList();
+            var totalUniqueGamesCount = categories.Count;
 
             var response = new GetStreamerStatisticsResponseContract
             {

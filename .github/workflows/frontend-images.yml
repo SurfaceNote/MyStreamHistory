@@ -50,5 +50,15 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            SENTRY_DSN=${{ secrets.SENTRY_FRONTEND_DSN }}
+            SENTRY_ENVIRONMENT=production
+            SENTRY_RELEASE=${{ github.sha }}
+            SENTRY_TRACES_SAMPLE_RATE=${{ secrets.SENTRY_FRONTEND_TRACES_SAMPLE_RATE }}
+            SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE=${{ secrets.SENTRY_FRONTEND_REPLAYS_ON_ERROR_SAMPLE_RATE }}
+            SENTRY_ORG=${{ secrets.SENTRY_ORG }}
+            SENTRY_PROJECT=${{ secrets.SENTRY_FRONTEND_PROJECT }}
+          secrets: |
+            sentry_auth_token=${{ secrets.SENTRY_AUTH_TOKEN }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

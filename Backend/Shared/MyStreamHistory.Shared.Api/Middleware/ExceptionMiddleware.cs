@@ -17,7 +17,7 @@ namespace MyStreamHistory.Shared.Api.Middleware
             }
             catch (AppException ex)
             {
-                logger.LogError(ex, "Application exception handled: {Message}", ex.Message);
+                logger.LogWarning(ex, "Application exception handled: {Message}", ex.Message);
 
                 context.Response.ContentType = "application/json";
                 context.Response.StatusCode = ErrorStatusMapper.GetStatusCode(ex.ErrorCode);

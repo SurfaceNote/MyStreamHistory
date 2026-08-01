@@ -3,6 +3,7 @@ using MyStreamHistory.Shared.Application.Transport;
 using MyStreamHistory.Shared.Base.Contracts;
 using MyStreamHistory.Shared.Base.Contracts.Users.Requests;
 using MyStreamHistory.Shared.Base.Contracts.Users.Response;
+using MyStreamHistory.TwitchTrackingService.Application.DTOs;
 using MyStreamHistory.TwitchTrackingService.Application.Interfaces;
 
 namespace MyStreamHistory.TwitchTrackingService.Application.Services;
@@ -46,6 +47,37 @@ public class UserProfileService : IUserProfileService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting user profile for TwitchUserId: {TwitchUserId}", twitchUserId);
+            return null;
+        }
+    }
+
+    public async Task<IReadOnlyList<TrackedUserProfileDto>?> GetTrackedUsersAsync(
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await _transportBus.SendRequestAsync<GetAllUsersRequestContract, GetAllUsersResponseContract>(
+                new GetAllUsersRequestContract(),
+                cancellationToken);
+
+            if (response.Success?.Users == null)
+            {
+                _logger.LogWarning("AuthService did not return the tracked user list");
+                return null;
+            }
+
+            return response.Success.Users
+                .Select(user => new TrackedUserProfileDto
+                {
+                    TwitchUserId = user.TwitchId,
+                    DisplayName = user.DisplayName,
+                    AvatarUrl = user.Avatar
+                })
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to load tracked users from AuthService");
             return null;
         }
     }

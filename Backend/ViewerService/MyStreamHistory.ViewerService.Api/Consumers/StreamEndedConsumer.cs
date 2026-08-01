@@ -28,6 +28,7 @@ public class StreamEndedConsumer : IConsumer<StreamEndedEventContract>
         {
             await _trackingService.HandleStreamOfflineAsync(
                 message.BroadcasterUserId.ToString(),
+                message.StreamSessionId,
                 context.CancellationToken);
 
             _logger.LogInformation("Successfully processed StreamEnded event for TwitchUserId: {TwitchUserId}", message.BroadcasterUserId);

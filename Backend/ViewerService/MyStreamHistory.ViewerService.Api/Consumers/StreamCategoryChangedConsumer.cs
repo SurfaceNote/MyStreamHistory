@@ -38,10 +38,18 @@ public class StreamCategoryChangedConsumer : IConsumer<StreamCategoryChangedEven
         try
         {
             // Update buffer with new category
-            _bufferService.UpdateStreamCategory(message.BroadcasterUserId.ToString(), message.NewCategoryId);
-            
-            _logger.LogInformation("Updated category for TwitchUserId: {TwitchUserId} to {CategoryName}", 
-                message.BroadcasterUserId, message.CategoryName);
+            var updated = _bufferService.UpdateStreamCategory(
+                message.BroadcasterUserId.ToString(),
+                message.StreamSessionId,
+                message.NewCategoryId);
+
+            if (!updated)
+            {
+                _logger.LogWarning(
+                    "Ignored stale category event for TwitchUserId {TwitchUserId}, StreamSessionId {StreamSessionId}",
+                    message.BroadcasterUserId,
+                    message.StreamSessionId);
+            }
 
             // Save processed message
             await _processedMessageRepository.AddAsync(new ProcessedEventSubMessage

@@ -6,5 +6,6 @@ public class StreamOfflineEventContract
     public int BroadcasterUserId { get; set; }
     public string BroadcasterUserLogin { get; set; } = null!;
     public string BroadcasterUserName { get; set; } = null!;
+    public DateTime? OccurredAt { get; set; }
 }
 

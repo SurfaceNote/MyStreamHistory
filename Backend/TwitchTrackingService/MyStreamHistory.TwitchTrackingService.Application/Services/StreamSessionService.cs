@@ -10,6 +10,8 @@ namespace MyStreamHistory.TwitchTrackingService.Application.Services;
 
 public class StreamSessionService : IStreamSessionService
 {
+    private static readonly TimeSpan ReconciliationGracePeriod = TimeSpan.FromMinutes(10);
+
     private readonly IStreamSessionRepository _repository;
     private readonly IStreamCategoryRepository _streamCategoryRepository;
     private readonly ICategoryTrackingService _categoryTrackingService;
@@ -43,235 +45,417 @@ public class StreamSessionService : IStreamSessionService
     {
         _logger.LogInformation("Stream online event received for broadcaster {BroadcasterUserLogin}", eventDto.BroadcasterUserLogin);
 
-        // Check if there's already an active stream session for this user
-        var existingSessions = await _repository.GetAllAsync(cancellationToken);
-        var activeSession = existingSessions.FirstOrDefault(s => s.TwitchUserId == eventDto.BroadcasterUserId && s.IsLive);
-
-        if (activeSession != null)
+        TwitchStreamDto? twitchStream = null;
+        try
         {
-            _logger.LogWarning("Active stream session already exists for broadcaster {BroadcasterUserLogin}", eventDto.BroadcasterUserLogin);
+            twitchStream = (await _twitchApiClient.GetStreamsAsync(
+                    new List<int> { eventDto.BroadcasterUserId },
+                    cancellationToken))
+                .FirstOrDefault();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "Could not enrich stream.online for {BroadcasterUserLogin}; polling will fill stream metadata later",
+                eventDto.BroadcasterUserLogin);
+        }
+
+        var activeSession = await _repository.GetActiveByTwitchUserIdAsync(
+            eventDto.BroadcasterUserId,
+            cancellationToken);
+        if (activeSession != null
+            && !StreamReconciliationPlanner.IsDifferentBroadcast(activeSession, twitchStream, eventDto.StartedAt))
+        {
+            _logger.LogInformation(
+                "Ignoring duplicate stream.online for active session {StreamSessionId}",
+                activeSession.Id);
             return;
         }
 
-        // Get user profile from AuthService
         var userProfile = await _userProfileService.GetUserProfileAsync(eventDto.BroadcasterUserId, cancellationToken);
-        
-        var streamSession = new StreamSession
+        var streamSession = CreateSession(
+            eventDto.BroadcasterUserId,
+            twitchStream?.UserLogin ?? eventDto.BroadcasterUserLogin,
+            userProfile?.DisplayName ?? eventDto.BroadcasterUserName,
+            userProfile?.Avatar,
+            twitchStream?.StartedAt ?? eventDto.StartedAt,
+            twitchStream,
+            DateTime.UtcNow);
+
         {
-            TwitchUserId = eventDto.BroadcasterUserId,
-            StreamerLogin = eventDto.BroadcasterUserLogin,
-            StreamerDisplayName = userProfile?.DisplayName ?? eventDto.BroadcasterUserName,
-            StreamerAvatarUrl = userProfile?.Avatar,
-            StartedAt = eventDto.StartedAt,
-            IsLive = true
-        };
+            await using var transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
+            try
+            {
+                activeSession = await _repository.GetActiveByTwitchUserIdAsync(
+                    eventDto.BroadcasterUserId,
+                    cancellationToken);
 
-        await _repository.AddAsync(streamSession, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+                if (activeSession != null)
+                {
+                    if (!StreamReconciliationPlanner.IsDifferentBroadcast(activeSession, twitchStream, eventDto.StartedAt))
+                    {
+                        await transaction.CommitAsync(cancellationToken);
+                        return;
+                    }
 
-        _logger.LogInformation("Stream session created for broadcaster {BroadcasterUserLogin} with StreamSessionId {StreamSessionId}", 
-            eventDto.BroadcasterUserLogin, streamSession.Id);
+                    var restartEndTime = ResolveRestartEndTime(activeSession, streamSession.StartedAt);
+                    await EndStreamSessionCoreAsync(
+                        activeSession,
+                        restartEndTime,
+                        activeSession.StreamerLogin,
+                        activeSession.StreamerDisplayName,
+                        "stream.online restart",
+                        cancellationToken);
+                }
 
-        // Get stream information from Twitch API to create initial category
+                await _repository.AddAsync(streamSession, cancellationToken);
+                await PublishStreamCreatedAsync(
+                    streamSession,
+                    eventDto.Type,
+                    cancellationToken);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
+            }
+            catch
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                throw;
+            }
+        }
+
+        _logger.LogInformation(
+            "Stream session created for broadcaster {BroadcasterUserLogin} with StreamSessionId {StreamSessionId}",
+            eventDto.BroadcasterUserLogin,
+            streamSession.Id);
+
         try
         {
-            var streams = await _twitchApiClient.GetStreamsAsync(new List<int> { eventDto.BroadcasterUserId }, cancellationToken);
-            
-            if (streams.Count > 0 && !string.IsNullOrEmpty(streams[0].GameId))
+            if (twitchStream != null && !string.IsNullOrWhiteSpace(twitchStream.GameId))
             {
-                var stream = streams[0];
-                _logger.LogInformation("Creating initial category for stream {StreamSessionId}: {GameName} (ID: {GameId})", 
-                    streamSession.Id, stream.GameName, stream.GameId);
-
-                // Create initial category
                 await _categoryTrackingService.ProcessSingleStreamCategoryAsync(
-                    streamSession.Id, 
-                    stream.GameId, 
-                    stream.GameName, 
+                    streamSession.Id,
+                    twitchStream.GameId,
+                    twitchStream.GameName,
                     cancellationToken);
-            }
-            else
-            {
-                _logger.LogWarning("No category information available for stream {StreamSessionId}", streamSession.Id);
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error fetching initial category for stream {StreamSessionId}, will be created later", streamSession.Id);
-            // Don't throw exception - category will be created on next polling or channel.update
+            _logger.LogError(
+                ex,
+                "Error creating initial category for stream {StreamSessionId}; polling will retry",
+                streamSession.Id);
         }
-
-        // Publish event for other microservices
-        var streamCreatedEvent = new StreamCreatedEventContract
-        {
-            StreamSessionId = streamSession.Id,
-            BroadcasterUserId = eventDto.BroadcasterUserId,
-            BroadcasterUserLogin = eventDto.BroadcasterUserLogin,
-            BroadcasterUserName = eventDto.BroadcasterUserName,
-            StartedAt = eventDto.StartedAt,
-            Type = eventDto.Type
-        };
-
-        await _publishEndpoint.Publish(streamCreatedEvent, cancellationToken);
-        
-        _logger.LogInformation("Published StreamCreatedEvent for broadcaster {BroadcasterUserLogin}", eventDto.BroadcasterUserLogin);
     }
 
     public async Task HandleStreamOfflineAsync(StreamOfflineEventDto eventDto, CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Stream offline event received for broadcaster {BroadcasterUserLogin}", eventDto.BroadcasterUserLogin);
 
-        var allSessions = await _repository.GetAllAsync(cancellationToken);
-        var activeSession = allSessions.FirstOrDefault(s => s.TwitchUserId == eventDto.BroadcasterUserId && s.IsLive);
-
-        if (activeSession == null)
+        await using var transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
+        try
         {
-            _logger.LogWarning("No active stream session found for broadcaster {BroadcasterUserLogin}", eventDto.BroadcasterUserLogin);
-            return;
+            var activeSession = await _repository.GetActiveByTwitchUserIdAsync(
+                eventDto.BroadcasterUserId,
+                cancellationToken);
+
+            if (activeSession == null)
+            {
+                await transaction.CommitAsync(cancellationToken);
+                return;
+            }
+
+            if (eventDto.OccurredAt.HasValue && eventDto.OccurredAt.Value < activeSession.StartedAt)
+            {
+                _logger.LogWarning(
+                    "Ignoring stale stream.offline at {OccurredAt} for newer session {StreamSessionId} started at {StartedAt}",
+                    eventDto.OccurredAt,
+                    activeSession.Id,
+                    activeSession.StartedAt);
+                await transaction.CommitAsync(cancellationToken);
+                return;
+            }
+
+            var endTime = eventDto.OccurredAt ?? DateTime.UtcNow;
+            if (endTime < activeSession.StartedAt)
+            {
+                endTime = activeSession.StartedAt;
+            }
+
+            await EndStreamSessionCoreAsync(
+                activeSession,
+                endTime,
+                eventDto.BroadcasterUserLogin,
+                eventDto.BroadcasterUserName,
+                "EventSub",
+                cancellationToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
         }
-
-        var endTime = DateTime.UtcNow;
-        activeSession.IsLive = false;
-        activeSession.EndedAt = endTime;
-
-        await _repository.UpdateAsync(activeSession, cancellationToken);
-        
-        // Close active category segment if exists
-        var activeSegment = await _streamCategoryRepository.GetActiveSegmentByStreamIdAsync(activeSession.Id, cancellationToken);
-        if (activeSegment != null)
+        catch
         {
-            await _streamCategoryRepository.CloseSegmentAsync(activeSegment.Id, endTime, cancellationToken);
-            _logger.LogInformation("Closed active category segment for stream {StreamSessionId}", activeSession.Id);
+            await transaction.RollbackAsync(cancellationToken);
+            throw;
         }
-        
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-        _logger.LogInformation("Stream session ended for broadcaster {BroadcasterUserLogin} with StreamSessionId {StreamSessionId}", 
-            eventDto.BroadcasterUserLogin, activeSession.Id);
-
-        // Publish event for other microservices
-        var streamEndedEvent = new StreamEndedEventContract
-        {
-            StreamSessionId = activeSession.Id,
-            BroadcasterUserId = eventDto.BroadcasterUserId,
-            BroadcasterUserLogin = eventDto.BroadcasterUserLogin,
-            BroadcasterUserName = eventDto.BroadcasterUserName,
-            EndedAt = endTime
-        };
-
-        await _publishEndpoint.Publish(streamEndedEvent, cancellationToken);
-        
-        _logger.LogInformation("Published StreamEndedEvent for broadcaster {BroadcasterUserLogin}", eventDto.BroadcasterUserLogin);
     }
 
-    public async Task UpdateActiveStreamsDataAsync(List<TwitchStreamDto> streams, CancellationToken cancellationToken = default)
+    public async Task ReconcileActiveStreamsAsync(
+        IReadOnlyCollection<StreamSession> activeSessions,
+        IReadOnlyCollection<TwitchStreamDto> streams,
+        IReadOnlyCollection<TrackedUserProfileDto> trackedUsers,
+        DateTime checkedAt,
+        CancellationToken cancellationToken = default)
     {
-        if (streams == null || streams.Count == 0)
+        var plan = StreamReconciliationPlanner.Build(
+            activeSessions,
+            streams,
+            trackedUsers.Select(user => user.TwitchUserId).ToArray());
+        var streamsByUserId = plan.StreamsByUserId;
+        var sessionsByUserId = plan.SessionsByUserId;
+        var profilesByUserId = trackedUsers
+            .GroupBy(user => user.TwitchUserId)
+            .ToDictionary(group => group.Key, group => group.First());
+        var restartedUserIds = plan.RestartedUserIds;
+        var confirmedUserIds = plan.ConfirmedUserIds;
+
+        var createdSessions = new List<StreamSession>();
+        await using var transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
+        try
         {
-            _logger.LogDebug("No active streams to update");
-            return;
-        }
-
-        _logger.LogInformation("Updating data for {StreamCount} active streams", streams.Count);
-
-        var allSessions = await _repository.GetAllAsync(cancellationToken);
-        var activeSessions = allSessions.Where(s => s.IsLive).ToList();
-
-        var updatedCount = 0;
-
-        foreach (var stream in streams)
-        {
-            if (!int.TryParse(stream.UserId, out var userId))
+            foreach (var userId in restartedUserIds)
             {
-                _logger.LogWarning("Invalid user ID: {UserId}", stream.UserId);
-                continue;
+                var oldSession = sessionsByUserId[userId];
+                var stream = streamsByUserId[userId];
+                var endTime = ResolveRestartEndTime(oldSession, stream.StartedAt);
+                await EndStreamSessionCoreAsync(
+                    oldSession,
+                    endTime,
+                    oldSession.StreamerLogin,
+                    oldSession.StreamerDisplayName,
+                    "polling restart reconciliation",
+                    cancellationToken);
+
+                var newSession = CreateSessionFromTwitchStream(
+                    userId,
+                    stream,
+                    profilesByUserId.GetValueOrDefault(userId),
+                    checkedAt);
+                await _repository.AddAsync(newSession, cancellationToken);
+                await PublishStreamCreatedAsync(newSession, stream.Type, cancellationToken);
+                createdSessions.Add(newSession);
             }
 
-            var session = activeSessions.FirstOrDefault(s => s.TwitchUserId == userId);
-            
-            if (session == null)
+            await _repository.ConfirmActiveAsync(
+                confirmedUserIds.Select(userId => sessionsByUserId[userId].Id).ToArray(),
+                checkedAt,
+                cancellationToken);
+
+            foreach (var userId in confirmedUserIds)
             {
-                _logger.LogWarning("No active session found for broadcaster {UserLogin} (TwitchId: {UserId})", 
-                    stream.UserLogin, userId);
-                continue;
+                var stream = streamsByUserId[userId];
+                var session = sessionsByUserId[userId];
+                await _repository.UpdatePollingDataAsync(
+                    session.Id,
+                    stream.Id,
+                    stream.Title,
+                    stream.GameName,
+                    stream.ViewerCount,
+                    cancellationToken);
+                await _publishEndpoint.Publish(new StreamLiveConfirmationRestoredEventContract
+                {
+                    StreamSessionId = session.Id,
+                    BroadcasterUserId = userId,
+                    ConfirmedAt = checkedAt
+                }, cancellationToken);
             }
 
-            // Update stream data
-            var hasChanges = false;
+            var missingSessions = plan.MissingSessions;
 
-            if (session.StreamId != stream.Id)
+            await _repository.MarkMissingAsync(
+                missingSessions.Select(session => session.Id).ToArray(),
+                checkedAt,
+                cancellationToken);
+
+            foreach (var session in missingSessions)
             {
-                session.StreamId = stream.Id;
-                hasChanges = true;
+                var missingSince = session.MissingSinceAt ?? checkedAt;
+                await _publishEndpoint.Publish(new StreamLiveConfirmationLostEventContract
+                {
+                    StreamSessionId = session.Id,
+                    BroadcasterUserId = session.TwitchUserId,
+                    MissingSince = missingSince
+                }, cancellationToken);
+
+                if (missingSince <= checkedAt - ReconciliationGracePeriod)
+                {
+                    var endTime = session.LastConfirmedLiveAt ?? missingSince;
+                    await EndStreamSessionCoreAsync(
+                        session,
+                        endTime,
+                        session.StreamerLogin,
+                        session.StreamerDisplayName,
+                        "polling reconciliation",
+                        cancellationToken);
+                }
             }
 
-            if (session.StreamTitle != stream.Title)
+            foreach (var userId in plan.DiscoveredUserIds)
             {
-                session.StreamTitle = stream.Title;
-                hasChanges = true;
+                var stream = streamsByUserId[userId];
+                var profile = profilesByUserId[userId];
+                var newSession = CreateSessionFromTwitchStream(userId, stream, profile, checkedAt);
+                await _repository.AddAsync(newSession, cancellationToken);
+                await PublishStreamCreatedAsync(newSession, stream.Type, cancellationToken);
+                createdSessions.Add(newSession);
             }
 
-            if (session.GameName != stream.GameName)
-            {
-                session.GameName = stream.GameName;
-                hasChanges = true;
-            }
-
-            if (session.ViewerCount != stream.ViewerCount)
-            {
-                session.ViewerCount = stream.ViewerCount;
-                hasChanges = true;
-            }
-
-            if (hasChanges)
-            {
-                await _repository.UpdateAsync(session, cancellationToken);
-                updatedCount++;
-            }
-        }
-
-        if (updatedCount > 0)
-        {
             await _unitOfWork.SaveChangesAsync(cancellationToken);
-            _logger.LogInformation("Updated {UpdatedCount} stream sessions with fresh data", updatedCount);
+            await transaction.CommitAsync(cancellationToken);
         }
-        else
+        catch
         {
-            _logger.LogDebug("No changes detected in stream data");
+            await transaction.RollbackAsync(cancellationToken);
+            throw;
         }
+
+        _logger.LogInformation(
+            "Reconciled streams: {ActiveCount} local, {ConfirmedCount} confirmed, {RestartedCount} restarted, {CreatedCount} discovered",
+            activeSessions.Count,
+            confirmedUserIds.Count,
+            restartedUserIds.Count,
+            createdSessions.Count - restartedUserIds.Count);
+    }
+
+    private async Task<bool> EndStreamSessionCoreAsync(
+        StreamSession activeSession,
+        DateTime endTime,
+        string broadcasterUserLogin,
+        string broadcasterUserName,
+        string source,
+        CancellationToken cancellationToken)
+    {
+        if (!await _repository.TryEndActiveAsync(activeSession.Id, endTime, cancellationToken))
+        {
+            _logger.LogDebug(
+                "Stream session {StreamSessionId} was already ended while processing {Source}",
+                activeSession.Id,
+                source);
+            return false;
+        }
+
+        var activeSegment = await _streamCategoryRepository.GetActiveSegmentByStreamIdAsync(
+            activeSession.Id,
+            cancellationToken);
+
+        if (activeSegment != null)
+        {
+            var segmentEndTime = endTime < activeSegment.StartedAt
+                ? activeSegment.StartedAt
+                : endTime;
+            await _streamCategoryRepository.CloseSegmentAsync(
+                activeSegment.Id,
+                segmentEndTime,
+                cancellationToken);
+            _logger.LogInformation("Closed active category segment for stream {StreamSessionId}", activeSession.Id);
+        }
+
+        await _publishEndpoint.Publish(new StreamEndedEventContract
+        {
+            StreamSessionId = activeSession.Id,
+            BroadcasterUserId = activeSession.TwitchUserId,
+            BroadcasterUserLogin = broadcasterUserLogin,
+            BroadcasterUserName = broadcasterUserName,
+            EndedAt = endTime
+        }, cancellationToken);
+
+        _logger.LogInformation(
+            "Stream session {StreamSessionId} ended from {Source} at {EndedAt}",
+            activeSession.Id,
+            source,
+            endTime);
+
+        return true;
+    }
+
+    private async Task PublishStreamCreatedAsync(
+        StreamSession streamSession,
+        string streamType,
+        CancellationToken cancellationToken)
+    {
+        await _publishEndpoint.Publish(new StreamCreatedEventContract
+        {
+            StreamSessionId = streamSession.Id,
+            BroadcasterUserId = streamSession.TwitchUserId,
+            BroadcasterUserLogin = streamSession.StreamerLogin,
+            BroadcasterUserName = streamSession.StreamerDisplayName,
+            StartedAt = streamSession.StartedAt,
+            Type = streamType
+        }, cancellationToken);
+    }
+
+    private static DateTime ResolveRestartEndTime(StreamSession activeSession, DateTime nextStartedAt)
+    {
+        var endTime = activeSession.LastConfirmedLiveAt ?? nextStartedAt;
+        if (endTime > nextStartedAt)
+        {
+            endTime = nextStartedAt;
+        }
+
+        return endTime < activeSession.StartedAt
+            ? activeSession.StartedAt
+            : endTime;
+    }
+
+    private static StreamSession CreateSessionFromTwitchStream(
+        int twitchUserId,
+        TwitchStreamDto stream,
+        TrackedUserProfileDto? profile,
+        DateTime confirmedAt)
+    {
+        return CreateSession(
+            twitchUserId,
+            stream.UserLogin,
+            string.IsNullOrWhiteSpace(profile?.DisplayName) ? stream.UserName : profile.DisplayName,
+            profile?.AvatarUrl,
+            stream.StartedAt,
+            stream,
+            confirmedAt);
+    }
+
+    private static StreamSession CreateSession(
+        int twitchUserId,
+        string streamerLogin,
+        string streamerDisplayName,
+        string? streamerAvatarUrl,
+        DateTime startedAt,
+        TwitchStreamDto? stream,
+        DateTime confirmedAt)
+    {
+        return new StreamSession
+        {
+            TwitchUserId = twitchUserId,
+            StreamId = stream?.Id,
+            StreamerLogin = streamerLogin,
+            StreamerDisplayName = streamerDisplayName,
+            StreamerAvatarUrl = streamerAvatarUrl,
+            StartedAt = startedAt,
+            IsLive = true,
+            LastConfirmedLiveAt = confirmedAt,
+            StreamTitle = stream?.Title,
+            GameName = stream?.GameName,
+            ViewerCount = stream?.ViewerCount
+        };
     }
 
     public async Task<List<StreamSessionDto>> GetRecentStreamsByTwitchUserIdAsync(int twitchUserId, int count = 10, CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Getting recent {Count} streams for TwitchUserId {TwitchUserId}", count, twitchUserId);
 
-        var sessions = await _repository.GetRecentStreamsByTwitchUserIdAsync(twitchUserId, count, cancellationToken);
-
-        var sessionDtos = sessions.Select(s => new StreamSessionDto
-        {
-            Id = s.Id,
-            StreamId = s.StreamId,
-            TwitchUserId = s.TwitchUserId,
-            StreamerLogin = s.StreamerLogin,
-            StreamerDisplayName = s.StreamerDisplayName,
-            StartedAt = s.StartedAt,
-            EndedAt = s.EndedAt,
-            IsLive = s.IsLive,
-            StreamTitle = s.StreamTitle,
-            GameName = s.GameName,
-            ViewerCount = s.ViewerCount,
-            Categories = s.StreamCategories
-                .Select(sc => sc.TwitchCategory)
-                .Distinct()
-                .Select(c => new TwitchCategoryDto
-                {
-                    TwitchId = c.TwitchId,
-                    Name = c.Name,
-                    BoxArtUrl = c.BoxArtUrl,
-                    IgdbId = c.IgdbId
-                })
-                .ToList()
-        }).ToList();
+        var sessionDtos = await _repository.GetRecentStreamsByTwitchUserIdAsync(
+            twitchUserId,
+            count,
+            cancellationToken);
 
         _logger.LogInformation("Found {SessionCount} recent streams for TwitchUserId {TwitchUserId}", sessionDtos.Count, twitchUserId);
 
@@ -282,7 +466,7 @@ public class StreamSessionService : IStreamSessionService
     {
         _logger.LogInformation("Getting stream session details for StreamSessionId {StreamSessionId}", streamSessionId);
 
-        var session = await _repository.GetByIdAsync(streamSessionId, cancellationToken);
+        var session = await _repository.GetDtoByIdAsync(streamSessionId, cancellationToken);
 
         if (session == null)
         {
@@ -290,36 +474,9 @@ public class StreamSessionService : IStreamSessionService
             return null;
         }
 
-        var sessionDto = new StreamSessionDto
-        {
-            Id = session.Id,
-            StreamId = session.StreamId,
-            TwitchUserId = session.TwitchUserId,
-            StreamerLogin = session.StreamerLogin,
-            StreamerDisplayName = session.StreamerDisplayName,
-            StreamerAvatarUrl = session.StreamerAvatarUrl,
-            StartedAt = session.StartedAt,
-            EndedAt = session.EndedAt,
-            IsLive = session.IsLive,
-            StreamTitle = session.StreamTitle,
-            GameName = session.GameName,
-            ViewerCount = session.ViewerCount,
-            Categories = session.StreamCategories
-                .Select(sc => sc.TwitchCategory)
-                .Distinct()
-                .Select(c => new TwitchCategoryDto
-                {
-                    TwitchId = c.TwitchId,
-                    Name = c.Name,
-                    BoxArtUrl = c.BoxArtUrl,
-                    IgdbId = c.IgdbId
-                })
-                .ToList()
-        };
-
         _logger.LogInformation("Found stream session for StreamSessionId {StreamSessionId}", streamSessionId);
 
-        return sessionDto;
+        return session;
     }
 }
 

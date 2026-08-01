@@ -47,22 +47,27 @@ public class ActiveStreamBootstrapService : IActiveStreamBootstrapService
         foreach (var user in users)
         {
             var twitchUserId = user.TwitchId.ToString();
-            if (_bufferService.IsStreamActive(twitchUserId))
-            {
-                continue;
-            }
-
             var activeStream = await _streamCategoryService.GetActiveStreamCategoryAsync(twitchUserId, cancellationToken);
             if (activeStream == null)
             {
                 continue;
             }
 
+            if (_bufferService.IsStreamActive(twitchUserId, activeStream.StreamSessionId))
+            {
+                continue;
+            }
+
             await _viewerTrackingService.HandleStreamOnlineAsync(
                 twitchUserId,
-                activeStream.Value.StreamSessionId,
-                activeStream.Value.StreamCategoryId,
+                activeStream.StreamSessionId,
+                activeStream.StreamCategoryId,
                 cancellationToken);
+
+            if (!activeStream.IsLiveConfirmed)
+            {
+                _bufferService.PauseStream(twitchUserId, activeStream.StreamSessionId);
+            }
 
             bootstrappedCount++;
         }

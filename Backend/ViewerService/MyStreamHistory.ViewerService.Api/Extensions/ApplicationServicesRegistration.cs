@@ -17,6 +17,7 @@ public static class ApplicationServicesRegistration
 
         // Application Services
         services.AddSingleton<IChatMessageBufferService, ChatMessageBufferService>();
+        services.AddSingleton<IStreamLifecycleLock, StreamLifecycleLock>();
         services.AddScoped<IViewerTrackingService, ViewerTrackingService>();
         services.AddScoped<IViewerDataProcessingService, ViewerDataProcessingService>();
         services.AddScoped<IActiveStreamBootstrapService, ActiveStreamBootstrapService>();

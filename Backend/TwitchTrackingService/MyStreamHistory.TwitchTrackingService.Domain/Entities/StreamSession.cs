@@ -11,6 +11,8 @@ public class StreamSession
     public DateTime StartedAt { get; set; }
     public DateTime? EndedAt { get; set; }
     public bool IsLive { get; set; }
+    public DateTime? LastConfirmedLiveAt { get; set; }
+    public DateTime? MissingSinceAt { get; set; }
     public string? StreamTitle { get; set; }
     public string? GameName { get; set; }
     public int? ViewerCount { get; set; }

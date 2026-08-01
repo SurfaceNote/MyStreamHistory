@@ -15,7 +15,7 @@ namespace MyStreamHistory.Shared.Api.Middleware
             }
             catch(FluentValidation.ValidationException ex)
             {
-                logger.LogError("Validation error: {Errors}", ex.Errors);
+                logger.LogWarning("Validation error: {Errors}", ex.Errors);
 
                 context.Response.StatusCode = 400;
                 context.Response.ContentType = "application/json";

@@ -90,7 +90,19 @@ public class ViewerDataProcessingBackgroundService : BackgroundService
     private async Task ProcessSnapshotAsync(DataCollectionSnapshot snapshot, CancellationToken cancellationToken)
     {
         using var scope = _serviceProvider.CreateScope();
+        var bufferService = scope.ServiceProvider.GetRequiredService<IChatMessageBufferService>();
         var processingService = scope.ServiceProvider.GetRequiredService<IViewerDataProcessingService>();
+
+        snapshot.StreamSnapshots = snapshot.StreamSnapshots
+            .Where(item => bufferService.IsAccrualEnabled(
+                item.Key,
+                item.Value.StreamSessionId))
+            .ToDictionary(item => item.Key, item => item.Value);
+
+        if (snapshot.StreamSnapshots.Count == 0)
+        {
+            return;
+        }
         
         var startTime = DateTime.UtcNow;
         await processingService.ProcessSnapshotAsync(snapshot, cancellationToken);

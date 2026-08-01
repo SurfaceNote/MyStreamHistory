@@ -29,6 +29,8 @@ FROM build AS publish
 RUN dotnet publish "MyStreamHistory.ViewerService.Api.csproj" -c Release -o /app/publish
 
 FROM base AS final
+ARG SENTRY_RELEASE=""
+ENV SENTRY_RELEASE=$SENTRY_RELEASE
 WORKDIR /app
 COPY --from=publish /app/publish .
 ENTRYPOINT ["dotnet", "MyStreamHistory.ViewerService.Api.dll"]

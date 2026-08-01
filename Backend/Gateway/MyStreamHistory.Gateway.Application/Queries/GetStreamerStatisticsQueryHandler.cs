@@ -52,39 +52,43 @@ public class GetStreamerStatisticsQueryHandler : IRequestHandler<GetStreamerStat
 
         if (playthroughSettingsResponse.IsSuccess)
         {
-            foreach (var playthrough in playthroughSettingsResponse.Success!.Settings.Playthroughs)
+            var configuredPlaythroughs = playthroughSettingsResponse.Success!.Settings.Playthroughs;
+            var viewerCounts = new Dictionary<Guid, int>();
+
+            if (configuredPlaythroughs.Count > 0)
+            {
+                var viewerCountsResponse = await _bus.SendRequestAsync<
+                    GetUniqueViewerCountsRequestContract,
+                    GetUniqueViewerCountsResponseContract,
+                    BaseFailedResponseContract>(
+                    new GetUniqueViewerCountsRequestContract
+                    {
+                        Playthroughs = configuredPlaythroughs.Select(playthrough =>
+                            new PlaythroughViewerCountRequestContract
+                            {
+                                PlaythroughId = playthrough.Id,
+                                StreamCategoryIds = playthrough.StreamCategories
+                                    .Select(sc => sc.StreamCategoryId)
+                                    .Distinct()
+                                    .ToList()
+                            }).ToList()
+                    },
+                    cancellationToken);
+
+                if (viewerCountsResponse.IsSuccess)
+                {
+                    viewerCounts = viewerCountsResponse.Success!.Counts
+                        .ToDictionary(c => c.PlaythroughId, c => c.UniqueViewerCount);
+                }
+            }
+
+            foreach (var playthrough in configuredPlaythroughs)
             {
                 var orderedSegments = playthrough.StreamCategories
                     .OrderBy(sc => sc.CategoryStartedAt)
                     .ToList();
 
-                var uniqueViewersCount = 0;
-                var streamCategoryIds = orderedSegments
-                    .Select(sc => sc.StreamCategoryId)
-                    .Distinct()
-                    .ToList();
-
-                if (streamCategoryIds.Count > 0)
-                {
-                    var viewersResponse = await _bus.SendRequestAsync<
-                        GetStreamViewersRequestContract,
-                        GetStreamViewersResponseContract,
-                        BaseFailedResponseContract>(
-                        new GetStreamViewersRequestContract
-                        {
-                            StreamSessionId = orderedSegments[0].StreamSessionId,
-                            StreamCategoryIds = streamCategoryIds
-                        },
-                        cancellationToken);
-
-                    if (viewersResponse.IsSuccess && viewersResponse.Success!.Success)
-                    {
-                        uniqueViewersCount = viewersResponse.Success.Viewers
-                            .Select(v => v.ViewerId)
-                            .Distinct()
-                            .Count();
-                    }
-                }
+                var uniqueViewersCount = viewerCounts.GetValueOrDefault(playthrough.Id);
 
                 var totalHours = orderedSegments
                     .Where(sc => sc.CategoryEndedAt.HasValue)

@@ -8,18 +8,15 @@ public class ChannelUpdateConsumer : IConsumer<ChannelUpdateEventContract>
 {
     private readonly ICategoryTrackingService _categoryTrackingService;
     private readonly IStreamSessionRepository _streamSessionRepository;
-    private readonly IPublishEndpoint _publishEndpoint;
     private readonly ILogger<ChannelUpdateConsumer> _logger;
 
     public ChannelUpdateConsumer(
         ICategoryTrackingService categoryTrackingService,
         IStreamSessionRepository streamSessionRepository,
-        IPublishEndpoint publishEndpoint,
         ILogger<ChannelUpdateConsumer> logger)
     {
         _categoryTrackingService = categoryTrackingService;
         _streamSessionRepository = streamSessionRepository;
-        _publishEndpoint = publishEndpoint;
         _logger = logger;
     }
 
@@ -33,9 +30,9 @@ public class ChannelUpdateConsumer : IConsumer<ChannelUpdateEventContract>
         try
         {
             // Find active stream session
-            var allSessions = await _streamSessionRepository.GetAllAsync(context.CancellationToken);
-            var activeSession = allSessions.FirstOrDefault(s => 
-                s.TwitchUserId == message.BroadcasterUserId && s.IsLive);
+            var activeSession = await _streamSessionRepository.GetActiveByTwitchUserIdAsync(
+                message.BroadcasterUserId,
+                context.CancellationToken);
 
             if (activeSession == null)
             {

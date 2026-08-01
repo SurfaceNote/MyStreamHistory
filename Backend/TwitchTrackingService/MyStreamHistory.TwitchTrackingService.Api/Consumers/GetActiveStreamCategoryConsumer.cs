@@ -40,8 +40,25 @@ public class GetActiveStreamCategoryConsumer : IConsumer<GetActiveStreamCategory
 
             // Find active stream session
             var streamSession = await _context.StreamSessions
+                .AsNoTracking()
                 .Where(s => s.TwitchUserId == twitchUserId && s.IsLive)
                 .OrderByDescending(s => s.StartedAt)
+                .Select(s => new GetActiveStreamCategoryResponseContract
+                {
+                    Success = true,
+                    StreamSessionId = s.Id,
+                    StreamCategoryId = s.StreamCategories
+                        .Where(sc => sc.EndedAt == null)
+                        .OrderByDescending(sc => sc.StartedAt)
+                        .Select(sc => (Guid?)sc.Id)
+                        .FirstOrDefault(),
+                    CategoryName = s.StreamCategories
+                        .Where(sc => sc.EndedAt == null)
+                        .OrderByDescending(sc => sc.StartedAt)
+                        .Select(sc => sc.TwitchCategory.Name)
+                        .FirstOrDefault(),
+                    IsLiveConfirmed = s.MissingSinceAt == null
+                })
                 .FirstOrDefaultAsync(context.CancellationToken);
 
             if (streamSession == null)
@@ -54,23 +71,10 @@ public class GetActiveStreamCategoryConsumer : IConsumer<GetActiveStreamCategory
                 return;
             }
 
-            // Get current active category (most recent without EndedAt)
-            var currentCategory = await _context.StreamCategories
-                .Where(sc => sc.StreamSessionId == streamSession.Id && sc.EndedAt == null)
-                .OrderByDescending(sc => sc.StartedAt)
-                .Include(sc => sc.TwitchCategory)
-                .FirstOrDefaultAsync(context.CancellationToken);
-
-            await context.RespondAsync(new GetActiveStreamCategoryResponseContract
-            {
-                Success = true,
-                StreamSessionId = streamSession.Id,
-                StreamCategoryId = currentCategory?.Id,
-                CategoryName = currentCategory?.TwitchCategory?.Name
-            });
+            await context.RespondAsync(streamSession);
 
             _logger.LogDebug("Found active stream category for TwitchUserId: {TwitchUserId}, StreamSessionId: {StreamSessionId}, CategoryId: {CategoryId}",
-                twitchUserId, streamSession.Id, currentCategory?.Id);
+                twitchUserId, streamSession.StreamSessionId, streamSession.StreamCategoryId);
         }
         catch (Exception ex)
         {

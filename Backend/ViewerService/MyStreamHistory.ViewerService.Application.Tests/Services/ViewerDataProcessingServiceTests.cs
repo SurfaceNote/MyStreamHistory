@@ -225,6 +225,13 @@ public class ViewerDataProcessingServiceTests
             throw new NotSupportedException();
         }
 
+        public Task<List<MyStreamHistory.Shared.Base.Contracts.Viewers.UniqueViewerCountDto>> GetUniqueViewerCountsAsync(
+            IReadOnlyCollection<UniqueViewerCountQueryDto> playthroughs,
+            CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException();
+        }
+
         public Task BulkUpsertAsync(List<ViewerCategoryWatch> watches, CancellationToken cancellationToken = default)
         {
             throw new NotSupportedException();

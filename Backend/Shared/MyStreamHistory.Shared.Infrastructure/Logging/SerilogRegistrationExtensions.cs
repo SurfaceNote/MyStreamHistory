@@ -11,7 +11,6 @@ namespace MyStreamHistory.Shared.Infrastructure.Logging
     {
         public static InfrastructureBuilder AddSerilog(this InfrastructureBuilder builder)
         {
-            var serilogOptions = builder.Services.BuildServiceProvider();
             var options = builder.Configuration.GetSection("Serilog").GetValidated<SerilogOptions>();
 
             var loggerConfig = new LoggerConfiguration()
@@ -39,6 +38,17 @@ namespace MyStreamHistory.Shared.Infrastructure.Logging
                         return x;
                     },
                     IndexFormat = $"{options.ApplicationName.ToLower().Replace('.', '-')}-logs-DateTime.UtcNow:yyyy-MM"
+                });
+            }
+
+            if (!string.IsNullOrWhiteSpace(builder.Configuration["Sentry:Dsn"]))
+            {
+                loggerConfig.WriteTo.Sentry(sentryOptions =>
+                {
+                    sentryOptions.InitializeSdk = false;
+                    sentryOptions.MinimumBreadcrumbLevel = LogEventLevel.Warning;
+                    sentryOptions.MinimumEventLevel = LogEventLevel.Error;
+                    sentryOptions.RestrictedToMinimumLevel = LogEventLevel.Warning;
                 });
             }
 

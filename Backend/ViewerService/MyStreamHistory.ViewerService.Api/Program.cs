@@ -13,6 +13,7 @@ using MyStreamHistory.ViewerService.Infrastructure.Persistence;
 Console.OutputEncoding = Encoding.UTF8;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.AddSentryObservability();
 
 builder.Services.AddInfrastructure(builder.Configuration)
     .AddSerilog()
@@ -22,9 +23,12 @@ builder.Services.AddInfrastructure(builder.Configuration)
     {
         configurator.AddConsumer<StreamCreatedConsumer>();
         configurator.AddConsumer<StreamEndedConsumer>();
+        configurator.AddConsumer<StreamLiveConfirmationLostConsumer>();
+        configurator.AddConsumer<StreamLiveConfirmationRestoredConsumer>();
         configurator.AddConsumer<ChatMessageConsumer>();
         configurator.AddConsumer<StreamCategoryChangedConsumer>();
         configurator.AddConsumer<GetStreamViewersConsumer>();
+        configurator.AddConsumer<GetUniqueViewerCountsConsumer>();
         configurator.AddConsumer<GetTopViewersConsumer>();
         configurator.AddConsumer<GetStreamerViewerStatsConsumer>();
         configurator.AddConsumer<GetChatSubscriptionsConsumer>();

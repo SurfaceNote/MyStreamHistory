@@ -1,7 +1,11 @@
 using Microsoft.EntityFrameworkCore;
+using MyStreamHistory.Shared.Base.Contracts.Viewers;
+using MyStreamHistory.ViewerService.Application.DTOs;
 using MyStreamHistory.ViewerService.Application.Interfaces;
 using MyStreamHistory.ViewerService.Domain.Entities;
 using Npgsql;
+using NpgsqlTypes;
+using System.Data;
 using System.Text;
 
 namespace MyStreamHistory.ViewerService.Infrastructure.Persistence;
@@ -18,6 +22,7 @@ public class ViewerCategoryWatchRepository : IViewerCategoryWatchRepository
     public async Task<ViewerCategoryWatch?> GetByViewerAndCategoryAsync(Guid viewerId, Guid streamCategoryId, CancellationToken cancellationToken = default)
     {
         return await _context.ViewerCategoryWatches
+            .AsNoTracking()
             .FirstOrDefaultAsync(w => w.ViewerId == viewerId && w.StreamCategoryId == streamCategoryId, cancellationToken);
     }
 
@@ -30,6 +35,7 @@ public class ViewerCategoryWatchRepository : IViewerCategoryWatchRepository
         }
 
         return await _context.ViewerCategoryWatches
+            .AsNoTracking()
             .Where(w => w.StreamCategoryId == streamCategoryId && distinctViewerIds.Contains(w.ViewerId))
             .ToListAsync(cancellationToken);
     }
@@ -37,6 +43,7 @@ public class ViewerCategoryWatchRepository : IViewerCategoryWatchRepository
     public async Task<List<ViewerCategoryWatch>> GetByViewerIdAsync(Guid viewerId, CancellationToken cancellationToken = default)
     {
         return await _context.ViewerCategoryWatches
+            .AsNoTracking()
             .Where(w => w.ViewerId == viewerId)
             .ToListAsync(cancellationToken);
     }
@@ -44,6 +51,7 @@ public class ViewerCategoryWatchRepository : IViewerCategoryWatchRepository
     public async Task<List<ViewerCategoryWatch>> GetByStreamCategoryIdAsync(Guid streamCategoryId, CancellationToken cancellationToken = default)
     {
         return await _context.ViewerCategoryWatches
+            .AsNoTracking()
             .Include(w => w.Viewer)
             .Where(w => w.StreamCategoryId == streamCategoryId)
             .ToListAsync(cancellationToken);
@@ -52,10 +60,96 @@ public class ViewerCategoryWatchRepository : IViewerCategoryWatchRepository
     public async Task<List<ViewerCategoryWatch>> GetByStreamCategoryIdsAsync(List<Guid> streamCategoryIds, CancellationToken cancellationToken = default)
     {
         return await _context.ViewerCategoryWatches
+            .AsNoTracking()
             .Include(w => w.Viewer)
             .Where(w => streamCategoryIds.Contains(w.StreamCategoryId))
             .OrderByDescending(w => w.MinutesWatched)
             .ToListAsync(cancellationToken);
+    }
+
+    public async Task<List<UniqueViewerCountDto>> GetUniqueViewerCountsAsync(
+        IReadOnlyCollection<UniqueViewerCountQueryDto> playthroughs,
+        CancellationToken cancellationToken = default)
+    {
+        var normalized = playthroughs
+            .GroupBy(p => p.PlaythroughId)
+            .Select(g => new UniqueViewerCountQueryDto
+            {
+                PlaythroughId = g.Key,
+                StreamCategoryIds = g
+                    .SelectMany(p => p.StreamCategoryIds)
+                    .Distinct()
+                    .ToArray()
+            })
+            .ToList();
+
+        var counts = normalized.ToDictionary(p => p.PlaythroughId, _ => 0);
+        var queries = normalized.Where(p => p.StreamCategoryIds.Count > 0).ToList();
+        if (queries.Count == 0)
+        {
+            return counts.Select(c => new UniqueViewerCountDto
+            {
+                PlaythroughId = c.Key,
+                UniqueViewerCount = c.Value
+            }).ToList();
+        }
+
+        var sql = new StringBuilder();
+        var connection = _context.Database.GetDbConnection();
+        await using var command = connection.CreateCommand();
+
+        for (var i = 0; i < queries.Count; i++)
+        {
+            if (i > 0)
+            {
+                sql.AppendLine("UNION ALL");
+            }
+
+            sql.AppendLine($$"""
+                SELECT CAST(@playthrough{{i}} AS uuid) AS "PlaythroughId",
+                       COUNT(DISTINCT "ViewerId")::integer AS "UniqueViewerCount"
+                FROM "ViewerCategoryWatches"
+                WHERE "StreamCategoryId" = ANY(@categoryIds{{i}})
+                """);
+
+            command.Parameters.Add(new NpgsqlParameter($"playthrough{i}", NpgsqlDbType.Uuid)
+            {
+                Value = queries[i].PlaythroughId
+            });
+            command.Parameters.Add(new NpgsqlParameter($"categoryIds{i}", NpgsqlDbType.Array | NpgsqlDbType.Uuid)
+            {
+                Value = queries[i].StreamCategoryIds.ToArray()
+            });
+        }
+
+        command.CommandText = sql.ToString();
+        var shouldCloseConnection = connection.State != ConnectionState.Open;
+        if (shouldCloseConnection)
+        {
+            await connection.OpenAsync(cancellationToken);
+        }
+
+        try
+        {
+            await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                counts[reader.GetGuid(0)] = reader.GetInt32(1);
+            }
+        }
+        finally
+        {
+            if (shouldCloseConnection)
+            {
+                await connection.CloseAsync();
+            }
+        }
+
+        return counts.Select(c => new UniqueViewerCountDto
+        {
+            PlaythroughId = c.Key,
+            UniqueViewerCount = c.Value
+        }).ToList();
     }
 
     public async Task BulkUpsertAsync(List<ViewerCategoryWatch> watches, CancellationToken cancellationToken = default)

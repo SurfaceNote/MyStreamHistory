@@ -1,3 +1,4 @@
+using MassTransit;
 using System.Text;
 using MyStreamHistory.Shared.Api.Extensions;
 using MyStreamHistory.Shared.Infrastructure;
@@ -13,6 +14,7 @@ using MyStreamHistory.TwitchTrackingService.Infrastructure.Persistence;
 Console.OutputEncoding = Encoding.UTF8;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.AddSentryObservability();
 
 builder.Services.AddInfrastructure(builder.Configuration)
     .AddSerilog()
@@ -20,6 +22,13 @@ builder.Services.AddInfrastructure(builder.Configuration)
     .AddUnitOfWork<TwitchTrackingDbContext>()
     .AddMassTransit(configureConsumers: configurator =>
     {
+        configurator.AddEntityFrameworkOutbox<TwitchTrackingDbContext>(outbox =>
+        {
+            outbox.UsePostgres();
+            outbox.UseBusOutbox();
+            outbox.QueryDelay = TimeSpan.FromSeconds(1);
+        });
+
         configurator.AddConsumer<StreamOnlineConsumer>();
         configurator.AddConsumer<StreamOfflineConsumer>();
         configurator.AddConsumer<ChannelUpdateConsumer>();

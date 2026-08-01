@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using MyStreamHistory.Shared.Application.Transport;
 using MyStreamHistory.Shared.Base.Contracts.StreamSessions.Requests;
 using MyStreamHistory.Shared.Base.Contracts.StreamSessions.Responses;
+using MyStreamHistory.ViewerService.Application.DTOs;
 using MyStreamHistory.ViewerService.Application.Interfaces;
 
 namespace MyStreamHistory.ViewerService.Infrastructure.Services;
@@ -19,7 +20,9 @@ public class StreamCategoryService : IStreamCategoryService
         _logger = logger;
     }
 
-    public async Task<(Guid StreamSessionId, Guid? StreamCategoryId)?> GetActiveStreamCategoryAsync(string twitchUserId, CancellationToken cancellationToken = default)
+    public async Task<ActiveStreamCategoryDto?> GetActiveStreamCategoryAsync(
+        string twitchUserId,
+        CancellationToken cancellationToken = default)
     {
         try
         {
@@ -41,7 +44,12 @@ public class StreamCategoryService : IStreamCategoryService
                 return null;
             }
 
-            return (result.StreamSessionId.Value, result.StreamCategoryId);
+            return new ActiveStreamCategoryDto
+            {
+                StreamSessionId = result.StreamSessionId.Value,
+                StreamCategoryId = result.StreamCategoryId,
+                IsLiveConfirmed = result.IsLiveConfirmed
+            };
         }
         catch (Exception ex)
         {

@@ -193,36 +193,27 @@ public class TwitchApiClient : ITwitchApiClient
 
         foreach (var batch in batches)
         {
-            try
+            var userIdsParam = string.Join("&", batch.Select(id => $"user_id={id}"));
+            var url = $"https://api.twitch.tv/helix/streams?{userIdsParam}";
+
+            using var response = await SendWithTokenRetryAsync(
+                token => CreateHelixRequest(HttpMethod.Get, url, token),
+                cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
             {
-                var userIdsParam = string.Join("&", batch.Select(id => $"user_id={id}"));
-                var url = $"https://api.twitch.tv/helix/streams?{userIdsParam}";
-
-                using var response = await SendWithTokenRetryAsync(
-                    token => CreateHelixRequest(HttpMethod.Get, url, token),
-                    cancellationToken);
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
-                    _logger.LogError("Failed to get streams. Status: {StatusCode}, Error: {Error}", 
-                        response.StatusCode, errorContent);
-                    continue;
-                }
-
-                var streamsResponse = await response.Content.ReadFromJsonAsync<TwitchStreamsResponse>(cancellationToken: cancellationToken);
-                
-                if (streamsResponse?.Data != null)
-                {
-                    allStreams.AddRange(streamsResponse.Data);
-                    _logger.LogInformation("Fetched {StreamCount} active streams from batch of {BatchSize} users", 
-                        streamsResponse.Data.Count, batch.Count);
-                }
+                var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+                throw new HttpRequestException(
+                    $"Failed to get streams from Twitch. Status: {response.StatusCode}, Error: {errorContent}");
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error fetching streams for batch");
-            }
+
+            var streamsResponse = await response.Content.ReadFromJsonAsync<TwitchStreamsResponse>(
+                cancellationToken: cancellationToken)
+                ?? throw new InvalidDataException("Twitch returned an empty streams response body.");
+
+            allStreams.AddRange(streamsResponse.Data);
+            _logger.LogInformation("Fetched {StreamCount} active streams from batch of {BatchSize} users",
+                streamsResponse.Data.Count, batch.Count);
         }
 
         _logger.LogInformation("Total active streams fetched: {TotalStreams}", allStreams.Count);

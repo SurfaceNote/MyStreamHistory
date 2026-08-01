@@ -23,6 +23,8 @@ ARG BUILD_CONFIGURATION=Release
 RUN dotnet publish "./MyStreamHistory.Gateway.Api.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
 FROM base AS final
+ARG SENTRY_RELEASE=""
+ENV SENTRY_RELEASE=$SENTRY_RELEASE
 WORKDIR /app
 COPY --from=publish /app/publish .
 ENTRYPOINT ["dotnet", "MyStreamHistory.Gateway.Api.dll"]

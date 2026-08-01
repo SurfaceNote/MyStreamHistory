@@ -14,6 +14,7 @@ using MyStreamHistory.Shared.Infrastructure.Transport;
 using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.AddSentryObservability();
 
 builder.Services.AddInfrastructure(builder.Configuration)
     .AddSerilog()
@@ -22,6 +23,7 @@ builder.Services.AddInfrastructure(builder.Configuration)
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddHealthChecks();
 builder.Services.AddSwaggerGen(option =>
 {
     option.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
@@ -212,5 +214,10 @@ if (app.Environment.IsDevelopment())
 app.UseHsts();
 
 app.MapControllers();
+app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = _ => false
+}).AllowAnonymous();
+app.MapHealthChecks("/health/ready").AllowAnonymous();
 
 app.Run();

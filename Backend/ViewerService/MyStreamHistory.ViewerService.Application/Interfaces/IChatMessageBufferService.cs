@@ -6,10 +6,14 @@ public interface IChatMessageBufferService
 {
     void InitializeStream(string twitchUserId, Guid streamSessionId, Guid? currentCategoryId);
     bool IsStreamActive(string twitchUserId);
+    bool IsStreamActive(string twitchUserId, Guid streamSessionId);
+    bool IsAccrualEnabled(string twitchUserId, Guid streamSessionId);
     int GetActiveStreamCount();
     void AddChatMessage(string twitchUserId, string chatterUserId, int characterCount);
-    void UpdateStreamCategory(string twitchUserId, Guid newCategoryId);
+    bool UpdateStreamCategory(string twitchUserId, Guid streamSessionId, Guid newCategoryId);
+    void PauseStream(string twitchUserId, Guid streamSessionId);
+    void ResumeStream(string twitchUserId, Guid streamSessionId);
     DataCollectionSnapshot CreateSnapshot();
-    void RemoveStream(string twitchUserId);
+    bool RemoveStream(string twitchUserId, Guid streamSessionId);
 }
 

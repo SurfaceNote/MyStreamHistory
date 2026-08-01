@@ -23,6 +23,19 @@ public class ChatMessageBufferService : IChatMessageBufferService
         return _streamBuffers.ContainsKey(twitchUserId);
     }
 
+    public bool IsStreamActive(string twitchUserId, Guid streamSessionId)
+    {
+        return _streamBuffers.TryGetValue(twitchUserId, out var buffer)
+            && buffer.StreamSessionId == streamSessionId;
+    }
+
+    public bool IsAccrualEnabled(string twitchUserId, Guid streamSessionId)
+    {
+        return _streamBuffers.TryGetValue(twitchUserId, out var buffer)
+            && buffer.StreamSessionId == streamSessionId
+            && !buffer.IsPaused;
+    }
+
     public int GetActiveStreamCount()
     {
         return _streamBuffers.Count;
@@ -30,17 +43,43 @@ public class ChatMessageBufferService : IChatMessageBufferService
 
     public void AddChatMessage(string twitchUserId, string chatterUserId, int characterCount)
     {
-        if (!_streamBuffers.TryGetValue(twitchUserId, out var buffer))
+        if (!_streamBuffers.TryGetValue(twitchUserId, out var buffer) || buffer.IsPaused)
             return;
 
         buffer.ChatMessages.AddOrUpdate(chatterUserId, characterCount, (_, existing) => existing + characterCount);
     }
 
-    public void UpdateStreamCategory(string twitchUserId, Guid newCategoryId)
+    public bool UpdateStreamCategory(string twitchUserId, Guid streamSessionId, Guid newCategoryId)
     {
-        if (_streamBuffers.TryGetValue(twitchUserId, out var buffer))
+        if (_streamBuffers.TryGetValue(twitchUserId, out var buffer)
+            && buffer.StreamSessionId == streamSessionId)
         {
             buffer.CurrentCategoryId = newCategoryId;
+            return true;
+        }
+
+        return false;
+    }
+
+    public void PauseStream(string twitchUserId, Guid streamSessionId)
+    {
+        if (_streamBuffers.TryGetValue(twitchUserId, out var buffer)
+            && buffer.StreamSessionId == streamSessionId
+            && !buffer.IsPaused)
+        {
+            buffer.IsPaused = true;
+            buffer.ChatMessages.Clear();
+        }
+    }
+
+    public void ResumeStream(string twitchUserId, Guid streamSessionId)
+    {
+        if (_streamBuffers.TryGetValue(twitchUserId, out var buffer)
+            && buffer.StreamSessionId == streamSessionId
+            && buffer.IsPaused)
+        {
+            buffer.ChatMessages.Clear();
+            buffer.IsPaused = false;
         }
     }
 
@@ -54,6 +93,12 @@ public class ChatMessageBufferService : IChatMessageBufferService
 
         foreach (var (twitchUserId, buffer) in _streamBuffers)
         {
+            if (buffer.IsPaused)
+            {
+                buffer.ChatMessages.Clear();
+                continue;
+            }
+
             // Create a snapshot and clear the buffer for next minute
             var chatMessages = buffer.ChatMessages.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
             buffer.ChatMessages.Clear();
@@ -70,15 +115,23 @@ public class ChatMessageBufferService : IChatMessageBufferService
         return snapshot;
     }
 
-    public void RemoveStream(string twitchUserId)
+    public bool RemoveStream(string twitchUserId, Guid streamSessionId)
     {
-        _streamBuffers.TryRemove(twitchUserId, out _);
+        if (!_streamBuffers.TryGetValue(twitchUserId, out var buffer)
+            || buffer.StreamSessionId != streamSessionId)
+        {
+            return false;
+        }
+
+        return ((ICollection<KeyValuePair<string, StreamBuffer>>)_streamBuffers)
+            .Remove(new KeyValuePair<string, StreamBuffer>(twitchUserId, buffer));
     }
 
     private class StreamBuffer
     {
         public Guid StreamSessionId { get; set; }
         public Guid? CurrentCategoryId { get; set; }
+        public bool IsPaused { get; set; }
         public ConcurrentDictionary<string, int> ChatMessages { get; set; } = new();
     }
 }

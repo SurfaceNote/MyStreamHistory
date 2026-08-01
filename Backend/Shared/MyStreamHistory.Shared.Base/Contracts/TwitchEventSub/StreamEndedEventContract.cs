@@ -1,8 +1,8 @@
 namespace MyStreamHistory.Shared.Base.Contracts.TwitchEventSub;
 
 /// <summary>
-/// Stream ended event, published by TwitchTrackingService after processing StreamOfflineEventContract.
-/// This event ensures that the stream was properly ended in TwitchTrackingService.
+/// Stream ended event, published after EventSub offline processing or polling reconciliation.
+/// This event confirms that TwitchTrackingService atomically ended the local stream session.
 /// </summary>
 public class StreamEndedEventContract
 {

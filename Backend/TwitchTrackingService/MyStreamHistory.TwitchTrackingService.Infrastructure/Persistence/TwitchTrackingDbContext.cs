@@ -1,3 +1,4 @@
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using MyStreamHistory.TwitchTrackingService.Domain.Entities;
 
@@ -20,12 +21,20 @@ public class TwitchTrackingDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
+        modelBuilder.AddInboxStateEntity();
+        modelBuilder.AddOutboxMessageEntity();
+        modelBuilder.AddOutboxStateEntity();
+
         modelBuilder.Entity<StreamSession>(entity =>
         {
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => e.TwitchUserId);
             entity.HasIndex(e => e.IsLive);
             entity.HasIndex(e => e.StreamId);
+            entity.HasIndex(e => e.TwitchUserId, "ux_stream_session_active_user")
+                .IsUnique()
+                .HasFilter("\"IsLive\" = true")
+                .HasDatabaseName("ux_stream_session_active_user");
             
             entity.Property(e => e.StreamerLogin).HasMaxLength(100).IsRequired();
             entity.Property(e => e.StreamerDisplayName).HasMaxLength(100).IsRequired();

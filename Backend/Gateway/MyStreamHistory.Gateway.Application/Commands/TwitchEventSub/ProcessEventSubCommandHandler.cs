@@ -74,7 +74,11 @@ public class ProcessEventSubCommandHandler : IRequestHandler<ProcessEventSubComm
                         await HandleStreamOnlineAsync(eventData, request.MessageId, cancellationToken);
                         break;
                     case "stream.offline":
-                        await HandleStreamOfflineAsync(eventData, request.MessageId, cancellationToken);
+                        await HandleStreamOfflineAsync(
+                            eventData,
+                            request.MessageId,
+                            request.MessageTimestamp,
+                            cancellationToken);
                         break;
                     case "channel.chat.message":
                         await HandleChatMessageAsync(eventData, request.MessageId, cancellationToken);
@@ -110,14 +114,21 @@ public class ProcessEventSubCommandHandler : IRequestHandler<ProcessEventSubComm
         await _transportBus.PublishAsync(eventContract, cancellationToken);
     }
 
-    private async Task HandleStreamOfflineAsync(JsonElement eventData, string messageId, CancellationToken cancellationToken)
+    private async Task HandleStreamOfflineAsync(
+        JsonElement eventData,
+        string messageId,
+        string messageTimestamp,
+        CancellationToken cancellationToken)
     {
         var eventContract = new StreamOfflineEventContract
         {
             MessageId = messageId,
             BroadcasterUserId = int.Parse(eventData.GetProperty("broadcaster_user_id").GetString()!),
             BroadcasterUserLogin = eventData.GetProperty("broadcaster_user_login").GetString()!,
-            BroadcasterUserName = eventData.GetProperty("broadcaster_user_name").GetString()!
+            BroadcasterUserName = eventData.GetProperty("broadcaster_user_name").GetString()!,
+            OccurredAt = DateTime.TryParse(messageTimestamp, out var occurredAt)
+                ? occurredAt.ToUniversalTime()
+                : DateTime.UtcNow
         };
 
         _logger.LogInformation("Publishing stream.offline event for {BroadcasterUserLogin}", eventContract.BroadcasterUserLogin);

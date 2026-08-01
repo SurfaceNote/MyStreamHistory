@@ -33,10 +33,38 @@ public class GetStreamSessionByIdConsumer : IConsumer<GetStreamSessionByIdReques
 
         try
         {
+            var now = DateTime.UtcNow;
             var session = await _streamSessionRepository.Query()
-                .Include(s => s.StreamCategories)
-                .ThenInclude(sc => sc.TwitchCategory)
-                .FirstOrDefaultAsync(s => s.Id == context.Message.StreamSessionId, context.CancellationToken);
+                .AsNoTracking()
+                .Where(s => s.Id == context.Message.StreamSessionId)
+                .Select(s => new StreamSessionDetailsDto
+                {
+                    Id = s.Id,
+                    StreamId = s.StreamId,
+                    TwitchUserId = s.TwitchUserId,
+                    StreamerLogin = s.StreamerLogin,
+                    StreamerDisplayName = s.StreamerDisplayName,
+                    StreamerAvatarUrl = s.StreamerAvatarUrl,
+                    StartedAt = s.StartedAt,
+                    EndedAt = s.EndedAt,
+                    IsLive = s.IsLive,
+                    StreamTitle = s.StreamTitle,
+                    GameName = s.GameName,
+                    ViewerCount = s.ViewerCount,
+                    Categories = s.StreamCategories
+                        .OrderBy(sc => sc.StartedAt)
+                        .Select(sc => new StreamCategoryDetailsDto
+                        {
+                            StreamCategoryId = sc.Id,
+                            TwitchCategoryId = sc.TwitchCategory.TwitchId,
+                            Name = sc.TwitchCategory.Name,
+                            BoxArtUrl = sc.TwitchCategory.BoxArtUrl,
+                            StartedAt = sc.StartedAt,
+                            EndedAt = sc.EndedAt
+                        })
+                        .ToList()
+                })
+                .FirstOrDefaultAsync(context.CancellationToken);
 
             if (session == null)
             {
@@ -51,46 +79,22 @@ public class GetStreamSessionByIdConsumer : IConsumer<GetStreamSessionByIdReques
                 return;
             }
 
+            foreach (var category in session.Categories)
+            {
+                category.DurationMinutes = (int)((category.EndedAt ?? now) - category.StartedAt).TotalMinutes;
+            }
+
             // Get actual streamer profile from AuthService
             var userProfile = await _userProfileService.GetUserProfileAsync(session.TwitchUserId, context.CancellationToken);
             
-            var categories = session.StreamCategories
-                .OrderBy(sc => sc.StartedAt)
-                .Select(sc => new StreamCategoryDetailsDto
-                {
-                    StreamCategoryId = sc.Id,
-                    TwitchCategoryId = sc.TwitchCategory.TwitchId,
-                    Name = sc.TwitchCategory.Name,
-                    BoxArtUrl = sc.TwitchCategory.BoxArtUrl,
-                    StartedAt = sc.StartedAt,
-                    EndedAt = sc.EndedAt,
-                    DurationMinutes = sc.EndedAt.HasValue 
-                        ? (int)(sc.EndedAt.Value - sc.StartedAt).TotalMinutes
-                        : (int)(DateTime.UtcNow - sc.StartedAt).TotalMinutes
-                })
-                .ToList();
-
             var response = new GetStreamSessionByIdResponseContract
             {
                 Success = true,
-                StreamSession = new StreamSessionDetailsDto
-                {
-                    Id = session.Id,
-                    StreamId = session.StreamId,
-                    TwitchUserId = session.TwitchUserId,
-                    // Use actual data from AuthService with fallback to StreamSession
-                    StreamerLogin = session.StreamerLogin,
-                    StreamerDisplayName = userProfile?.DisplayName ?? session.StreamerDisplayName,
-                    StreamerAvatarUrl = userProfile?.Avatar ?? session.StreamerAvatarUrl,
-                    StartedAt = session.StartedAt,
-                    EndedAt = session.EndedAt,
-                    IsLive = session.IsLive,
-                    StreamTitle = session.StreamTitle,
-                    GameName = session.GameName,
-                    ViewerCount = session.ViewerCount,
-                    Categories = categories
-                }
+                StreamSession = session
             };
+
+            session.StreamerDisplayName = userProfile?.DisplayName ?? session.StreamerDisplayName;
+            session.StreamerAvatarUrl = userProfile?.Avatar ?? session.StreamerAvatarUrl;
 
             await context.RespondAsync(response);
             _logger.LogInformation("Successfully responded with stream session details for ID {StreamSessionId}", 

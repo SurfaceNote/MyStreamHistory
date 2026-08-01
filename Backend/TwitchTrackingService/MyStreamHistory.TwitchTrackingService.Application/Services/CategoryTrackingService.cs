@@ -1,5 +1,6 @@
 using MassTransit;
 using Microsoft.Extensions.Logging;
+using MyStreamHistory.Shared.Application.UnitOfWork;
 using MyStreamHistory.Shared.Base.Contracts.TwitchEventSub;
 using MyStreamHistory.TwitchTrackingService.Application.Interfaces;
 using MyStreamHistory.TwitchTrackingService.Domain.Entities;
@@ -14,6 +15,7 @@ public class CategoryTrackingService : ICategoryTrackingService
     private readonly IPlaythroughService _playthroughService;
     private readonly ITwitchApiClient _twitchApiClient;
     private readonly IPublishEndpoint _publishEndpoint;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<CategoryTrackingService> _logger;
 
     public CategoryTrackingService(
@@ -23,6 +25,7 @@ public class CategoryTrackingService : ICategoryTrackingService
         IPlaythroughService playthroughService,
         ITwitchApiClient twitchApiClient,
         IPublishEndpoint publishEndpoint,
+        IUnitOfWork unitOfWork,
         ILogger<CategoryTrackingService> logger)
     {
         _categoryRepository = categoryRepository;
@@ -31,10 +34,29 @@ public class CategoryTrackingService : ICategoryTrackingService
         _playthroughService = playthroughService;
         _twitchApiClient = twitchApiClient;
         _publishEndpoint = publishEndpoint;
+        _unitOfWork = unitOfWork;
         _logger = logger;
     }
 
     public async Task ProcessStreamCategoriesAsync(Dictionary<Guid, string> streamGameIds, CancellationToken cancellationToken = default)
+    {
+        await using var transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
+        try
+        {
+            await ProcessStreamCategoriesCoreAsync(streamGameIds, cancellationToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+        }
+        catch
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw;
+        }
+    }
+
+    private async Task ProcessStreamCategoriesCoreAsync(
+        Dictionary<Guid, string> streamGameIds,
+        CancellationToken cancellationToken)
     {
         if (streamGameIds == null || streamGameIds.Count == 0)
         {
@@ -216,7 +238,36 @@ public class CategoryTrackingService : ICategoryTrackingService
             segmentsCreated, segmentsClosed, segmentsUpdated);
     }
 
-    public async Task<bool> ProcessSingleStreamCategoryAsync(Guid streamSessionId, string categoryId, string categoryName, CancellationToken cancellationToken = default)
+    public async Task<bool> ProcessSingleStreamCategoryAsync(
+        Guid streamSessionId,
+        string categoryId,
+        string categoryName,
+        CancellationToken cancellationToken = default)
+    {
+        await using var transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
+        try
+        {
+            var changed = await ProcessSingleStreamCategoryCoreAsync(
+                streamSessionId,
+                categoryId,
+                categoryName,
+                cancellationToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+            return changed;
+        }
+        catch
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw;
+        }
+    }
+
+    private async Task<bool> ProcessSingleStreamCategoryCoreAsync(
+        Guid streamSessionId,
+        string categoryId,
+        string categoryName,
+        CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(categoryId))
         {

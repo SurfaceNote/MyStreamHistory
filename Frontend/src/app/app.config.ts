@@ -1,5 +1,12 @@
-import { ApplicationConfig, provideZoneChangeDetection } from '@angular/core';
+import {
+  ApplicationConfig,
+  ErrorHandler,
+  inject,
+  provideAppInitializer,
+  provideZoneChangeDetection
+} from '@angular/core';
 import { provideRouter, withInMemoryScrolling } from '@angular/router';
+import { createErrorHandler, TraceService } from '@sentry/angular';
 
 import { routes } from './app.routes';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
@@ -17,6 +24,16 @@ export const appConfig: ApplicationConfig = {
       })
     ),
     provideHttpClient(withInterceptors([authIntercerptor])),
-    provideClientHydration()
+    provideClientHydration(),
+    {
+      provide: ErrorHandler,
+      useValue: createErrorHandler({
+        logErrors: true,
+        showDialog: false
+      })
+    },
+    provideAppInitializer(() => {
+      inject(TraceService);
+    })
   ]
 };

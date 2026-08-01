@@ -12,6 +12,7 @@ using MyStreamHistory.Shared.Infrastructure.Transport;
 Console.OutputEncoding = Encoding.UTF8;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.AddSentryObservability();
 
 builder.Services.AddInfrastructure(builder.Configuration)
     .AddSerilog()

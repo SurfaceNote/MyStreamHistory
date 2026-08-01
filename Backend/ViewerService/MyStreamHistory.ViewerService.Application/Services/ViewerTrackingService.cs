@@ -8,31 +8,34 @@ public class ViewerTrackingService : IViewerTrackingService
     private readonly IChatMessageBufferService _bufferService;
     private readonly ITwitchEventSubClient _eventSubClient;
     private readonly IAuthTokenService _authTokenService;
+    private readonly IStreamLifecycleLock _lifecycleLock;
     private readonly ILogger<ViewerTrackingService> _logger;
-    private readonly Dictionary<string, string> _activeSubscriptions = new(); // TwitchUserId -> SubscriptionId
-    private readonly Dictionary<string, string> _cachedTokens = new(); // TwitchUserId -> AccessToken
 
     public ViewerTrackingService(
         IChatMessageBufferService bufferService,
         ITwitchEventSubClient eventSubClient,
         IAuthTokenService authTokenService,
+        IStreamLifecycleLock lifecycleLock,
         ILogger<ViewerTrackingService> logger)
     {
         _bufferService = bufferService;
         _eventSubClient = eventSubClient;
         _authTokenService = authTokenService;
+        _lifecycleLock = lifecycleLock;
         _logger = logger;
     }
 
     public async Task HandleStreamOnlineAsync(string twitchUserId, Guid streamSessionId, Guid? currentCategoryId, CancellationToken cancellationToken = default)
     {
+        await using var lifecycleLock = await _lifecycleLock.AcquireAsync(twitchUserId, cancellationToken);
+
         _logger.LogInformation("Handling stream online for TwitchUserId: {TwitchUserId}, StreamSessionId: {StreamSessionId}", twitchUserId, streamSessionId);
 
-        if (_bufferService.IsStreamActive(twitchUserId))
+        if (_bufferService.IsStreamActive(twitchUserId, streamSessionId))
         {
             if (currentCategoryId.HasValue)
             {
-                _bufferService.UpdateStreamCategory(twitchUserId, currentCategoryId.Value);
+                _bufferService.UpdateStreamCategory(twitchUserId, streamSessionId, currentCategoryId.Value);
             }
 
             _logger.LogInformation("Stream buffer already active for TwitchUserId: {TwitchUserId}, refreshed category only", twitchUserId);
@@ -50,9 +53,7 @@ public class ViewerTrackingService : IViewerTrackingService
             return;
         }
 
-        var (accessToken, expiresAt) = tokenResult.Value;
-        _cachedTokens[twitchUserId] = accessToken;
-
+        var (accessToken, _) = tokenResult.Value;
         // Subscribe to EventSub chat messages
         try
         {
@@ -68,7 +69,6 @@ public class ViewerTrackingService : IViewerTrackingService
                 subscriptionId = await _eventSubClient.SubscribeToChatMessagesAsync(twitchUserId, accessToken, cancellationToken);
             }
 
-            _activeSubscriptions[twitchUserId] = subscriptionId;
             _logger.LogInformation("Subscribed to chat messages for TwitchUserId: {TwitchUserId}, SubscriptionId: {SubscriptionId}", twitchUserId, subscriptionId);
         }
         catch (Exception ex)
@@ -77,52 +77,39 @@ public class ViewerTrackingService : IViewerTrackingService
         }
     }
 
-    public async Task HandleStreamOfflineAsync(string twitchUserId, CancellationToken cancellationToken = default)
+    public async Task HandleStreamOfflineAsync(
+        string twitchUserId,
+        Guid streamSessionId,
+        CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Handling stream offline for TwitchUserId: {TwitchUserId}", twitchUserId);
+        await using var lifecycleLock = await _lifecycleLock.AcquireAsync(twitchUserId, cancellationToken);
 
-        // Unsubscribe from EventSub
-        string? subscriptionId = null;
-        string? accessToken = null;
+        _logger.LogInformation(
+            "Handling stream offline for TwitchUserId: {TwitchUserId}, StreamSessionId: {StreamSessionId}",
+            twitchUserId,
+            streamSessionId);
 
-        // Try to get subscription ID from cache first
-        if (_activeSubscriptions.TryGetValue(twitchUserId, out var cachedSubscriptionId))
+        if (!_bufferService.IsStreamActive(twitchUserId, streamSessionId))
         {
-            subscriptionId = cachedSubscriptionId;
-            _cachedTokens.TryGetValue(twitchUserId, out accessToken);
-            _logger.LogInformation("Found cached subscription for TwitchUserId: {TwitchUserId}, SubscriptionId: {SubscriptionId}", 
-                twitchUserId, subscriptionId);
+            _logger.LogWarning(
+                "Ignoring stale stream offline event for TwitchUserId {TwitchUserId}, StreamSessionId {StreamSessionId}",
+                twitchUserId,
+                streamSessionId);
+            return;
         }
-        else
-        {
-            // If not in cache, query Twitch API to find the subscription
-            _logger.LogWarning("Subscription ID not found in cache for TwitchUserId: {TwitchUserId}, querying Twitch API", twitchUserId);
-            
-            try
-            {
-                // Get all chat message subscriptions
-                var subscriptions = await _eventSubClient.GetSubscriptionsAsync("channel.chat.message", cancellationToken);
-                
-                // Find subscription for this broadcaster
-                var subscription = subscriptions.FirstOrDefault(s => 
-                    s.Condition?.BroadcasterUserId == twitchUserId && 
-                    s.Status == "enabled");
 
-                if (subscription != null)
-                {
-                    subscriptionId = subscription.Id;
-                    _logger.LogInformation("Found subscription via API for TwitchUserId: {TwitchUserId}, SubscriptionId: {SubscriptionId}", 
-                        twitchUserId, subscriptionId);
-                }
-                else
-                {
-                    _logger.LogWarning("No active chat message subscription found for TwitchUserId: {TwitchUserId}", twitchUserId);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to query subscriptions for TwitchUserId: {TwitchUserId}", twitchUserId);
-            }
+        string? subscriptionId = null;
+        try
+        {
+            var subscriptions = await _eventSubClient.GetSubscriptionsAsync("channel.chat.message", cancellationToken);
+            subscriptionId = subscriptions.FirstOrDefault(subscription =>
+                subscription.Condition?.BroadcasterUserId == twitchUserId
+                && subscription.Condition?.UserId == twitchUserId
+                && subscription.Status == "enabled")?.Id;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to query subscriptions for TwitchUserId: {TwitchUserId}", twitchUserId);
         }
 
         // Unsubscribe if we have a subscription ID
@@ -130,7 +117,7 @@ public class ViewerTrackingService : IViewerTrackingService
         {
             try
             {
-                await _eventSubClient.UnsubscribeAsync(subscriptionId, accessToken ?? string.Empty, cancellationToken);
+                await _eventSubClient.UnsubscribeAsync(subscriptionId, string.Empty, cancellationToken);
                 _logger.LogInformation("Successfully unsubscribed from chat messages for TwitchUserId: {TwitchUserId}, SubscriptionId: {SubscriptionId}", 
                     twitchUserId, subscriptionId);
             }
@@ -141,10 +128,7 @@ public class ViewerTrackingService : IViewerTrackingService
             }
         }
 
-        // Clean up
-        _activeSubscriptions.Remove(twitchUserId);
-        _cachedTokens.Remove(twitchUserId);
-        _bufferService.RemoveStream(twitchUserId);
+        _bufferService.RemoveStream(twitchUserId, streamSessionId);
     }
 }
 
