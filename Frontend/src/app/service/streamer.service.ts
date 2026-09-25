@@ -18,6 +18,11 @@ import { StreamerStatistics } from "../models/streamer-statistics.model";
 export class StreamerService {
     constructor(private http: HttpClient) {}
 
+    getAllStreamers(): Observable<StreamerShortDTO[]> {
+        return this.http.get<ApiResponse<StreamerShortDTO[]>>(API_ENDPOINTS.STREAMERS.ALL, {withCredentials: true})
+            .pipe(unwrapData<StreamerShortDTO[]>());
+    }
+
     getStreamers(streamersListType: StreamerListType): Observable<StreamerShortDTO[]> {
         let url: string;
 

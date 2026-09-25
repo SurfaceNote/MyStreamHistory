@@ -2,7 +2,7 @@ import { Component, inject, OnDestroy, OnInit } from '@angular/core';
 import { StreamerListType } from '../../enums/streamer-list-type.enum';
 import { AuthService } from '../../auth/auth.service';
 import { CommonModule } from '@angular/common';
-import { Subscription } from 'rxjs';
+import { Subscription, timer, switchMap, from, mergeMap, map, catchError, of } from 'rxjs';
 import { RouterLink } from '@angular/router';
 import { LoginComponentComponent } from '../../components/buttons/login-component/login-component.component';
 import { StreamerService } from '../../service/streamer.service';
@@ -25,6 +25,9 @@ export class HomeComponent implements OnInit, OnDestroy {
   twitchId: string = '';
   
   streamers: StreamerShortDTO[] = [];
+  liveStreamerIds = new Set<number>();
+  streamersLoadFailed = false;
+  showingRecentStreamers = false;
   isLoadingStreamers: boolean = true;
   
   private subscriptions: Subscription = new Subscription();
@@ -47,25 +50,47 @@ export class HomeComponent implements OnInit, OnDestroy {
       })
     );
 
-    // Load list of new streamers
+    // Load the full public directory
     this.loadStreamers();
   }
 
   private loadStreamers(): void {
     this.isLoadingStreamers = true;
     this.subscriptions.add(
-      this.streamerService.getStreamers(StreamerListType.NewStreamers).subscribe({
+      this.streamerService.getAllStreamers().pipe(
+        catchError(() => {
+          // Older API deployments do not expose the full directory yet.
+          this.showingRecentStreamers = true;
+          return this.streamerService.getStreamers(StreamerListType.NewStreamers);
+        })
+      ).subscribe({
         next: (streamers) => {
           this.streamers = streamers;
+          this.watchLiveStatus();
           this.isLoadingStreamers = false;
         },
         error: (error) => {
+          this.streamersLoadFailed = true;
           console.error('Error loading streamers:', error);
           this.isLoadingStreamers = false;
           this.streamers = [];
         }
       })
     );
+  }
+
+  private watchLiveStatus(): void {
+    this.subscriptions.add(timer(0, 60000).pipe(
+      switchMap(() => from(this.streamers).pipe(
+        mergeMap(streamer => this.streamerService.getRecentStreams(streamer.twitchId, 1).pipe(
+          map(streams => ({ id: streamer.twitchId, live: streams.some(stream => stream.isLive) })),
+          catchError(() => of({ id: streamer.twitchId, live: false }))
+        ), 4)
+      ))
+    ).subscribe(({ id, live }) => {
+      if (live) this.liveStreamerIds.add(id);
+      else this.liveStreamerIds.delete(id);
+    }));
   }
 
   ngOnDestroy(): void {

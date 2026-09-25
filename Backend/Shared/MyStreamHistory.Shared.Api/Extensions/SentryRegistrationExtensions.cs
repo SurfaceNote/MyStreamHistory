@@ -17,12 +17,13 @@ public static class SentryRegistrationExtensions
         builder.WebHost.UseSentry(options =>
         {
             var configuration = builder.Configuration;
-            var dsn = configuration["Sentry:Dsn"];
+            var dsn = FirstNotEmpty(
+                configuration["Sentry:Dsn"],
+                Environment.GetEnvironmentVariable("SENTRY_DSN"));
 
-            if (!string.IsNullOrWhiteSpace(dsn))
-            {
-                options.Dsn = dsn;
-            }
+            // Sentry treats a missing DSN as a configuration error. An empty DSN
+            // explicitly disables the SDK for local environments.
+            options.Dsn = dsn ?? string.Empty;
 
             options.Environment = FirstNotEmpty(
                 configuration["Sentry:Environment"],
