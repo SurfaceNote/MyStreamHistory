@@ -6,9 +6,11 @@ import { SettingsComponent } from './pages/settings/settings.component';
 import { AdminComponent } from './pages/admin/admin.component';
 import { authGuard } from './auth/auth.guard';
 import { ViewerStatsComponent } from './pages/viewer-stats/viewer-stats.component';
+import { TopViewersOverlayComponent } from './pages/top-viewers-overlay/top-viewers-overlay.component';
 
 export const routes: Routes = [
     { path: 'callback', component: CallbackComponent, data: { seo: { title: 'Signing in — MyStreamHistory', description: 'Completing Twitch sign-in.', noIndex: true } } },
+    { path: 'overlay/top-viewers/:twitchId', component: TopViewersOverlayComponent, data: { seo: { title: 'Top Viewers Overlay — MyStreamHistory', description: 'OBS top viewers overlay.', noIndex: true } } },
     { path: 'profile/:twitchId/viewer/:viewerTwitchId', component: ViewerStatsComponent, data: { seo: { title: 'Viewer Statistics — MyStreamHistory', description: 'Detailed Twitch viewer activity and watch statistics.', noIndex: true } } },
     { path: 'profile/:twitchId', component: StreamerProfileComponent, data: { seo: { title: 'Streamer Profile — MyStreamHistory', description: 'Twitch streamer history, games, audience and channel performance.', type: 'profile' } } },
     { path: 'stream/:streamId', component: StreamDetailComponent, data: { seo: { title: 'Stream Details — MyStreamHistory', description: 'Stream timeline, categories and audience statistics.', type: 'article' } } },

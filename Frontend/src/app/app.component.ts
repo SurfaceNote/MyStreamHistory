@@ -15,6 +15,10 @@ export class AppComponent implements OnInit {
   private activatedRoute = inject(ActivatedRoute);
   private seo = inject(SeoService);
 
+  get isOverlayRoute(): boolean {
+    return this.router.url.startsWith('/overlay/');
+  }
+
   ngOnInit(): void {
     this.router.events
       .pipe(filter(event => event instanceof NavigationEnd))
