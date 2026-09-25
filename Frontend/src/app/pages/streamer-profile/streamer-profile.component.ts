@@ -1,13 +1,34 @@
-import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, inject, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import {
+  AfterViewInit,
+  ChangeDetectorRef,
+  Component,
+  ElementRef,
+  inject,
+  OnDestroy,
+  OnInit,
+  ViewChild,
+} from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { StreamerService } from '../../service/streamer.service';
 import { StreamerShortDTO } from '../../models/streamer-short.dto';
-import { catchError, finalize, forkJoin, map, of, Subscription, switchMap } from 'rxjs';
+import {
+  catchError,
+  finalize,
+  forkJoin,
+  map,
+  of,
+  Subscription,
+  switchMap,
+} from 'rxjs';
 import { StreamSession } from '../../models/stream-session.model';
 import { ViewerStats } from '../../models/viewer-stats.model';
 import { CommonModule } from '@angular/common';
 import { SocialLink } from '../../models/social-link.model';
-import { StreamerDashboardPeriod, StreamerStatistics, TimeSeriesPoint } from '../../models/streamer-statistics.model';
+import {
+  StreamerDashboardPeriod,
+  StreamerStatistics,
+  TimeSeriesPoint,
+} from '../../models/streamer-statistics.model';
 import { PlaythroughStatistics } from '../../models/playthrough-statistics.model';
 import { Chart, registerables } from 'chart.js';
 import { SeoService } from '../../service/seo.service';
@@ -30,11 +51,69 @@ interface DashboardSummaryCard {
   selector: 'app-streamer-profile',
   imports: [CommonModule],
   templateUrl: './streamer-profile.component.html',
-  styleUrl: './streamer-profile.component.scss'
+  styleUrl: './streamer-profile.component.scss',
 })
-export class StreamerProfileComponent implements OnInit, AfterViewInit, OnDestroy {
-  @ViewChild('streamedHoursChart') streamedHoursChart?: ElementRef<HTMLCanvasElement>;
-  @ViewChild('topGamesChart') topGamesChart?: ElementRef<HTMLCanvasElement>;
+export class StreamerProfileComponent
+  implements OnInit, AfterViewInit, OnDestroy
+{
+  @ViewChild('streamedHoursChart')
+  streamedHoursChart?: ElementRef<HTMLCanvasElement>;
+
+  readonly socialNetworks = [
+    { name: 'YouTube', icon: 'youtube', color: '#e00022' },
+    { name: 'Discord', icon: 'discord', color: '#5865f2' },
+    { name: 'Instagram', icon: 'instagram', color: '#c13584' },
+    { name: 'Steam', icon: 'steam', color: '#23445a' },
+    { name: 'VK', icon: 'vk', color: '#0077ff' },
+    { name: 'Yandex', icon: 'yandex', color: '#d93025' },
+    { name: 'Telegram', icon: 'telegram', color: '#229ed9' },
+  ];
+  profileLoadFailed = false;
+  activeSection = 'Overview';
+  sections = ['Overview', 'Streams', 'Games', 'Viewers'];
+  gameStatus = 'All';
+  readonly gameStatuses = [
+    { value: 'All', label: 'All Games' },
+    { value: 'Playing', label: 'Playing Now' },
+    { value: 'Completed', label: 'Completed' },
+    { value: 'Planned', label: 'Planned' },
+    { value: 'Dropped', label: 'Dropped' },
+  ];
+  gameQuery = '';
+  gameSort = 'hours';
+
+  get featuredStream(): StreamSession | undefined {
+    return (
+      this.recentStreams.find((stream) => stream.isLive) ??
+      this.recentStreams[0]
+    );
+  }
+
+  get filteredGames() {
+    const query = this.gameQuery.trim().toLowerCase();
+    return [...(this.statistics?.categories ?? [])]
+      .filter((game) => game.name.toLowerCase().includes(query))
+      .sort((a, b) =>
+        this.gameSort === 'name'
+          ? a.name.localeCompare(b.name)
+          : b.totalHours - a.totalHours,
+      );
+  }
+
+  selectSection(section: string): void {
+    this.activeSection = section;
+    if (section === 'Overview') this.scheduleDashboardRender();
+  }
+
+  gameShare(hours: number): number {
+    const maximum = Math.max(
+      ...(this.statistics?.dashboard.topCategories ?? []).map(
+        (game) => game.totalHours,
+      ),
+      1,
+    );
+    return (hours / maximum) * 100;
+  }
 
   twitchId!: number;
   streamerShortDTO!: StreamerShortDTO;
@@ -46,7 +125,7 @@ export class StreamerProfileComponent implements OnInit, AfterViewInit, OnDestro
   dashboardPeriods: Array<{ value: StreamerDashboardPeriod; label: string }> = [
     { value: '7d', label: '7 days' },
     { value: '30d', label: '30 days' },
-    { value: '90d', label: '90 days' }
+    { value: '90d', label: '90 days' },
   ];
   isLoadingStreams: boolean = false;
   isLoadingViewers: boolean = false;
@@ -62,7 +141,7 @@ export class StreamerProfileComponent implements OnInit, AfterViewInit, OnDestro
   private seo = inject(SeoService);
 
   ngOnInit(): void {
-    this.routeSub = this.route.paramMap.subscribe(params => {
+    this.routeSub = this.route.paramMap.subscribe((params) => {
       const idParam = params.get('twitchId');
       if (idParam) {
         this.twitchId = +idParam;
@@ -75,6 +154,27 @@ export class StreamerProfileComponent implements OnInit, AfterViewInit, OnDestro
     });
   }
 
+  get overviewPlaythroughSections(): PlaythroughStatusSection[] {
+    return this.playthroughSections.filter((section) =>
+      ['Playing', 'Completed'].includes(section.status),
+    );
+  }
+
+  get selectedPlaythroughs(): PlaythroughStatistics[] {
+    const query = this.gameQuery.trim().toLowerCase();
+    return (this.statistics?.playthroughs ?? [])
+      .filter(
+        (game) =>
+          game.status === this.gameStatus &&
+          game.gameName.toLowerCase().includes(query),
+      )
+      .sort((a, b) =>
+        this.gameSort === 'name'
+          ? a.gameName.localeCompare(b.gameName)
+          : b.totalHours - a.totalHours,
+      );
+  }
+
   get playthroughSections(): PlaythroughStatusSection[] {
     const playthroughs = this.statistics?.playthroughs ?? [];
 
@@ -82,15 +182,17 @@ export class StreamerProfileComponent implements OnInit, AfterViewInit, OnDestro
       { status: 'Playing', title: 'Playing Now' },
       { status: 'Planned', title: 'Will Play' },
       { status: 'Dropped', title: 'Dropped' },
-      { status: 'Completed', title: 'Completed' }
+      { status: 'Completed', title: 'Completed' },
     ];
 
     return sections
-      .map(section => ({
+      .map((section) => ({
         ...section,
-        items: playthroughs.filter(playthrough => playthrough.status === section.status)
+        items: playthroughs.filter(
+          (playthrough) => playthrough.status === section.status,
+        ),
       }))
-      .filter(section => section.items.length > 0);
+      .filter((section) => section.items.length > 0);
   }
 
   ngAfterViewInit(): void {
@@ -99,30 +201,36 @@ export class StreamerProfileComponent implements OnInit, AfterViewInit, OnDestro
 
   get dashboardSummaryCards(): DashboardSummaryCard[] {
     const dashboard = this.statistics?.dashboard;
-    const streamedDays = (dashboard?.streamedHoursByDay ?? []).filter(point => point.value > 0).length;
+    const streamedDays = (dashboard?.streamedHoursByDay ?? []).filter(
+      (point) => point.value > 0,
+    ).length;
     const topCategory = dashboard?.topCategories?.[0];
 
     return [
       {
         label: 'Hours Live',
         value: `${this.formatNumber(dashboard?.totalStreamedHours ?? 0)} h`,
-        hint: this.selectedPeriodLabel
+        hint: this.selectedPeriodLabel,
       },
       {
-        label: 'Streams Run',
+        label: 'Streams',
         value: `${dashboard?.totalStreamsCount ?? 0}`,
-        hint: `${streamedDays} live days`
+        hint: `${streamedDays} live days`,
       },
       {
-        label: 'Games Covered',
+        label: 'Games played',
         value: `${dashboard?.totalUniqueGamesCount ?? 0}`,
-        hint: topCategory ? `Lead: ${topCategory.name}` : 'No categories yet'
-      }
+        hint: topCategory ? `Lead: ${topCategory.name}` : 'No categories yet',
+      },
     ];
   }
 
   get selectedPeriodLabel(): string {
-    return this.dashboardPeriods.find(period => period.value === this.selectedDashboardPeriod)?.label ?? '30 days';
+    return (
+      this.dashboardPeriods.find(
+        (period) => period.value === this.selectedDashboardPeriod,
+      )?.label ?? '30 days'
+    );
   }
 
   loadSocialLinks(): void {
@@ -135,12 +243,12 @@ export class StreamerProfileComponent implements OnInit, AfterViewInit, OnDestro
       error: (err) => {
         console.error('Error loading social links', err);
         this.isLoadingSocialLinks = false;
-      }
+      },
     });
   }
 
   getSocialLinkUrl(type: string): string | null {
-    const link = this.socialLinks.find(l => l.socialNetworkType === type);
+    const link = this.socialLinks.find((l) => l.socialNetworkType === type);
     return link ? link.fullUrl : null;
   }
 
@@ -153,6 +261,7 @@ export class StreamerProfileComponent implements OnInit, AfterViewInit, OnDestro
   }
 
   loadStreamer(): void {
+    this.profileLoadFailed = false;
     this.streamerService.getStreamerByTwitchId(this.twitchId).subscribe({
       next: (data: StreamerShortDTO) => {
         this.streamerShortDTO = data;
@@ -160,52 +269,65 @@ export class StreamerProfileComponent implements OnInit, AfterViewInit, OnDestro
           title: `${data.displayName} — Twitch Stream Stats | MyStreamHistory`,
           description: `Explore ${data.displayName}'s Twitch stream history, games, audience activity and channel performance.`,
           image: data.avatar,
-          type: 'profile'
+          type: 'profile',
         });
       },
       error: (err) => {
+        this.profileLoadFailed = true;
         console.error('Error loading streamer', err);
-      }
+      },
     });
   }
 
   loadRecentStreams(): void {
     this.isLoadingStreams = true;
-    this.streamerService.getRecentStreams(this.twitchId, 10).pipe(
-      switchMap((streams: StreamSession[]) => {
-        if (streams.length === 0) {
-          return of([] as StreamSession[]);
-        }
+    this.streamerService
+      .getRecentStreams(this.twitchId, 10)
+      .pipe(
+        switchMap((streams: StreamSession[]) => {
+          if (streams.length === 0) {
+            return of([] as StreamSession[]);
+          }
 
-        return forkJoin(streams.map(stream =>
-          this.streamerService.getStreamDetails(stream.id).pipe(
-            map(details => ({
-              ...stream,
-              uniqueViewersCount: details.viewers.length
-            })),
-            catchError(err => {
-              console.error(`Error loading unique viewers for stream ${stream.id}`, err);
-              return of({ ...stream, uniqueViewersCount: 0 });
-            })
-          )
-        ));
-      }),
-      finalize(() => {
-        this.isLoadingStreams = false;
-      })
-    ).subscribe({
-      next: (data: StreamSession[]) => {
-        this.recentStreams = data;
-      },
-      error: (err) => {
-        console.error('Error loading recent streams', err);
-      }
-    });
+          return forkJoin(
+            streams.map((stream) =>
+              this.streamerService.getStreamDetails(stream.id).pipe(
+                map((details) => ({
+                  ...stream,
+                  uniqueViewersCount: details.viewers.length,
+                })),
+                catchError((err) => {
+                  console.error(
+                    `Error loading unique viewers for stream ${stream.id}`,
+                    err,
+                  );
+                  return of({ ...stream, uniqueViewersCount: 0 });
+                }),
+              ),
+            ),
+          );
+        }),
+        finalize(() => {
+          this.isLoadingStreams = false;
+        }),
+      )
+      .subscribe({
+        next: (data: StreamSession[]) => {
+          this.recentStreams = data;
+        },
+        error: (err) => {
+          console.error('Error loading recent streams', err);
+        },
+      });
   }
 
   formatDate(dateString: string): string {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    return date.toLocaleDateString('en-US', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
   }
 
   formatDuration(startedAt: string, endedAt?: string): string {
@@ -237,7 +359,7 @@ export class StreamerProfileComponent implements OnInit, AfterViewInit, OnDestro
       error: (err) => {
         console.error('Error loading top viewers', err);
         this.isLoadingViewers = false;
-      }
+      },
     });
   }
 
@@ -261,27 +383,38 @@ export class StreamerProfileComponent implements OnInit, AfterViewInit, OnDestro
   navigateToViewerStats(viewer: ViewerStats): void {
     const viewerTwitchId = viewer.viewer?.twitchUserId;
     if (viewerTwitchId) {
-      this.router.navigate(['/profile', this.twitchId, 'viewer', viewerTwitchId]);
+      this.router.navigate([
+        '/profile',
+        this.twitchId,
+        'viewer',
+        viewerTwitchId,
+      ]);
     }
   }
 
   loadStatistics(): void {
     this.isLoadingStatistics = true;
-    this.streamerService.getStreamerStatistics(this.twitchId, this.selectedDashboardPeriod).subscribe({
-      next: (data: StreamerStatistics) => {
-        this.statistics = data;
-        this.isLoadingStatistics = false;
-        this.changeDetector.detectChanges();
-        this.scheduleDashboardRender();
-      },
-      error: (err) => {
-        console.error('Error loading statistics', err);
-        this.isLoadingStatistics = false;
-      }
-    });
+    this.streamerService
+      .getStreamerStatistics(this.twitchId, this.selectedDashboardPeriod)
+      .subscribe({
+        next: (data: StreamerStatistics) => {
+          this.statistics = data;
+          this.isLoadingStatistics = false;
+          this.changeDetector.detectChanges();
+          this.scheduleDashboardRender();
+        },
+        error: (err) => {
+          console.error('Error loading statistics', err);
+          this.isLoadingStatistics = false;
+        },
+      });
   }
 
-  getCategoryBoxArtForStats(boxArtUrl: string, width: number, height: number): string {
+  getCategoryBoxArtForStats(
+    boxArtUrl: string,
+    width: number,
+    height: number,
+  ): string {
     return boxArtUrl
       .replace('{width}', width.toString())
       .replace('{height}', height.toString());
@@ -297,7 +430,7 @@ export class StreamerProfileComponent implements OnInit, AfterViewInit, OnDestro
   }
 
   hasSeriesData(series?: TimeSeriesPoint[]): boolean {
-    return (series ?? []).some(point => point.value > 0);
+    return (series ?? []).some((point) => point.value > 0);
   }
 
   hasSeriesPoints(series?: TimeSeriesPoint[]): boolean {
@@ -309,7 +442,10 @@ export class StreamerProfileComponent implements OnInit, AfterViewInit, OnDestro
   }
 
   formatSeriesDate(dateString: string): string {
-    return new Date(dateString).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+    });
   }
 
   private scheduleDashboardRender(): void {
@@ -324,77 +460,44 @@ export class StreamerProfileComponent implements OnInit, AfterViewInit, OnDestro
 
     this.destroyDashboardCharts();
 
-    if (this.streamedHoursChart && this.hasSeriesPoints(dashboard.streamedHoursByDay)) {
-      this.charts.push(this.createLineChart(
-        this.streamedHoursChart.nativeElement,
-        dashboard.streamedHoursByDay,
-        'Streamed hours',
-        '#ff4d5e'
-      ));
-    }
-
-    if (this.topGamesChart && dashboard.topCategories.length > 0) {
-      this.charts.push(new Chart(this.topGamesChart.nativeElement, {
-        type: 'doughnut',
-        data: {
-          labels: dashboard.topCategories.map(category => category.name),
-          datasets: [{
-            data: dashboard.topCategories.map(category => category.totalHours),
-            backgroundColor: ['#ff4d5e', '#7c8cff', '#2dd4bf', '#f9b44a', '#a78bfa'],
-            borderColor: '#171821',
-            borderWidth: 3,
-            hoverOffset: 8
-          }]
-        },
-        plugins: [this.createGameMixLabelsPlugin(dashboard.topCategories)],
-        options: this.baseChartOptions({
-          interaction: {
-            mode: 'nearest',
-            intersect: true
-          },
-          hover: {
-            mode: 'nearest',
-            intersect: true
-          },
-          cutout: '58%',
-          plugins: {
-            legend: {
-              display: false
-            },
-            tooltip: {
-              enabled: false,
-              external: (context: any) => this.renderGameMixTooltip(context, dashboard.topCategories),
-              callbacks: {
-                label: (context: any) => {
-                  const label = context.label ? `${context.label}: ` : '';
-                  return `${label}${this.formatNumber(context.parsed)} h`;
-                }
-              }
-            }
-          }
-        })
-      }));
+    if (
+      this.streamedHoursChart &&
+      this.hasSeriesPoints(dashboard.streamedHoursByDay)
+    ) {
+      this.charts.push(
+        this.createHoursChart(
+          this.streamedHoursChart.nativeElement,
+          dashboard.streamedHoursByDay,
+          'Streamed hours',
+          '#a78bfa',
+        ),
+      );
     }
   }
 
-  private createLineChart(canvas: HTMLCanvasElement, series: TimeSeriesPoint[], label: string, color: string): Chart {
+  private createHoursChart(
+    canvas: HTMLCanvasElement,
+    series: TimeSeriesPoint[],
+    label: string,
+    color: string,
+  ): Chart {
     return new Chart(canvas, {
-      type: 'line',
+      type: 'bar',
       data: {
-        labels: series.map(point => this.formatSeriesDate(point.date)),
-        datasets: [{
-          label,
-          data: series.map(point => point.value),
-          borderColor: color,
-          backgroundColor: `${color}24`,
-          borderWidth: 3,
-          pointRadius: 0,
-          pointHoverRadius: 4,
-          fill: true,
-          tension: 0.35
-        }]
+        labels: series.map((point) => this.formatSeriesDate(point.date)),
+        datasets: [
+          {
+            label,
+            data: series.map((point) => point.value),
+            borderColor: color,
+            backgroundColor: color,
+            borderWidth: 0,
+            borderRadius: 4,
+            maxBarThickness: 22,
+          },
+        ],
       },
-      options: this.baseCartesianOptions()
+      options: this.baseCartesianOptions(),
     });
   }
 
@@ -405,21 +508,21 @@ export class StreamerProfileComponent implements OnInit, AfterViewInit, OnDestro
           grid: { display: false },
           ticks: {
             color: '#8d8da3',
-            maxTicksLimit: 7
-          }
+            maxTicksLimit: 7,
+          },
         },
         y: {
           beginAtZero: true,
           grid: { color: 'rgba(255, 255, 255, 0.08)' },
           ticks: {
             color: '#8d8da3',
-            precision: 0
-          }
-        }
+            precision: 0,
+          },
+        },
       },
       plugins: {
-        legend: { display: false }
-      }
+        legend: { display: false },
+      },
     });
   }
 
@@ -431,7 +534,7 @@ export class StreamerProfileComponent implements OnInit, AfterViewInit, OnDestro
       maintainAspectRatio: false,
       interaction: {
         intersect: false,
-        mode: 'index'
+        mode: 'index',
       },
       ...overrides,
       plugins: {
@@ -440,149 +543,15 @@ export class StreamerProfileComponent implements OnInit, AfterViewInit, OnDestro
           borderColor: 'rgba(255, 255, 255, 0.12)',
           borderWidth: 1,
           titleColor: '#ffffff',
-          bodyColor: '#c7c7d4'
+          bodyColor: '#c7c7d4',
         },
-        ...overridePlugins
-      }
+        ...overridePlugins,
+      },
     };
   }
 
   private destroyDashboardCharts(): void {
-    this.charts.forEach(chart => chart.destroy());
+    this.charts.forEach((chart) => chart.destroy());
     this.charts = [];
   }
-
-  private createGameMixLabelsPlugin(categories: Array<{ totalHours: number }>): any {
-    return {
-      id: 'gameMixLabels',
-      afterDatasetsDraw: (chart: Chart) => {
-        const { ctx } = chart;
-        const meta = chart.getDatasetMeta(0);
-
-        ctx.save();
-        ctx.font = '700 12px Montserrat, sans-serif';
-        ctx.fillStyle = '#f4f4f8';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-
-        meta.data.forEach((arc: any, index: number) => {
-          const value = categories[index]?.totalHours ?? 0;
-          if (value <= 0) {
-            return;
-          }
-
-          const position = arc.tooltipPosition();
-          ctx.fillText(`${this.formatNumber(value)} h`, position.x, position.y);
-        });
-
-        ctx.restore();
-      }
-    };
-  }
-
-  private renderGameMixTooltip(context: any, categories: Array<{ name: string; boxArtUrl: string; totalHours: number; streamsCount: number }>): void {
-    const { chart, tooltip } = context;
-    const tooltipElement = this.getOrCreateGameMixTooltip(chart.canvas.parentNode as HTMLElement);
-
-    if (tooltip.opacity === 0) {
-      tooltipElement.style.opacity = '0';
-      return;
-    }
-
-    const dataPoint = tooltip.dataPoints?.[0];
-    const category = categories[dataPoint?.dataIndex ?? 0];
-    if (!category) {
-      tooltipElement.style.opacity = '0';
-      return;
-    }
-
-    tooltipElement.replaceChildren();
-
-    const image = document.createElement('img');
-    image.src = this.getCategoryBoxArtForStats(category.boxArtUrl, 80, 106);
-    image.alt = '';
-    Object.assign(image.style, {
-      width: '2.4rem',
-      aspectRatio: '80 / 106',
-      flexShrink: '0',
-      borderRadius: '0.25rem',
-      objectFit: 'cover'
-    });
-
-    const meta = document.createElement('div');
-    const title = document.createElement('strong');
-    const hours = document.createElement('span');
-    const streams = document.createElement('small');
-
-    Object.assign(meta.style, {
-      display: 'flex',
-      minWidth: '0',
-      flexDirection: 'column',
-      gap: '0.12rem'
-    });
-
-    Object.assign(title.style, {
-      color: '#f4f4f8',
-      fontSize: '0.82rem',
-      fontWeight: '800',
-      lineHeight: '1.2'
-    });
-
-    Object.assign(hours.style, {
-      color: '#ffffff',
-      fontSize: '0.78rem',
-      fontWeight: '800'
-    });
-
-    Object.assign(streams.style, {
-      color: '#8d8da3',
-      fontSize: '0.72rem',
-      fontWeight: '600'
-    });
-
-    title.textContent = category.name;
-    hours.textContent = `${this.formatNumber(category.totalHours)} h`;
-    streams.textContent = `${category.streamsCount} streams`;
-
-    meta.append(title, hours, streams);
-    tooltipElement.append(image, meta);
-
-    const container = chart.canvas.parentNode as HTMLElement;
-    const canvasRect = chart.canvas.getBoundingClientRect();
-    const containerRect = container.getBoundingClientRect();
-    const mousePosition = tooltip._eventPosition ?? { x: tooltip.caretX, y: tooltip.caretY };
-
-    tooltipElement.style.opacity = '1';
-    tooltipElement.style.left = `${canvasRect.left - containerRect.left + mousePosition.x + 14}px`;
-    tooltipElement.style.top = `${canvasRect.top - containerRect.top + mousePosition.y + 14}px`;
-  }
-
-  private getOrCreateGameMixTooltip(container: HTMLElement): HTMLDivElement {
-    let tooltipElement = container.querySelector<HTMLDivElement>('.game-mix-tooltip');
-
-    if (!tooltipElement) {
-      tooltipElement = document.createElement('div');
-      tooltipElement.className = 'game-mix-tooltip';
-      Object.assign(tooltipElement.style, {
-        position: 'absolute',
-        zIndex: '5',
-        display: 'flex',
-        gap: '0.65rem',
-        alignItems: 'center',
-        maxWidth: '15rem',
-        padding: '0.55rem',
-        border: '1px solid rgba(255, 255, 255, 0.12)',
-        borderRadius: '0.5rem',
-        background: '#11121a',
-        boxShadow: '0 12px 30px rgba(0, 0, 0, 0.35)',
-        opacity: '0',
-        pointerEvents: 'none',
-        transition: 'opacity 0.12s ease'
-      });
-      container.appendChild(tooltipElement);
-    }
-
-    return tooltipElement;
-  }
-
 }

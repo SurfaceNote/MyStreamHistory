@@ -189,8 +189,8 @@
     <!-- Streamers Section -->
     <section class="streamers-section">
         <div class="section-header">
-            <h2 class="section-title">New streamers on the platform</h2>
-            <p class="section-description">Join the growing community</p>
+            <h2 class="section-title">Streamers on the platform</h2>
+            <p class="section-description">{{ showingRecentStreamers ? 'Recently joined streamers' : 'Join the growing community' }}</p>
         </div>
         
         <div class="streamers-gallery">
@@ -204,13 +204,14 @@
                     <a 
                         [routerLink]="['/profile', streamer.twitchId]" 
                         class="streamer-avatar"
-                        [style.animation-delay]="(i * 0.05) + 's'"
+                        [style.animation-delay]="((i % 10) * 0.05) + 's'"
                         [attr.title]="streamer.displayName"
                     >
                         <img 
                             [src]="streamer.avatar" 
                             [alt]="streamer.displayName + ' avatar'"
                         />
+                        @if (liveStreamerIds.has(streamer.twitchId)) { <span class="streamer-live" aria-label="Live now">● LIVE</span> }
                         <div class="streamer-name">{{ streamer.displayName }}</div>
                         <div class="avatar-overlay">
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -229,7 +230,7 @@
                         <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
                         <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
                     </svg>
-                    <p>No new streamers yet</p>
+                    <p>{{ streamersLoadFailed ? 'Could not load streamers. Please try again later.' : 'No streamers yet' }}</p>
                 </div>
             }
         </div>

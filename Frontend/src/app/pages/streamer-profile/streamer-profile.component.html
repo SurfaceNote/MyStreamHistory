@@ -1,530 +1,522 @@
-<main>
-    <div class="wrapper">
-        <div class="gray-main-block">
-            <div class="stream-page-main-content">
-                <div class="profile">
-                    <div class="poster">
-                        <img src="{{ streamerShortDTO.avatar }}" alt="logo channel {{ streamerShortDTO.displayName }}">
-                    </div>
-                    <div class="meta">
-                        <div class="profile">
-                            <span>{{ streamerShortDTO.displayName }}</span>
-                            <div class="socials-list">
-                                <!-- Twitch - всегда показываем -->
-                                <a href="https://www.twitch.tv/{{ streamerShortDTO.displayName }}" target="_blank" rel="noopener noreferrer">
-                                    <div class="social-link twitch-background"><i class="fa-brands fa-twitch"></i></div>
-                                </a>
-
-                                <!-- YouTube -->
-                                <a *ngIf="getSocialLinkUrl('YouTube')" [href]="getSocialLinkUrl('YouTube')!" target="_blank" rel="noopener noreferrer">
-                                    <div class="social-link youtube-background"><i class="fa-brands fa-youtube"></i></div>
-                                </a>
-
-                                <!-- Instagram -->
-                                <a *ngIf="getSocialLinkUrl('Instagram')" [href]="getSocialLinkUrl('Instagram')!" target="_blank" rel="noopener noreferrer">
-                                    <div class="social-link instagram-background"><i class="fa-brands fa-instagram"></i></div>
-                                </a>
-
-                                <!-- Discord -->
-                                <a *ngIf="getSocialLinkUrl('Discord')" [href]="getSocialLinkUrl('Discord')!" target="_blank" rel="noopener noreferrer">
-                                    <div class="social-link discord-background"><i class="fa-brands fa-discord"></i></div>
-                                </a>
-
-                                <!-- Steam -->
-                                <a *ngIf="getSocialLinkUrl('Steam')" [href]="getSocialLinkUrl('Steam')!" target="_blank" rel="noopener noreferrer">
-                                    <div class="social-link steam-background"><i class="fa-brands fa-steam"></i></div>
-                                </a>
-
-                                <!-- VK -->
-                                <a *ngIf="getSocialLinkUrl('VK')" [href]="getSocialLinkUrl('VK')!" target="_blank" rel="noopener noreferrer">
-                                    <div class="social-link vk-background"><i class="fa-brands fa-vk"></i></div>
-                                </a>
-
-                                <!-- Yandex -->
-                                <a *ngIf="getSocialLinkUrl('Yandex')" [href]="getSocialLinkUrl('Yandex')!" target="_blank" rel="noopener noreferrer">
-                                    <div class="social-link yandex-background"><i class="fa-brands fa-yandex"></i></div>
-                                </a>
-
-                                <!-- Telegram -->
-                                <a *ngIf="getSocialLinkUrl('Telegram')" [href]="getSocialLinkUrl('Telegram')!" target="_blank" rel="noopener noreferrer">
-                                    <div class="social-link telegram-background"><i class="fa-brands fa-telegram"></i></div>
-                                </a>
-                            </div>
-                        </div>
-                        <div class="meta-stream-item">
-                            <span>Made</span>
-                            <span><b>{{ statistics?.totalStreamsCount || 0 }}</b> streams</span>
-                        </div>
-                        <div class="meta-stream-item">
-                            <span>Played</span>
-                            <span><b>{{ statistics?.totalUniqueGamesCount || 0 }}</b> games</span>
-                        </div>
-                        <div class="meta-stream-item">
-                            <span>Streamed</span>
-                            <span><b>{{ statistics?.totalStreamedHours || 0 }}</b> hours</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="schedule-list-wrapper">
-                <div class="schedule-list-header">
-                    <span>Scheduled Streams</span>
-                </div>
-                <div class="schedule-list">
-                    <div class="elements">
-                        <div class="day">
-                            <div class="header">
-                                <span>Thu, 23 Nov (Test)</span>
-                            </div>
-                            <div class="scheduled-game-wrapper">
-                                <div class="scheduled-game-info">
-                                    <div class="scheduled-game">
-                                        <img src="https://static-cdn.jtvnw.net/ttv-boxart/512953_IGDB-130x180.jpg">
-                                        <span>Elden Ring</span>
-                                    </div>
-                                </div>
-                                <div class="time">
-                                    <span>23:30 PM</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="schedule-next-button">
-                    <span>></span>
-                </div>
-            </div>
+<main class="profile-page">
+  @if (streamerShortDTO; as streamer) {
+    <section class="profile-hero">
+      <div class="identity">
+        <img
+          class="avatar"
+          [src]="streamer.avatar"
+          [alt]="streamer.displayName"
+        />
+        <div>
+          <span class="eyebrow">STREAMER PROFILE</span>
+          <h1>
+            {{ streamer.displayName }}
+            @if (featuredStream?.isLive) {
+              <span class="live-badge">LIVE</span>
+            }
+          </h1>
+          <div class="socials">
+            <a
+              class="social-icon twitch"
+              [href]="'https://www.twitch.tv/' + streamer.displayName"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Twitch"
+              title="Twitch"
+              ><i class="fa-brands fa-twitch" aria-hidden="true"></i
+            ></a>
+            @for (network of socialNetworks; track network.name) {
+              @if (getSocialLinkUrl(network.name); as url) {
+                <a
+                  class="social-icon"
+                  [style.background-color]="network.color"
+                  [href]="url"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  [attr.aria-label]="network.name"
+                  [title]="network.name"
+                  ><i
+                    [class]="'fa-brands fa-' + network.icon"
+                    aria-hidden="true"
+                  ></i
+                ></a>
+              }
+            }
+          </div>
         </div>
-
-        <section class="dashboard-section">
-            <div class="dashboard-header">
-                <div>
-                    <span class="eyebrow">Profile Stats</span>
-                    <h2>Streaming Overview</h2>
-                </div>
-                <div class="period-control" role="group" aria-label="Dashboard period">
-                    @for (period of dashboardPeriods; track period.value) {
-                        <button
-                            type="button"
-                            [class.active]="selectedDashboardPeriod === period.value"
-                            (click)="selectDashboardPeriod(period.value)">
-                            {{ period.label }}
-                        </button>
-                    }
-                </div>
-            </div>
-
-            @if (isLoadingStatistics) {
-                <div class="dashboard-state">
-                    <p>Loading dashboard...</p>
-                </div>
-            }
-
-            @if (!isLoadingStatistics && statistics?.dashboard; as dashboard) {
-                <div class="dashboard-cards">
-                    @for (card of dashboardSummaryCards; track card.label) {
-                        <article class="dashboard-card">
-                            <span>{{ card.label }}</span>
-                            <strong>{{ card.value }}</strong>
-                            <small>{{ card.hint }}</small>
-                        </article>
-                    }
-                </div>
-
-                <div class="dashboard-grid">
-                    <article class="chart-panel chart-panel-wide">
-                        <div class="panel-head">
-                            <div>
-                                <h3>Hours Live</h3>
-                                <span>{{ selectedPeriodLabel }}</span>
-                            </div>
-                        </div>
-
-                        @if (hasSeriesPoints(dashboard.streamedHoursByDay)) {
-                            <div class="chart-canvas-wrap chart-canvas-wrap-large">
-                                <canvas #streamedHoursChart aria-label="Streamed hours by day"></canvas>
-                            </div>
-                        } @else {
-                            <div class="empty-chart">
-                                <span>No streamed hours in this period</span>
-                            </div>
-                        }
-                    </article>
-
-                    <article class="chart-panel top-games-panel">
-                        <div class="panel-head">
-                            <div>
-                                <h3>Game Mix</h3>
-                                <span>By streamed hours</span>
-                            </div>
-                        </div>
-
-                        @if (dashboard.topCategories.length > 0) {
-                            <div class="game-mix-content">
-                                <div class="chart-canvas-wrap doughnut-wrap">
-                                    <canvas #topGamesChart aria-label="Top games by streamed hours"></canvas>
-                                </div>
-                                <div class="game-mix-list" aria-label="Game mix list">
-                                    @for (category of dashboard.topCategories; track category.twitchCategoryId) {
-                                        <div class="game-mix-row">
-                                            <img [src]="getCategoryBoxArtForStats(category.boxArtUrl, 80, 106)" [alt]="category.name">
-                                            <div>
-                                                <strong>{{ category.name }}</strong>
-                                                <span>{{ formatNumber(category.totalHours) }} h</span>
-                                            </div>
-                                        </div>
-                                    }
-                                </div>
-                            </div>
-                        } @else {
-                            <div class="empty-chart">
-                                <span>No games in this period</span>
-                            </div>
-                        }
-                    </article>
-                </div>
-            }
-        </section>
-
-        <div class="recent-streams-section">
-            <div class="block-title">
-                <div class="start-line"></div>
-                <h3>Last 10 Streams</h3>
-                <div class="end-line"></div>
-            </div>
-
-            @if (isLoadingStreams) {
-                <div style="padding: 2rem; text-align: center;">
-                    <p>Loading streams...</p>
-                </div>
-            }
-
-            @if (!isLoadingStreams && recentStreams.length === 0) {
-                <div style="padding: 2rem; text-align: center;">
-                    <p>No recent streams found</p>
-                </div>
-            }
-
-            @if (!isLoadingStreams && recentStreams.length > 0) {
-                <div class="streams-list-wrapper">
-                    <div class="streams-list-horizontal">
-                        @for (stream of recentStreams; track stream.id) {
-                            <div class="stream-card" (click)="navigateToStreamDetail(stream.id)" style="cursor: pointer;">
-                                <div class="stream-header">
-                                    <div class="stream-status">
-                                        @if (stream.isLive) {
-                                            <span class="badge live">LIVE</span>
-                                        } @else {
-                                            <span class="badge offline">ENDED</span>
-                                        }
-                                    </div>
-                                    <div class="stream-date">
-                                        <span>{{ formatDate(stream.startedAt) }}</span>
-                                    </div>
-                                </div>
-
-                                <div class="stream-content">
-                                    <div class="stream-categories">
-                                        @if (stream.categories && stream.categories.length > 0) {
-                                            <div class="categories-row">
-                                                @for (category of stream.categories; track category.twitchId) {
-                                                    <div class="category-box-art">
-                                                        <img [src]="getCategoryBoxArt(category.boxArtUrl, 52, 72)"
-                                                             [alt]="category.name"
-                                                             [title]="category.name">
-                                                    </div>
-                                                }
-                                            </div>
-                                        } @else if (stream.gameName) {
-                                            <span class="game-name-fallback">{{ stream.gameName }}</span>
-                                        } @else {
-                                            <span class="game-name no-game">No category</span>
-                                        }
-                                    </div>
-
-                                    <div class="stream-stats">
-                                        <div class="stat-item">
-                                            <i class="fa-regular fa-clock"></i>
-                                            <span>{{ formatDuration(stream.startedAt, stream.endedAt) }}</span>
-                                        </div>
-                                        <div class="stat-item">
-                                            <i class="fa-regular fa-eye"></i>
-                                            <span>{{ stream.uniqueViewersCount ?? 0 }}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        }
-                    </div>
-                </div>
-            }
-        </div>
-
-        <div class="gray-main-block list-walkthrough-and-viewers">
-            <div class="list-walkthrough">
-                @if (isLoadingStatistics) {
-                    <div style="padding: 2rem; text-align: center;">
-                        <p>Loading playthroughs...</p>
-                    </div>
-                }
-
-                @if (!isLoadingStatistics && (!statistics?.playthroughs || (statistics?.playthroughs?.length ?? 0) === 0)) {
-                    <div style="padding: 2rem; text-align: center;">
-                        <p>No playthroughs found</p>
-                    </div>
-                }
-
-                @if (!isLoadingStatistics && playthroughSections.length > 0) {
-                    @for (section of playthroughSections; track section.status) {
-                        <div class="status-section">
-                            <div class="block-title playthrough-section-title">
-                                <div class="start-line"></div>
-                                <h3>{{ section.title }} ({{ section.items.length }})</h3>
-                                <div class="end-line"></div>
-                            </div>
-
-                            <div class="playthrough-metrics-head-wrap hide-mobile">
-                                <div class="playthrough-metrics-head-spacer"></div>
-                                <div class="metric-grid metric-grid-playthrough playthrough-metrics-head">
-                                    <span>First Stream</span>
-                                    <span>Last Stream</span>
-                                    <span>Unique Viewers</span>
-                                    <span>Duration</span>
-                                </div>
-                            </div>
-
-                            <div class="playthrough-cards">
-                                @for (playthrough of section.items; track playthrough.playthroughId) {
-                                    <article class="playthrough-card">
-                                        <div class="playthrough-card-main">
-                                            <div class="playthrough-card-left">
-                                                <img [src]="getCategoryBoxArtForStats(playthrough.boxArtUrl, 285, 380)"
-                                                    [alt]="'Poster ' + playthrough.gameName">
-                                                <div class="playthrough-meta">
-                                                    <span>{{ playthrough.gameName }}</span>
-                                                    <small>{{ playthrough.title }}</small>
-                                                </div>
-                                            </div>
-
-                                            <div class="metric-grid metric-grid-playthrough playthrough-card-right">
-                                                <div class="playthrough-stat">
-                                                    <span class="stat-value">{{ playthrough.firstStreamStartedAt ? (playthrough.firstStreamStartedAt | date:'mediumDate') : 'No data' }}</span>
-                                                </div>
-                                                <div class="playthrough-stat">
-                                                    <span class="stat-value">{{ playthrough.lastStreamStartedAt ? (playthrough.lastStreamStartedAt | date:'mediumDate') : 'No data' }}</span>
-                                                </div>
-                                                <div class="playthrough-stat">
-                                                    <span class="stat-value">{{ playthrough.uniqueViewersCount }}</span>
-                                                </div>
-                                                <div class="playthrough-stat">
-                                                    <span class="stat-value">{{ playthrough.totalHours }} h.</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </article>
-                                }
-                            </div>
-                        </div>
-                    }
-                }
-
-                <div class="block-title summary-title">
-                    <div class="start-line"></div>
-                    <h3>All Games Summary</h3>
-                    <div class="end-line"></div>
-                </div>
-
-                @if (!isLoadingStatistics && statistics) {
-                    <div class="summary-grid">
-                        @for (category of statistics.categories; track category.twitchCategoryId) {
-                            <article class="summary-card">
-                                <img [src]="getCategoryBoxArtForStats(category.boxArtUrl, 285, 380)"
-                                    [alt]="'Poster ' + category.name">
-                                <div class="summary-card-meta">
-                                    <span class="summary-card-title">{{ category.name }}</span>
-                                    <span class="summary-card-hours">{{ category.totalHours }} h.</span>
-                                </div>
-                            </article>
-                        }
-                    </div>
-                }
-            </div>
-            <div class="viewers-list" style="margin-right: 1rem">
-                <div class="header">
-                    <span><b>TOP-100 Viewers</b></span>
-                </div>
-
-                @if (isLoadingViewers) {
-                    <div style="padding: 2rem; text-align: center;">
-                        <p>Loading viewers...</p>
-                    </div>
-                }
-
-                @if (!isLoadingViewers && topViewers.length === 0) {
-                    <div style="padding: 2rem; text-align: center;">
-                        <p>No viewers data yet</p>
-                    </div>
-                }
-
-                @if (!isLoadingViewers && topViewers.length > 0) {
-                    <div class="list">
-                        @for (viewer of topViewers; track viewer.id; let i = $index) {
-                            <button type="button" class="viewer-row" (click)="navigateToViewerStats(viewer)"
-                                    [attr.aria-label]="'View ' + (viewer.viewer?.displayName || 'viewer') + ' statistics'">
-                                <div class="number">
-                                    <span>{{ i + 1 }}</span>
-                                </div>
-                                <img class="channel-logo"
-                                    [src]="viewer.viewer?.profileImageUrl || getDefaultAvatar()"
-                                    [alt]="viewer.viewer?.displayName + '\'s avatar'">
-                                <div class="meta">
-                                    <div class="nickname">
-                                        <span>{{ viewer.viewer?.displayName || 'Unknown' }}</span>
-                                    </div>
-                                    <div class="stats">
-                                        <div class="stat-item">
-                                            <span><b>{{ formatHours(viewer.minutesWatched) }}</b></span>
-                                        </div>
-                                        <div class="stat-item">
-                                            <span><b>{{ formatMessagePoints(viewer.earnedMsgPoints) }}</b> msg pts</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </button>
-                        }
-                    </div>
-                }
-            </div>
-        </div>
-    </div>
-
-    <script>
-        function addCheckboxEventHandlers() {
-            var checkboxes = document.querySelectorAll('.stream-profile-category input[type="checkbox"]');
-
-            checkboxes.forEach(function (checkbox) {
-                checkbox.addEventListener('change', function () {
-                    var category = checkbox.name;
-                    var person = checkbox.value;
-                    console.log(person);
-                    var streamId = checkbox.closest('.stream-profile').getAttribute('data-stream-id');
-                    console.log(streamId);
-                    var personsBlock = document.getElementById('stream-persons-' + streamId);
-                    console.log(personsBlock);
-
-                    if (checkbox.checked) {
-                        var imageUrl = checkbox.getAttribute('data-image');
-
-                        console.log(imageUrl);
-
-                        var personsBlock = document.getElementById('stream-persons-' + streamId);
-                        console.log(personsBlock);
-                        if (personsBlock.hasChildNodes()) {
-                            personsBlock.innerHTML += '<img src="' + imageUrl + '" style="vertical-align: middle;" width="20" height="20">';
-                        } else {
-                            personsBlock.innerHTML = '<img src="' + imageUrl + '" style="vertical-align: middle;" width="20" height="20">';
-                        }
-
-
-                    } else {
-                        var imageUrl = checkbox.getAttribute('data-image');
-                        var contentToRemove = personsBlock.querySelector('img[src="' + imageUrl + '"]');
-                        if (contentToRemove) {
-                            personsBlock.removeChild(contentToRemove);
-                        }
-                    }
-                });
-            });
+      </div>
+      <div class="lifetime">
+        <span class="eyebrow">ALL TIME</span>
+        @if (statistics; as stats) {
+          <div>
+            <span
+              ><b>{{ stats.totalStreamsCount | number }}</b> streams</span
+            ><span
+              ><b>{{ stats.totalUniqueGamesCount }}</b> games</span
+            ><span
+              ><b>{{ stats.totalStreamedHours | number: "1.0-0" }}</b> hours
+              live</span
+            >
+          </div>
+        } @else {
+          <p>Loading statistics…</p>
         }
-
-
-        document.addEventListener("DOMContentLoaded", function () {
-            var openModalLinks = document.querySelectorAll(".open-modal");
-
-            openModalLinks.forEach(function (link) {
-                link.addEventListener("click", function (e) {
-                    e.preventDefault();
-                    var itemId = link.getAttribute("data-item-id");
-                    var csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]').value;
-
-                    var xhr = new XMLHttpRequest();
-                    xhr.open("POST", "/get-stream-data/", true);
-                    xhr.setRequestHeader("Content-Type", "application/json");
-                    xhr.setRequestHeader("X-CSRFToken", csrfToken);
-
-                    xhr.onreadystatechange = function () {
-                        if (xhr.readyState === XMLHttpRequest.DONE) {
-                            if (xhr.status === 200) {
-                                var response = JSON.parse(xhr.responseText);
-                                var modal = document.getElementById("modal");
-                                var modalContent = modal.querySelector("#modal-content");
-
-                                modalContent.innerHTML = response.data;
-
-                                modal.style.display = "block";
-
-                                var form = modal.firstElementChild;
-                                console.log(form);
-                                form.action = "/stream/" + itemId + "/settings/";
-
-                                addCheckboxEventHandlers();
-
-                            } else {
-                                console.log("Error with getting data");
-                            }
-                        }
-                    };
-
-                    var requestData = JSON.stringify({ item_id: itemId });
-
-                    xhr.send(requestData);
-                });
-            });
-
-            var closeModalButtons = document.querySelectorAll(".close-modal");
-
-            closeModalButtons.forEach(function (button) {
-                button.addEventListener("click", function (e) {
-                    e.preventDefault();
-                    var modal = document.getElementById("modal");
-                    modal.style.display = "none";
-                });
-            });
-
-            var forms = document.querySelectorAll('.django-form');
-
-            forms.forEach(function (form) {
-                form.addEventListener('submit', function (event) {
-                    event.preventDefault();
-                    var formData = new FormData(form);
-
-                    fetch(form.action, {
-                        method: 'POST',
-                        body: formData,
-                        headers: {
-                            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-                        }
-                    })
-                        .then(function (response) {
-                            if (response.ok) {
-                                var modal = document.getElementById("modal");
-                                var modalContent = modal.querySelector("#modal-content");
-                                var formResult = document.createElement("p");
-                                formResult.style.color = "green";
-                                formResult.textContent = "Form submitted successfully";
-
-                                modalContent.appendChild(formResult);
-
-                            } else {
-                                console.log("Error wile sending a form");
-                            }
-                        })
-                        .catch(function (error) {
-                            console.log("Error wile sending a form: " + error.message);
-                        });
-                });
-            });
-        });
-    </script>
+      </div>
+      @if (featuredStream; as stream) {
+        <article class="featured-stream">
+          <div class="featured-heading">
+            <span class="eyebrow" [class.live-text]="stream.isLive">{{
+              stream.isLive ? "● LIVE NOW" : "LATEST STREAM"
+            }}</span
+            ><span>{{
+              stream.isLive
+                ? formatDuration(stream.startedAt)
+                : (stream.startedAt | date: "mediumDate")
+            }}</span>
+          </div>
+          <ng-container
+            *ngTemplateOutlet="streamGames; context: { $implicit: stream }"
+          ></ng-container>
+          @if (stream.isLive) {
+            <a
+              class="primary-button"
+              [href]="'https://www.twitch.tv/' + stream.streamerLogin"
+              target="_blank"
+              rel="noopener noreferrer"
+              >Watch on Twitch ↗</a
+            >
+          } @else {
+            <button
+              class="primary-button"
+              (click)="navigateToStreamDetail(stream.id)"
+            >
+              View stream →
+            </button>
+          }
+        </article>
+      } @else {
+        <div class="featured-stream state">
+          {{
+            isLoadingStreams
+              ? "Loading recent activity…"
+              : "No streams recorded yet"
+          }}
+        </div>
+      }
+    </section>
+  } @else {
+    <p class="state" role="status">
+      {{
+        profileLoadFailed
+          ? "Could not load this profile. Please try again later."
+          : "Loading streamer profile…"
+      }}
+    </p>
+  }
+  <nav class="section-nav" aria-label="Profile sections">
+    @for (section of sections; track section) {
+      <button
+        type="button"
+        [class.active]="activeSection === section"
+        [attr.aria-current]="activeSection === section ? 'page' : null"
+        (click)="selectSection(section)"
+      >
+        {{ section }}
+      </button>
+    }
+  </nav>
+  <section [hidden]="activeSection !== 'Overview'">
+    <div class="section-heading">
+      <div>
+        <span class="eyebrow">THE BIG PICTURE</span>
+        <h2>Streaming overview</h2>
+      </div>
+      <div class="period-control" role="group" aria-label="Dashboard period">
+        @for (period of dashboardPeriods; track period.value) {
+          <button
+            type="button"
+            [class.active]="selectedDashboardPeriod === period.value"
+            [attr.aria-pressed]="selectedDashboardPeriod === period.value"
+            (click)="selectDashboardPeriod(period.value)"
+          >
+            {{ period.label }}
+          </button>
+        }
+      </div>
+    </div>
+    @if (isLoadingStatistics) {
+      <p class="state" role="status">Loading statistics…</p>
+    }
+    @if (!isLoadingStatistics && statistics?.dashboard; as dashboard) {
+      <div class="dashboard-cards">
+        @for (card of dashboardSummaryCards; track card.label) {
+          <article class="dashboard-card">
+            <span>{{ card.label }}</span
+            ><strong>{{ card.value }}</strong
+            ><small>{{ card.hint }}</small>
+          </article>
+        }
+      </div>
+      <div class="dashboard-grid">
+        <article class="chart-panel">
+          <div class="panel-head">
+            <h3>Hours live</h3>
+            <span>Daily activity · {{ selectedPeriodLabel }}</span>
+          </div>
+          @if (hasSeriesPoints(dashboard.streamedHoursByDay)) {
+            <div class="chart-wrap">
+              <canvas
+                #streamedHoursChart
+                role="img"
+                aria-label="Hours streamed each day"
+              ></canvas>
+            </div>
+          } @else {
+            <p class="state">No streamed hours in this period</p>
+          }
+        </article>
+        <article class="chart-panel">
+          <div class="panel-head">
+            <h3>Most played</h3>
+            <span>By hours streamed</span>
+          </div>
+          <div class="game-mix-list">
+            @for (
+              game of dashboard.topCategories;
+              track game.twitchCategoryId
+            ) {
+              <div class="game-mix-row">
+                <img
+                  [src]="getCategoryBoxArt(game.boxArtUrl, 80, 106)"
+                  alt=""
+                />
+                <div>
+                  <div class="game-label">
+                    <strong>{{ game.name }}</strong
+                    ><span>{{ formatNumber(game.totalHours) }} h</span>
+                  </div>
+                  <div class="bar-track">
+                    <div [style.width.%]="gameShare(game.totalHours)"></div>
+                  </div>
+                </div>
+              </div>
+            } @empty {
+              <p class="state">No games in this period</p>
+            }
+          </div>
+        </article>
+      </div>
+    }
+  </section>
+  @if (activeSection === "Overview" && !isLoadingStatistics) {
+    @for (section of overviewPlaythroughSections; track section.status) {
+      <section class="overview-playthroughs">
+        <div class="section-heading">
+          <h2>
+            {{ section.title }}
+            <span class="count">{{ section.items.length }}</span>
+          </h2>
+          <button
+            class="text-button"
+            (click)="gameStatus = section.status; selectSection('Games')"
+          >
+            View section →
+          </button>
+        </div>
+        <ng-container
+          *ngTemplateOutlet="
+            playthroughCards;
+            context: { $implicit: section.items }
+          "
+        ></ng-container>
+      </section>
+    }
+  }
+  <section
+    [hidden]="activeSection !== 'Overview' && activeSection !== 'Streams'"
+  >
+    <div class="section-heading">
+      <div>
+        <span class="eyebrow">RECENT ACTIVITY</span>
+        <h2>
+          {{
+            activeSection === "Overview" ? "Latest streams" : "Last 10 streams"
+          }}
+        </h2>
+      </div>
+      @if (activeSection === "Overview" && recentStreams.length > 3) {
+        <button class="text-button" (click)="selectSection('Streams')">
+          View all streams →
+        </button>
+      }
+    </div>
+    @if (isLoadingStreams) {
+      <p class="state">Loading streams…</p>
+    } @else {
+      <div class="stream-grid">
+        @for (
+          stream of activeSection === "Overview"
+            ? recentStreams.slice(0, 3)
+            : recentStreams;
+          track stream.id
+        ) {
+          <button
+            type="button"
+            class="stream-card"
+            (click)="navigateToStreamDetail(stream.id)"
+          >
+            <div class="stream-top">
+              <span>{{ stream.startedAt | date: "mediumDate" }}</span>
+              @if (stream.isLive) {
+                <span class="live-badge">LIVE</span>
+              }
+              <span class="arrow">↗</span>
+            </div>
+            <ng-container
+              *ngTemplateOutlet="streamGames; context: { $implicit: stream }"
+            ></ng-container>
+            <div class="stream-footer">
+              <span>{{ formatDuration(stream.startedAt, stream.endedAt) }}</span
+              ><span>{{ stream.uniqueViewersCount ?? 0 }} unique viewers</span>
+            </div>
+          </button>
+        } @empty {
+          <p class="state">No recent streams found</p>
+        }
+      </div>
+    }
+  </section>
+  <section [hidden]="activeSection !== 'Overview' && activeSection !== 'Games'">
+    <div class="section-heading">
+      <div>
+        <span class="eyebrow">THE COLLECTION · ALL TIME</span>
+        <h2>
+          Games
+          <span class="count">{{ statistics?.categories?.length || 0 }}</span>
+        </h2>
+      </div>
+      @if (
+        activeSection === "Overview" &&
+        (statistics?.categories?.length || 0) > 6
+      ) {
+        <button class="text-button" (click)="selectSection('Games')">
+          View all games →
+        </button>
+      }
+    </div>
+    @if (activeSection === "Games") {
+      <nav class="game-status-nav" aria-label="Game progress">
+        @for (status of gameStatuses; track status.value) {
+          <button
+            type="button"
+            [class.active]="gameStatus === status.value"
+            [attr.aria-pressed]="gameStatus === status.value"
+            (click)="gameStatus = status.value"
+          >
+            {{ status.label }}
+          </button>
+        }
+      </nav>
+    }
+    @if (activeSection === "Games") {
+      <div class="game-controls">
+        <input
+          type="search"
+          placeholder="Search games…"
+          aria-label="Search games"
+          [value]="gameQuery"
+          (input)="gameQuery = $any($event.target).value"
+        /><select
+          aria-label="Sort games"
+          [value]="gameSort"
+          (change)="gameSort = $any($event.target).value"
+        >
+          <option value="hours">Most played</option>
+          <option value="name">Name A–Z</option>
+        </select>
+      </div>
+    }
+    @if (isLoadingStatistics) {
+      <p class="state">Loading games…</p>
+    } @else {
+      @if (activeSection === "Games" && gameStatus !== "All") {
+        <ng-container
+          *ngTemplateOutlet="
+            playthroughCards;
+            context: { $implicit: selectedPlaythroughs }
+          "
+        ></ng-container>
+      } @else {
+        <div class="summary-grid">
+          @for (
+            game of activeSection === "Overview"
+              ? (statistics?.categories || []).slice(0, 6)
+              : filteredGames;
+            track game.twitchCategoryId
+          ) {
+            <article class="summary-card">
+              <img
+                loading="lazy"
+                [src]="getCategoryBoxArt(game.boxArtUrl, 285, 380)"
+                [alt]="game.name"
+              />
+              <h3>{{ game.name }}</h3>
+              <span>{{ formatNumber(game.totalHours) }} hours</span>
+            </article>
+          } @empty {
+            <p class="state">
+              {{
+                gameQuery
+                  ? "No games match your search"
+                  : "No games recorded yet"
+              }}
+            </p>
+          }
+        </div>
+      }
+    }
+  </section>
+  <section
+    [hidden]="activeSection !== 'Overview' && activeSection !== 'Viewers'"
+  >
+    <div class="section-heading">
+      <div>
+        <span class="eyebrow">THE COMMUNITY · ALL TIME</span>
+        <h2>Top viewers</h2>
+      </div>
+      @if (activeSection === "Overview" && topViewers.length > 10) {
+        <button class="text-button" (click)="selectSection('Viewers')">
+          View full ranking →
+        </button>
+      }
+    </div>
+    @if (isLoadingViewers) {
+      <p class="state">Loading viewers…</p>
+    } @else {
+      <div class="viewer-list">
+        @for (
+          viewer of activeSection === "Overview"
+            ? topViewers.slice(0, 10)
+            : topViewers;
+          track viewer.id;
+          let i = $index
+        ) {
+          <button
+            type="button"
+            class="viewer-row"
+            (click)="navigateToViewerStats(viewer)"
+            [attr.aria-label]="
+              'View ' + (viewer.viewer?.displayName || 'viewer') + ' statistics'
+            "
+          >
+            <span class="rank">{{ i + 1 }}</span
+            ><img
+              loading="lazy"
+              [src]="viewer.viewer?.profileImageUrl || getDefaultAvatar()"
+              alt=""
+            /><strong>{{ viewer.viewer?.displayName || "Unknown" }}</strong
+            ><span>{{ formatHours(viewer.minutesWatched) }} watched</span
+            ><span
+              >{{ formatMessagePoints(viewer.earnedMsgPoints) }} msg pts</span
+            ><span class="arrow">↗</span>
+          </button>
+        } @empty {
+          <p class="state">No viewer data yet</p>
+        }
+      </div>
+    }
+  </section>
 </main>
+
+<ng-template #streamGames let-stream>
+  <div class="stream-games">
+    @if (stream.categories?.length) {
+      <div class="stream-covers">
+        @for (game of stream.categories.slice(0, 4); track game.twitchId) {
+          <img
+            [src]="getCategoryBoxArt(game.boxArtUrl, 120, 160)"
+            [alt]="game.name"
+            [title]="game.name"
+            loading="lazy"
+          />
+        }
+        @if (stream.categories.length > 4) {
+          <span
+            class="more-games"
+            [attr.aria-label]="
+              stream.categories.length -
+              4 +
+              ' more games. Open stream to see all games.'
+            "
+            >+{{ stream.categories.length - 4 }}</span
+          >
+        }
+      </div>
+      <p class="stream-games-label">
+        {{
+          stream.categories.length === 1
+            ? stream.categories[0].name
+            : stream.categories.length + " games played"
+        }}
+      </p>
+    } @else {
+      <p class="stream-games-label">{{ stream.gameName || "No category" }}</p>
+    }
+  </div>
+</ng-template>
+
+<ng-template #playthroughCards let-games>
+  <div class="playthrough-list">
+    @for (game of games; track game.playthroughId) {
+      <article class="playthrough-card">
+        <img
+          loading="lazy"
+          [src]="getCategoryBoxArt(game.boxArtUrl, 80, 106)"
+          [alt]="game.gameName"
+        />
+        <div>
+          <h3>{{ game.gameName }}</h3>
+          <p>{{ game.title }}</p>
+        </div>
+        <dl>
+          <div>
+            <dt>First stream</dt>
+            <dd>
+              {{
+                game.firstStreamStartedAt
+                  ? (game.firstStreamStartedAt | date: "mediumDate")
+                  : "No data"
+              }}
+            </dd>
+          </div>
+          <div>
+            <dt>Last stream</dt>
+            <dd>
+              {{
+                game.lastStreamStartedAt
+                  ? (game.lastStreamStartedAt | date: "mediumDate")
+                  : "No data"
+              }}
+            </dd>
+          </div>
+          <div>
+            <dt>Unique viewers</dt>
+            <dd>{{ game.uniqueViewersCount }}</dd>
+          </div>
+          <div>
+            <dt>Duration</dt>
+            <dd>{{ formatNumber(game.totalHours) }} h</dd>
+          </div>
+        </dl>
+      </article>
+    } @empty {
+      <p class="state">
+        {{
+          gameQuery
+            ? "No games match your search"
+            : "No games in this section yet"
+        }}
+      </p>
+    }
+  </div>
+</ng-template>

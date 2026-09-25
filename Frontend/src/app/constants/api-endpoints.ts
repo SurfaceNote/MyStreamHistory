@@ -2,6 +2,7 @@ import { environment } from "../../environments/environment";
 
 export const API_ENDPOINTS = {
     STREAMERS: {
+        ALL: environment.api_url + '/user/all',
         NEW: environment.api_url+ '/user/get-new-users',
         POPULAR: environment.api_url + '/api/PopularStreamers',
         LIVE: environment.api_url + '/api/LiveStreamers'

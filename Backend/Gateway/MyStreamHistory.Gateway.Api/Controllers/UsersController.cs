@@ -16,6 +16,14 @@ namespace MyStreamHistory.Gateway.Api.Controllers;
 [Route("user")]
 public class UsersController(IMapper mapper, IMediator mediator) : ApiControllerBase
 {
+    [HttpGet("all")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(ApiResultContainer<List<UserDto>>), 200)]
+    public async Task<ActionResult<ApiResultContainer<List<UserDto>>>> GetAllUsers(CancellationToken cancellationToken)
+    {
+        return this.Success(await mediator.Send(new GetAllUsersQuery(), cancellationToken));
+    }
+
     [HttpGet("get-new-users")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(ApiResultContainer<List<UserDto>>), 200)]
