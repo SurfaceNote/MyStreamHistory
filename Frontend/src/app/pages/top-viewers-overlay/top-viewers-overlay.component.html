@@ -1,0 +1,32 @@
+<main class="overlay-stage" aria-label="Top viewers overlay">
+  <section class="leaderboard" [class.visible]="visible" [attr.aria-hidden]="!visible">
+    <div class="heading">
+      <span class="eyebrow">COMMUNITY LEADERBOARD</span>
+      <h1>Top 10 viewers</h1>
+      <span class="accent"></span>
+    </div>
+    <div class="viewer-list">
+      @for (row of rows; track row.key) {
+        <div class="viewer-row" [class.entering]="row.entering" [class.leaving]="row.leaving"
+             [style.transform]="'translateY(' + row.position * 58 + 'px)'"
+             [style.animation-delay.ms]="row.entering ? row.position * 55 : 0">
+          <span class="rank">{{ row.position + 1 }}</span>
+          @if (row.viewer.viewer?.profileImageUrl) {
+            <img [src]="row.viewer.viewer?.profileImageUrl" alt="" />
+          } @else {
+            <span class="avatar-placeholder"></span>
+          }
+          <span class="name">{{ row.viewer.viewer?.displayName || row.viewer.viewer?.login || 'Viewer' }}</span>
+          <span class="score">
+            <span>{{ formatExperience(row.viewer.experience) }} XP</span>
+            @if (row.gainedExperience !== null) {
+              <small class="gain" [class.negative]="row.gainedExperience < 0" [class.unchanged]="row.gainedExperience === 0">{{ formatGain(row.gainedExperience) }}</small>
+            } @else if (row.newcomer) {
+              <small class="gain">NEW</small>
+            }
+          </span>
+        </div>
+      }
+    </div>
+  </section>
+</main>

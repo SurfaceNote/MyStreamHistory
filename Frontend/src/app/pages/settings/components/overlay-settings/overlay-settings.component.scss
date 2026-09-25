@@ -1,0 +1,44 @@
+.overlay-settings {
+  max-width: 800px;
+  color: #efeff1;
+
+  h2 { margin: 0 0 12px; font-size: 28px; }
+  p { color: #adadb8; line-height: 1.5; }
+  label { display: block; margin: 28px 0 8px; font-weight: 600; }
+  a { display: inline-block; margin-top: 16px; color: #b98bff; }
+  .hint { margin-top: 24px; font-size: 14px; }
+  .copy-status { color: #70e2aa; font-size: 14px; }
+  .error { color: #ff9292; }
+}
+
+.link-row {
+  display: flex;
+  gap: 10px;
+
+  input {
+    flex: 1;
+    min-width: 0;
+    padding: 12px;
+    color: #efeff1;
+    background: #0e0e10;
+    border: 1px solid #3a3a44;
+    border-radius: 6px;
+    font: inherit;
+    font-size: 14px;
+  }
+
+  button {
+    padding: 0 18px;
+    border: 0;
+    border-radius: 6px;
+    background: #9147ff;
+    color: white;
+    font: inherit;
+    cursor: pointer;
+  }
+}
+
+@media (max-width: 600px) {
+  .link-row { flex-direction: column; }
+  .link-row button { padding: 12px; }
+}

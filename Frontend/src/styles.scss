@@ -66,3 +66,12 @@ div::-webkit-scrollbar-thumb {
 html {
     scroll-behavior: auto;
 }
+
+html.obs-overlay,
+body.obs-overlay {
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    min-height: 0;
+    overflow: hidden;
+}

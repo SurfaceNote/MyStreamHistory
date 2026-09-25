@@ -22,6 +22,7 @@ export class SettingsSidebarComponent {
   sections: SidebarSection[] = [
     { id: 'profile', label: 'Profile', icon: 'fa-user' },
     { id: 'playthroughs', label: 'Playthroughs', icon: 'fa-folder-open' },
+    { id: 'overlay', label: 'OBS Overlay', icon: 'fa-trophy' },
     { id: 'content', label: 'Content', icon: 'fa-video', disabled: true },
     { id: 'streams', label: 'Streams', icon: 'fa-broadcast-tower', disabled: true }
   ];

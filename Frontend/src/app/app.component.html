@@ -1,6 +1,8 @@
 <!-- Background effects -->
-<div class="bg-effect bg-effect-top-right"></div>
-<div class="bg-effect bg-effect-bottom-left"></div>
+@if (!isOverlayRoute) {
+  <div class="bg-effect bg-effect-top-right"></div>
+  <div class="bg-effect bg-effect-bottom-left"></div>
+  <app-header></app-header>
+}
 
-<app-header></app-header>
 <router-outlet />

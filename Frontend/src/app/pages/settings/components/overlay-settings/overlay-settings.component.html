@@ -1,0 +1,17 @@
+<section class="overlay-settings">
+  <h2>Top viewers OBS overlay</h2>
+  <p>Add this URL as a Browser Source in OBS. The background is transparent. A top 10 card appears every 10 minutes, shows ranking changes and XP gained since the previous display, then disappears.</p>
+
+  @if (overlayUrl; as url) {
+    <label for="overlay-url">Browser Source URL</label>
+    <div class="link-row">
+      <input id="overlay-url" type="text" [value]="url" readonly (click)="$any($event.target).select()" />
+      <button type="button" (click)="copyLink()">Copy link</button>
+    </div>
+    @if (copyStatus) { <p class="copy-status" role="status">{{ copyStatus }}</p> }
+    <a [href]="url" target="_blank" rel="noopener noreferrer">Open preview</a>
+    <p class="hint">Recommended Browser Source size: 600 × 760 px. Keep the source active while hidden to preserve the 10 minute cycle.</p>
+  } @else {
+    <p class="error">Your Twitch ID is unavailable. Sign in again to generate the link.</p>
+  }
+</section>
