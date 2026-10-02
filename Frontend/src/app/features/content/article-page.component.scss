@@ -1,0 +1,8 @@
+.article-page { max-width: 900px; padding: 58px 24px 110px; margin: 0 auto; min-height: 70vh; }
+.back, .missing a { color: #bd92f5; font-weight: 700; }
+header { margin: 46px 0 38px; }
+.category { color: #b98cff; font-size: .75rem; font-weight: 800; letter-spacing: .14em; }
+h1 { font-size: clamp(2.4rem, 5vw, 4.3rem); line-height: 1.13; margin: 16px 0; }
+.cover { width: 100%; aspect-ratio: 16/9; object-fit: cover; border-radius: 18px; }
+.body { max-width: 760px; margin: 46px auto; font-size: 1.08rem; overflow-wrap: anywhere; }
+.missing { text-align: center; padding: 80px 0; }

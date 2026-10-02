@@ -1,0 +1,26 @@
+<main class="content-page">
+  <div class="page-heading">
+    <p class="eyebrow">MyStreamHistory / Editorial</p>
+    <h1>{{ heading }}</h1>
+    <p>{{ type === 'news' ? 'Updates and stories from the world of streaming.' : 'Thoughtful reviews and hands-on impressions.' }}</p>
+  </div>
+  <p *ngIf="loading" class="state">Loading articles…</p>
+  <p *ngIf="error" class="state">Articles could not be loaded. <button type="button" (click)="load(page)">Try again</button></p>
+  <p *ngIf="!loading && !error && !articles.length" class="state">No articles yet. Check back soon.</p>
+  <div class="card-grid" *ngIf="!loading && !error">
+    <a *ngFor="let article of articles" class="article-card" [routerLink]="['/', type === 'news' ? 'news' : 'reviews', article.slug]">
+      <img *ngIf="article.coverId" [src]="content.mediaUrl(article.coverId)" [alt]="article.title" loading="lazy" />
+      <div class="card-copy">
+        <span class="card-meta">{{ type === 'news' ? 'NEWS' : 'REVIEW' }} · {{ article.publishedAt | date:'mediumDate' }}</span>
+        <h2>{{ article.title }}</h2>
+        <p *ngIf="type === 'review' && article.summary">{{ article.summary }}</p>
+        <span class="read-more">Read article →</span>
+      </div>
+    </a>
+  </div>
+  <nav class="pagination" *ngIf="total > 12" aria-label="Article pages">
+    <button type="button" (click)="load(page - 1)" [disabled]="page <= 1">← Previous</button>
+    <span>Page {{ page }} of {{ Math.ceil(total / 12) }}</span>
+    <button type="button" (click)="load(page + 1)" [disabled]="page * 12 >= total">Next →</button>
+  </nav>
+</main>

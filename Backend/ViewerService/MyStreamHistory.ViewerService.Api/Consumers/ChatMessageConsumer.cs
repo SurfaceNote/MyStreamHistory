@@ -1,3 +1,4 @@
+using MyStreamHistory.Shared.Api.Features;
 using MassTransit;
 using MyStreamHistory.Shared.Base.Contracts.TwitchEventSub;
 using MyStreamHistory.ViewerService.Application.Interfaces;
@@ -7,15 +8,18 @@ namespace MyStreamHistory.ViewerService.Api.Consumers;
 
 public class ChatMessageConsumer : IConsumer<ChatMessageEventContract>
 {
+    private readonly TwitchDataCollectionFeature _dataCollection;
     private readonly IChatMessageBufferService _bufferService;
     private readonly IProcessedEventSubMessageRepository _processedMessageRepository;
     private readonly ILogger<ChatMessageConsumer> _logger;
 
     public ChatMessageConsumer(
+        TwitchDataCollectionFeature dataCollection,
         IChatMessageBufferService bufferService,
         IProcessedEventSubMessageRepository processedMessageRepository,
         ILogger<ChatMessageConsumer> logger)
     {
+        _dataCollection = dataCollection;
         _bufferService = bufferService;
         _processedMessageRepository = processedMessageRepository;
         _logger = logger;
@@ -23,6 +27,8 @@ public class ChatMessageConsumer : IConsumer<ChatMessageEventContract>
 
     public async Task Consume(ConsumeContext<ChatMessageEventContract> context)
     {
+        if (!_dataCollection.Enabled) return;
+
         var message = context.Message;
         
         // Check for duplicate

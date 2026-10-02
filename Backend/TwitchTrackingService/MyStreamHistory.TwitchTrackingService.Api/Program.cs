@@ -1,3 +1,4 @@
+using MyStreamHistory.Shared.Api.Features;
 using MassTransit;
 using System.Text;
 using MyStreamHistory.Shared.Api.Extensions;
@@ -15,6 +16,7 @@ Console.OutputEncoding = Encoding.UTF8;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddSentryObservability();
+var twitchDataCollection = builder.AddTwitchDataCollectionFeature();
 
 builder.Services.AddInfrastructure(builder.Configuration)
     .AddSerilog()
@@ -52,16 +54,14 @@ builder.Services.AddTwitchTrackingInfrastructure(builder.Configuration);
 // Add AutoMapper
 builder.Services.AddAutoMapper(typeof(Program).Assembly);
 
-// Add Background Services
-if (!builder.Environment.IsDevelopment())
+if (twitchDataCollection.Enabled)
 {
     builder.Services.AddHostedService<SubscriptionSyncBackgroundService>();
+    builder.Services.AddHostedService<StreamDataPollingBackgroundService>();
 }
 
-// Add Stream Data Polling Background Service (runs in all environments)
-builder.Services.AddHostedService<StreamDataPollingBackgroundService>();
-
 var app = builder.Build();
+app.Logger.LogInformation("Twitch data collection enabled: {Enabled}", twitchDataCollection.Enabled);
 
 app.UseGlobalExceptionHandler();
 app.UseAppExceptionHandler();

@@ -1,3 +1,4 @@
+using MyStreamHistory.Shared.Api.Features;
 using MassTransit;
 using Microsoft.Extensions.Logging;
 using MyStreamHistory.Shared.Application.Transport;
@@ -14,15 +15,18 @@ namespace MyStreamHistory.TwitchTrackingService.Api.Consumers;
 /// </summary>
 public class SubscribeToAllUsersConsumer : IConsumer<SubscribeToAllUsersRequestContract>
 {
+    private readonly TwitchDataCollectionFeature _dataCollection;
     private readonly ITwitchApiClient _twitchApiClient;
     private readonly ITransportBus _transportBus;
     private readonly ILogger<SubscribeToAllUsersConsumer> _logger;
 
     public SubscribeToAllUsersConsumer(
+        TwitchDataCollectionFeature dataCollection,
         ITwitchApiClient twitchApiClient,
         ITransportBus transportBus,
         ILogger<SubscribeToAllUsersConsumer> logger)
     {
+        _dataCollection = dataCollection;
         _twitchApiClient = twitchApiClient;
         _transportBus = transportBus;
         _logger = logger;
@@ -30,6 +34,8 @@ public class SubscribeToAllUsersConsumer : IConsumer<SubscribeToAllUsersRequestC
 
     public async Task Consume(ConsumeContext<SubscribeToAllUsersRequestContract> context)
     {
+        _dataCollection.EnsureEnabled();
+
         _logger.LogInformation("Received request to subscribe to all users");
 
         try

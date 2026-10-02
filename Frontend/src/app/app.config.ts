@@ -9,9 +9,9 @@ import { provideRouter, withInMemoryScrolling } from '@angular/router';
 import { createErrorHandler, TraceService } from '@sentry/angular';
 
 import { routes } from './app.routes';
-import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
 import { authIntercerptor } from './auth/auth.interceptor';
-import { provideClientHydration } from '@angular/platform-browser';
+import { provideClientHydration, withEventReplay } from '@angular/platform-browser';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -23,8 +23,7 @@ export const appConfig: ApplicationConfig = {
         anchorScrolling: 'enabled'
       })
     ),
-    provideHttpClient(withInterceptors([authIntercerptor])),
-    provideClientHydration(),
+    provideHttpClient(withFetch(), withInterceptors([authIntercerptor])),
     {
       provide: ErrorHandler,
       useValue: createErrorHandler({
@@ -34,6 +33,6 @@ export const appConfig: ApplicationConfig = {
     },
     provideAppInitializer(() => {
       inject(TraceService);
-    })
+    }), provideClientHydration(withEventReplay())
   ]
 };

@@ -1,3 +1,4 @@
+using MyStreamHistory.Shared.Api.Features;
 using MassTransit;
 using MyStreamHistory.Shared.Base.Contracts.TwitchEventSub;
 using MyStreamHistory.ViewerService.Application.Interfaces;
@@ -7,15 +8,18 @@ namespace MyStreamHistory.ViewerService.Api.Consumers;
 
 public class StreamCategoryChangedConsumer : IConsumer<StreamCategoryChangedEventContract>
 {
+    private readonly TwitchDataCollectionFeature _dataCollection;
     private readonly IChatMessageBufferService _bufferService;
     private readonly IProcessedEventSubMessageRepository _processedMessageRepository;
     private readonly ILogger<StreamCategoryChangedConsumer> _logger;
 
     public StreamCategoryChangedConsumer(
+        TwitchDataCollectionFeature dataCollection,
         IChatMessageBufferService bufferService,
         IProcessedEventSubMessageRepository processedMessageRepository,
         ILogger<StreamCategoryChangedConsumer> logger)
     {
+        _dataCollection = dataCollection;
         _bufferService = bufferService;
         _processedMessageRepository = processedMessageRepository;
         _logger = logger;
@@ -23,6 +27,8 @@ public class StreamCategoryChangedConsumer : IConsumer<StreamCategoryChangedEven
 
     public async Task Consume(ConsumeContext<StreamCategoryChangedEventContract> context)
     {
+        if (!_dataCollection.Enabled) return;
+
         var message = context.Message;
         
         // Check for duplicate
