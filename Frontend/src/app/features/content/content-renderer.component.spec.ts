@@ -9,7 +9,7 @@ describe('YouTube article rendering', () => {
     ] });
     fixture.detectChanges();
     const frame = fixture.nativeElement.querySelector('iframe');
-    expect(frame.getAttribute('src')).toBe('https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ');
+    expect(frame.getAttribute('src')).toBe('https://www.youtube.com/embed/dQw4w9WgXcQ');
     expect(frame.hasAttribute('allowfullscreen')).toBeTrue();
     expect(frame.getAttribute('referrerpolicy')).toBe('strict-origin-when-cross-origin');
     expect(frame.parentElement.className).toBe('youtube-video');

@@ -2,7 +2,7 @@ const videoIdPattern = /^[a-zA-Z0-9_-]{11}$/;
 
 export function youtubeEmbedUrl(videoId: unknown): string | null {
   return typeof videoId === 'string' && videoId.length === 11 && videoIdPattern.test(videoId)
-    ? `https://www.youtube-nocookie.com/embed/${videoId}` : null;
+    ? `https://www.youtube.com/embed/${videoId}` : null;
 }
 
 export function youtubeVideoId(value: string): string | null {

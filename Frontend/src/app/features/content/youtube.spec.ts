@@ -26,7 +26,7 @@ describe('YouTube URL validation', () => {
   }
 
   it('constructs embed URLs only from validated IDs', () => {
-    expect(youtubeEmbedUrl('aB_012345-9')).toBe('https://www.youtube-nocookie.com/embed/aB_012345-9');
+    expect(youtubeEmbedUrl('aB_012345-9')).toBe('https://www.youtube.com/embed/aB_012345-9');
     for (const id of [null, {}, 'https://evil.test', 'dQw4w9WgXcQ?autoplay=1', 'dQw4w9WgXcQ\n'])
       expect(youtubeEmbedUrl(id)).toBeNull();
   });

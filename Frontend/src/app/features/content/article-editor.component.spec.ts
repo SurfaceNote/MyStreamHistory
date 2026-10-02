@@ -239,7 +239,7 @@ describe('Article editor writing and persistence', () => {
     fixture.detectChanges();
     expect(fixture.componentInstance.youtubeOpen).toBeFalse();
     expect(fixture.nativeElement.querySelector('.writing-surface iframe').getAttribute('src'))
-      .toBe('https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ');
+      .toBe('https://www.youtube.com/embed/dQw4w9WgXcQ');
     tick(1200);
     const save = http.expectOne(endpoint);
     expect(save.request.body.body.content).toContain({ type: 'youtube', attrs: { videoId: 'dQw4w9WgXcQ' } });
