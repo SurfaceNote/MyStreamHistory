@@ -227,6 +227,80 @@ describe('Article editor writing and persistence', () => {
     expect(component.busy).toBeFalse();
   }));
 
+  it('inserts a YouTube video through the toolbar, autosaves and restores it on reopening', fakeAsync(() => {
+    load();
+    fixture.nativeElement.querySelector('[title="Insert YouTube video"]').click();
+    fixture.detectChanges();
+    tick(0);
+    const input = fixture.nativeElement.querySelector('[aria-label="YouTube video URL"]');
+    input.value = 'https://youtu.be/dQw4w9WgXcQ?si=shared';
+    input.dispatchEvent(new Event('input'));
+    fixture.nativeElement.querySelector('#youtube-form').dispatchEvent(new Event('submit'));
+    fixture.detectChanges();
+    expect(fixture.componentInstance.youtubeOpen).toBeFalse();
+    expect(fixture.nativeElement.querySelector('.writing-surface iframe').getAttribute('src'))
+      .toBe('https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ');
+    tick(1200);
+    const save = http.expectOne(endpoint);
+    expect(save.request.body.body.content).toContain({ type: 'youtube', attrs: { videoId: 'dQw4w9WgXcQ' } });
+    draft = { ...draft, ...save.request.body, revision: 2 };
+    save.flush(draft);
+    flushMicrotasks();
+    fixture.destroy();
+    fixture = TestBed.createComponent(ArticleEditorComponent);
+    fixture.detectChanges();
+    load();
+    expect(fixture.componentInstance.editor!.getJSON().content)
+      .toContain(jasmine.objectContaining({ type: 'youtube', attrs: { videoId: 'dQw4w9WgXcQ' } }));
+    const component = fixture.componentInstance;
+    // Select the actual video node and delete it with the editor's standard command.
+    let position = 0;
+    component.editor!.state.doc.forEach((node, offset) => { if (node.type.name === 'youtube') position = offset; });
+    component.editor!.commands.setNodeSelection(position);
+    component.editor!.commands.deleteSelection();
+    expect(component.editor!.getJSON().content?.some(node => node.type === 'youtube')).toBeFalse();
+    expect(component.editor!.getText()).toContain('Existing draft text');
+    void component.flush();
+    http.expectOne(endpoint).flush({ ...draft, revision: 3 });
+    flushMicrotasks();
+    tick(1200);
+  }));
+
+  it('keeps the draft unchanged and explains an invalid YouTube URL', fakeAsync(() => {
+    load();
+    const component = fixture.componentInstance;
+    const before = component.editor!.getJSON();
+    component.youtubeOpen = true;
+    component.youtubeUrl = 'https://example.com/watch?v=dQw4w9WgXcQ';
+    component.insertYoutube();
+    fixture.detectChanges();
+    expect(component.youtubeError).toContain('valid YouTube video URL');
+    expect(component.youtubeOpen).toBeTrue();
+    expect(component.editor!.getJSON()).toEqual(before);
+    tick(1200);
+    http.expectNone(request => request.method === 'PUT');
+  }));
+
+  for (const position of [1, 10, 20]) {
+    it(`preserves existing text when inserting a video at position ${position} and supports undo`, fakeAsync(() => {
+      load();
+      const component = fixture.componentInstance;
+      const before = component.editor!.getJSON();
+      tick(501);
+      component.editor!.commands.setTextSelection(position);
+      component.youtubeUrl = 'https://www.youtube.com/shorts/dQw4w9WgXcQ';
+      component.insertYoutube();
+      expect(component.editor!.getText({ blockSeparator: '' })).toBe('Existing draft text');
+      expect(component.editor!.getJSON().content?.some(node => node.type === 'youtube')).toBeTrue();
+      expect(component.editor!.commands.undo()).toBeTrue();
+      expect(component.editor!.getJSON()).toEqual(before);
+      void component.flush();
+      http.expectOne(endpoint).flush({ ...draft, revision: 2 });
+      flushMicrotasks();
+      tick(1200);
+    }));
+  }
+
   it('keeps the image in the library when deletion is cancelled or rejected', fakeAsync(() => {
     load();
     const confirm = spyOn(window, 'confirm').and.returnValue(false);

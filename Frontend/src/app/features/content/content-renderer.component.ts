@@ -1,11 +1,14 @@
 import { CommonModule } from '@angular/common';
-import { Component, Input } from '@angular/core';
+import { Component, Input, inject } from '@angular/core';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { ContentNode } from './content.models';
+import { youtubeEmbedUrl } from './youtube';
 
 @Component({
   selector: 'app-content-renderer',
   standalone: true,
   imports: [CommonModule],
+  styleUrl: './content-renderer.component.scss',
   template: `
     <ng-container [ngSwitch]="node.type">
       <ng-container *ngSwitchCase="'doc'"><ng-container *ngFor="let child of node.content"><app-content-renderer [node]="child" /></ng-container></ng-container>
@@ -20,13 +23,23 @@ import { ContentNode } from './content.models';
         <ng-template #plain><strong *ngIf="hasMark('bold'); else noBold"><em *ngIf="hasMark('italic'); else onlyBold">{{ node.text }}</em><ng-template #onlyBold>{{ node.text }}</ng-template></strong><ng-template #noBold><em *ngIf="hasMark('italic'); else noMark">{{ node.text }}</em><ng-template #noMark>{{ node.text }}</ng-template></ng-template></ng-template>
       </ng-container>
       <img *ngSwitchCase="'image'" [src]="node.attrs?.['src']" [alt]="node.attrs?.['alt'] || ''" loading="lazy" />
+      <ng-container *ngSwitchCase="'youtube'"><div class="youtube-video" *ngIf="youtubeSrc"><iframe [src]="youtubeSrc" title="YouTube video player" loading="lazy" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div></ng-container>
       <br *ngSwitchCase="'hardBreak'" />
     </ng-container>
   `,
   styles: [`:host { display: contents; } p { line-height: 1.8; margin: 1.25em 0; } h2 { margin: 1.8em 0 .6em; font-size: 1.6em; } h3 { margin: 1.5em 0 .5em; font-size: 1.3em; } img { display: block; max-width: 100%; border-radius: 14px; margin: 1.8em auto; } blockquote { border-left: 3px solid #a970ff; margin: 1.5em 0; padding-left: 1.1em; color: #c8c4d0; } a { color: #b68aff; } li { line-height: 1.7; }`]
 })
 export class ContentRendererComponent {
-  @Input({ required: true }) node!: ContentNode;
+  private readonly sanitizer = inject(DomSanitizer);
+  private currentNode!: ContentNode;
+  youtubeSrc: SafeResourceUrl | null = null;
+  @Input({ required: true })
+  set node(value: ContentNode) {
+    this.currentNode = value;
+    const src = value.type === 'youtube' ? youtubeEmbedUrl(value.attrs?.['videoId']) : null;
+    this.youtubeSrc = src ? this.sanitizer.bypassSecurityTrustResourceUrl(src) : null;
+  }
+  get node(): ContentNode { return this.currentNode; }
   hasMark(type: string): boolean { return !!this.node.marks?.some(mark => mark.type === type); }
   get link(): string | null {
     const href = this.node.marks?.find(mark => mark.type === 'link')?.attrs?.['href'];

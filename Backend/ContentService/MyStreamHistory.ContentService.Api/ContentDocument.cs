@@ -5,7 +5,7 @@ namespace MyStreamHistory.ContentService.Api;
 
 public static partial class ContentDocument
 {
-    private static readonly HashSet<string> Nodes = ["doc", "paragraph", "heading", "bulletList", "orderedList", "listItem", "blockquote", "text", "image", "hardBreak"];
+    private static readonly HashSet<string> Nodes = ["doc", "paragraph", "heading", "bulletList", "orderedList", "listItem", "blockquote", "text", "image", "youtube", "hardBreak"];
     private static readonly HashSet<string> Marks = ["bold", "italic", "link"];
 
     public static HashSet<Guid> Validate(JsonElement root)
@@ -36,6 +36,8 @@ public static partial class ContentDocument
                 throw new ArgumentException("Invalid text node.");
         }
         else if (node.TryGetProperty("text", out _)) throw new ArgumentException("Only text nodes can contain text.");
+        if (type == "youtube" && !node.TryGetProperty("attrs", out _))
+            throw new ArgumentException("YouTube videos require a video ID.");
         if (node.TryGetProperty("attrs", out var attrs))
         {
             if (attrs.ValueKind != JsonValueKind.Object) throw new ArgumentException("Invalid node attributes.");
@@ -61,6 +63,14 @@ public static partial class ContentDocument
                     }
                     else throw new ArgumentException("Invalid image attributes.");
                 }
+            }
+            else if (type == "youtube")
+            {
+                if (!attrs.TryGetProperty("videoId", out var videoId) || videoId.ValueKind != JsonValueKind.String
+                    || !YoutubeVideoId().IsMatch(videoId.GetString()!))
+                    throw new ArgumentException("Invalid YouTube video ID.");
+                if (attrs.EnumerateObject().Any(property => property.Name != "videoId"))
+                    throw new ArgumentException("Unsupported YouTube attributes.");
             }
             else if (type == "heading")
             {
@@ -107,7 +117,7 @@ public static partial class ContentDocument
         }
         if (node.TryGetProperty("content", out var content))
         {
-            if (type is "text" or "image" or "hardBreak") throw new ArgumentException("Inline nodes cannot contain child nodes.");
+            if (type is "text" or "image" or "youtube" or "hardBreak") throw new ArgumentException("Leaf nodes cannot contain child nodes.");
             if (content.ValueKind != JsonValueKind.Array) throw new ArgumentException("Invalid node content.");
             foreach (var child in content.EnumerateArray())
             {
@@ -121,8 +131,8 @@ public static partial class ContentDocument
 
     private static bool AllowedChild(string parent, string? child) => parent switch
     {
-        "doc" or "blockquote" => child is "paragraph" or "heading" or "bulletList" or "orderedList" or "blockquote" or "image",
-        "listItem" => child is "paragraph" or "heading" or "bulletList" or "orderedList" or "blockquote" or "image",
+        "doc" or "blockquote" => child is "paragraph" or "heading" or "bulletList" or "orderedList" or "blockquote" or "image" or "youtube",
+        "listItem" => child is "paragraph" or "heading" or "bulletList" or "orderedList" or "blockquote" or "image" or "youtube",
         "bulletList" or "orderedList" => child == "listItem",
         "paragraph" or "heading" => child is "text" or "hardBreak",
         _ => false
@@ -130,4 +140,7 @@ public static partial class ContentDocument
 
     [GeneratedRegex("^/content/media/([0-9a-fA-F-]{36})$")]
     private static partial Regex MediaPath();
+
+    [GeneratedRegex("\\A[a-zA-Z0-9_-]{11}\\z")]
+    private static partial Regex YoutubeVideoId();
 }

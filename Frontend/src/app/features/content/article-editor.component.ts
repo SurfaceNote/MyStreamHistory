@@ -5,10 +5,13 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Editor } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
 import Image from '@tiptap/extension-image';
+import { Selection } from '@tiptap/pm/state';
 import { Subject, debounceTime, firstValueFrom, takeUntil } from 'rxjs';
 import { ContentService } from './content.service';
 import { Article, ArticleInput, ContentNode, MediaAsset } from './content.models';
 import { PrivateMediaThumbComponent } from './private-media-thumb.component';
+import { YoutubeVideo } from './youtube.extension';
+import { youtubeVideoId } from './youtube';
 
 @Component({
   selector: 'app-article-editor',
@@ -35,6 +38,9 @@ export class ArticleEditorComponent implements OnInit, OnDestroy {
   mediaOpen = false;
   linkOpen = false;
   linkUrl = '';
+  youtubeOpen = false;
+  youtubeUrl = '';
+  youtubeError = '';
   slugEdited = false;
   loading = true;
   busy = false;
@@ -69,7 +75,7 @@ export class ArticleEditorComponent implements OnInit, OnDestroy {
         underline: false,
         horizontalRule: false,
         link: { openOnClick: false }
-      }), Image],
+      }), Image, YoutubeVideo],
       content: { type: 'doc', content: [] },
       onUpdate: () => this.changed(),
       editorProps: {
@@ -137,6 +143,10 @@ export class ArticleEditorComponent implements OnInit, OnDestroy {
     });
     if (!this.destroyed) {
       this.editor.commands.setContent(copy, { emitUpdate: false });
+      this.editor.commands.command(({ tr }) => {
+        tr.setSelection(Selection.atStart(tr.doc));
+        return true;
+      });
       this.editor.setEditable(true, false);
       this.editorReady = true;
     }
@@ -174,6 +184,27 @@ export class ArticleEditorComponent implements OnInit, OnDestroy {
   }
 
   link(): void { this.linkOpen = !this.linkOpen; }
+  insertYoutube(): void {
+    if (!this.editorReady || !this.editor || this.busy) return;
+    const videoId = youtubeVideoId(this.youtubeUrl);
+    if (!videoId) {
+      this.youtubeError = 'Enter a valid YouTube video URL (youtube.com, youtu.be or Shorts).';
+      return;
+    }
+    if (this.editor.chain().focus().command(({ tr, state, dispatch }) => {
+      // ProseMirror preserves text on both sides when splitting a paragraph for a block.
+      if (dispatch) tr.replaceSelectionWith(state.schema.nodes['youtube'].create({ videoId }));
+      return true;
+    }).command(({ commands }) => {
+      commands.createParagraphNear();
+      return true;
+    }).run()) {
+      this.youtubeOpen = false;
+      this.youtubeUrl = '';
+      this.youtubeError = '';
+    }
+  }
+
   applyLink(): void {
     if (!/^https?:\/\//i.test(this.linkUrl)) { this.error = 'Links must start with http:// or https://.'; return; }
     this.editor?.chain().focus().setLink({ href: this.linkUrl }).run();

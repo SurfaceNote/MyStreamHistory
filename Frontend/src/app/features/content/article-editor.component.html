@@ -26,10 +26,16 @@
         <button type="button" title="Quote" (click)="editor?.chain()?.focus()?.toggleBlockquote()?.run()">❝</button>
         <button type="button" title="Link" (click)="link()">Link</button>
         <button type="button" title="Insert image" (click)="mediaOpen = true">Image</button>
+        <button type="button" title="Insert YouTube video" (click)="youtubeOpen = !youtubeOpen; youtubeError = ''" [disabled]="busy || !editorReady" [attr.aria-expanded]="youtubeOpen" aria-controls="youtube-form">YouTube</button>
       </div>
       <div class="link-form" *ngIf="linkOpen"><input [(ngModel)]="linkUrl" placeholder="https://example.com" aria-label="Link URL" /><button type="button" (click)="applyLink()">Apply link</button><button type="button" class="ghost" (click)="editor?.chain()?.focus()?.unsetLink()?.run(); linkOpen = false">Remove</button></div>
+      <form id="youtube-form" *ngIf="youtubeOpen" (ngSubmit)="insertYoutube()">
+        <div class="link-form youtube-form"><input name="youtubeUrl" [(ngModel)]="youtubeUrl" placeholder="https://www.youtube.com/watch?v=…" aria-label="YouTube video URL" [attr.aria-invalid]="youtubeError ? 'true' : null" aria-describedby="youtube-hint" /><button type="submit" [disabled]="busy || !editorReady">Insert video</button><button type="button" class="ghost" (click)="youtubeOpen = false">Cancel</button></div>
+        <p id="youtube-hint" class="hint">Paste a YouTube video link, including youtu.be or Shorts.</p>
+        <p class="error" role="alert" *ngIf="youtubeError">{{ youtubeError }}</p>
+      </form>
       <div #editorHost class="editor-host" [class.empty]="editorReady && editor?.isEmpty" [attr.aria-busy]="!editorReady" data-placeholder="Write your article here…"></div>
-      <p class="hint">Tip: paste or drop an image into the article. Drafts save automatically.</p>
+      <p class="hint">Tip: paste or drop an image into the article. Use YouTube to insert a video. Drafts save automatically.</p>
     </section>
     <aside class="settings-pane">
       <h2>Article settings</h2>

@@ -7,6 +7,34 @@ namespace MyStreamHistory.ContentService.Api.Tests;
 public sealed class ContentRulesTests
 {
     [Fact]
+    public void YoutubeVideosCanBeSavedAndPublishedWithoutMediaReferences()
+    {
+        const string body = """{"type":"doc","content":[{"type":"youtube","attrs":{"videoId":"dQw4w9WgXcQ"}}]}""";
+        using var document = JsonDocument.Parse(body);
+        Assert.Empty(ContentDocument.Validate(document.RootElement));
+        var article = new Article { Body = body };
+        article.Publish();
+        Assert.Equal(body, article.PublishedBody);
+    }
+
+    [Theory]
+    [InlineData("""{"type":"youtube"}""")]
+    [InlineData("""{"type":"youtube","attrs":{}}""")]
+    [InlineData("""{"type":"youtube","attrs":{"videoId":null}}""")]
+    [InlineData("""{"type":"youtube","attrs":{"videoId":123}}""")]
+    [InlineData("""{"type":"youtube","attrs":{"videoId":"short"}}""")]
+    [InlineData("""{"type":"youtube","attrs":{"videoId":"dQw4w9WgXcQ\n"}}""")]
+    [InlineData("""{"type":"youtube","attrs":{"videoId":"https://evil.test"}}""")]
+    [InlineData("""{"type":"youtube","attrs":{"videoId":"dQw4w9WgXcQ","src":"https://evil.test"}}""")]
+    [InlineData("""{"type":"youtube","attrs":{"videoId":"dQw4w9WgXcQ"},"content":[]}""")]
+    [InlineData("""{"type":"paragraph","content":[{"type":"youtube","attrs":{"videoId":"dQw4w9WgXcQ"}}]}""")]
+    public void YoutubeVideosRejectInvalidIdsAttributesAndNesting(string node)
+    {
+        using var document = JsonDocument.Parse("{\"type\":\"doc\",\"content\":[" + node + "]}");
+        Assert.Throws<ArgumentException>(() => ContentDocument.Validate(document.RootElement));
+    }
+
+    [Fact]
     public void PublishedSnapshotDoesNotChangeWhenDraftChanges()
     {
         var article = new Article { Title = "First", Body = "{\"type\":\"doc\",\"content\":[]}" };
