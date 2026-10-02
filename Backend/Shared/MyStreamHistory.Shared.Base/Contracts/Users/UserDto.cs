@@ -7,4 +7,7 @@ public class UserDto
     public string DisplayName { get; set; } = null!;
     
     public string Avatar { get; set; } = null!;
+
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public bool? IsLive { get; set; }
 }

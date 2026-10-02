@@ -1,6 +1,8 @@
 ﻿using MediatR;
 using MyStreamHistory.Shared.Application.Transport;
 using MyStreamHistory.Shared.Base.Contracts;
+using MyStreamHistory.Shared.Base.Contracts.StreamSessions.Requests;
+using MyStreamHistory.Shared.Base.Contracts.StreamSessions.Responses;
 using MyStreamHistory.Shared.Base.Contracts.Users;
 using MyStreamHistory.Shared.Base.Contracts.Users.Requests;
 using MyStreamHistory.Shared.Base.Contracts.Users.Response;
@@ -20,11 +22,35 @@ public class GetAllUsersQueryHandler(ITransportBus bus) : IRequestHandler<GetAll
 
         if (response.IsSuccess)
         {
-            return response.Success!.Users.Select(u => new UserDto
+            var users = response.Success!.Users;
+            if (users.Count == 0)
+            {
+                return new List<UserDto>();
+            }
+
+            var liveResponse = await bus.SendRequestAsync<
+                GetLiveStreamersRequestContract, GetLiveStreamersResponseContract, BaseFailedResponseContract>
+            (
+                new GetLiveStreamersRequestContract(), cancellationToken
+            );
+
+            if (liveResponse.IsFailure)
+            {
+                throw new AppException(liveResponse.Failure!.Reason);
+            }
+
+            if (!liveResponse.IsSuccess)
+            {
+                throw new InvalidOperationException();
+            }
+
+            var liveIds = liveResponse.Success!.TwitchUserIds.ToHashSet();
+            return users.Select(u => new UserDto
             {
                 TwitchId = u.TwitchId,
                 DisplayName = u.DisplayName,
-                Avatar = u.Avatar
+                Avatar = u.Avatar,
+                IsLive = liveIds.Contains(u.TwitchId)
             }).ToList();
         }
 

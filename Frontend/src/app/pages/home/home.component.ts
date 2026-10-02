@@ -2,7 +2,7 @@ import { afterNextRender, ChangeDetectorRef, Component, inject, OnDestroy, OnIni
 import { StreamerListType } from '../../enums/streamer-list-type.enum';
 import { AuthService } from '../../auth/auth.service';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
-import { Subscription, timer, switchMap, from, mergeMap, map, catchError, of } from 'rxjs';
+import { Subscription, timer, exhaustMap, catchError, EMPTY } from 'rxjs';
 import { RouterLink } from '@angular/router';
 import { LoginComponentComponent } from '../../components/buttons/login-component/login-component.component';
 import { StreamerService } from '../../service/streamer.service';
@@ -73,7 +73,7 @@ export class HomeComponent implements OnInit, OnDestroy {
         })
       ).subscribe({
         next: (streamers) => {
-          this.streamers = streamers;
+          this.updateStreamers(streamers);
           this.watchLiveStatus();
           this.isLoadingStreamers = false;
         },
@@ -90,17 +90,23 @@ export class HomeComponent implements OnInit, OnDestroy {
   private watchLiveStatus(): void {
     if (!isPlatformBrowser(this.platformId)) return;
 
-    this.subscriptions.add(timer(0, 60000).pipe(
-      switchMap(() => from(this.streamers).pipe(
-        mergeMap(streamer => this.streamerService.getRecentStreams(streamer.twitchId, 1).pipe(
-          map(streams => ({ id: streamer.twitchId, live: streams.some(stream => stream.isLive) })),
-          catchError(() => of({ id: streamer.twitchId, live: false }))
-        ), 4)
+    this.subscriptions.add(timer(60000, 60000).pipe(
+      exhaustMap(() => this.streamerService.getAllStreamers().pipe(
+        // Keep the last successful snapshot and retry on the next tick.
+        catchError(() => EMPTY)
       ))
-    ).subscribe(({ id, live }) => {
-      if (live) this.liveStreamerIds.add(id);
-      else this.liveStreamerIds.delete(id);
+    ).subscribe(streamers => {
+      this.updateStreamers(streamers);
+      this.showingRecentStreamers = false;
     }));
+  }
+
+  private updateStreamers(streamers: StreamerShortDTO[]): void {
+    this.streamers = streamers;
+    this.liveStreamerIds = new Set(
+      streamers.filter(streamer => streamer.isLive).map(streamer => streamer.twitchId)
+    );
+    this.changeDetector.markForCheck();
   }
 
   ngOnDestroy(): void {

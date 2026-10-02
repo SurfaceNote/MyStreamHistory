@@ -10,7 +10,12 @@ describe('Home streamer directory', () => {
   it('loads every streamer and refreshes live status', fakeAsync(() => {
     const streamers = Array.from({length: 15}, (_, i) => ({twitchId: i, displayName: `Streamer ${i}`, avatar: ''}));
     let live = true;
-    const service = {getAllStreamers: () => of(streamers), getRecentStreams: jasmine.createSpy().and.callFake((id: number) => of([{isLive: id === 14 && live}]))};
+    const service = {
+      getAllStreamers: jasmine.createSpy().and.callFake(() => of(streamers.map(streamer => ({
+        ...streamer, isLive: streamer.twitchId === 14 && live
+      })))),
+      getRecentStreams: jasmine.createSpy()
+    };
     TestBed.configureTestingModule({providers: [
       {provide: ChangeDetectorRef, useValue: {markForCheck: () => {}, detectChanges: () => {}}},
       {provide: AuthService, useValue: {isLoggedIn: () => false, getAccessTokenObservable: () => of(null)}},
@@ -21,11 +26,54 @@ describe('Home streamer directory', () => {
     expect(component.streamers.length).toBe(15);
     expect(component.liveStreamerIds.has(14)).toBeTrue();
     expect(component.liveStreamerIds.has(0)).toBeFalse();
+    expect(service.getAllStreamers.calls.count()).toBe(1);
     live = false; tick(60000);
     expect(component.liveStreamerIds.has(14)).toBeFalse();
+    expect(service.getAllStreamers.calls.count()).toBe(2);
+    expect(service.getRecentStreams).not.toHaveBeenCalled();
     component.ngOnDestroy();
-    const calls = service.getRecentStreams.calls.count(); tick(60000);
-    expect(service.getRecentStreams.calls.count()).toBe(calls);
+    tick(60000);
+    expect(service.getAllStreamers.calls.count()).toBe(2);
+  }));
+
+  it('preserves live status on a refresh failure and retries next minute', fakeAsync(() => {
+    const streamers = [{twitchId: 1, displayName: 'Example', avatar: '', isLive: true}];
+    const getAllStreamers = jasmine.createSpy().and.returnValues(
+      of(streamers), throwError(() => new Error('Temporary failure')),
+      of([{...streamers[0], isLive: false}, {twitchId: 2, displayName: 'New', avatar: '', isLive: true}])
+    );
+    TestBed.configureTestingModule({providers: [
+      {provide: ChangeDetectorRef, useValue: {markForCheck: () => {}, detectChanges: () => {}}},
+      {provide: AuthService, useValue: {getAccessTokenObservable: () => of(null)}},
+      {provide: StreamerService, useValue: {getAllStreamers}}
+    ]});
+    const component = TestBed.runInInjectionContext(() => new HomeComponent());
+    component.ngOnInit();
+    tick(60000);
+    expect(component.streamers).toEqual(streamers);
+    expect(component.liveStreamerIds.has(1)).toBeTrue();
+    tick(60000);
+    expect(component.liveStreamerIds.has(1)).toBeFalse();
+    expect(component.liveStreamerIds.has(2)).toBeTrue();
+    expect(component.streamers.length).toBe(2);
+    expect(getAllStreamers.calls.count()).toBe(3);
+    component.ngOnDestroy();
+  }));
+
+  it('does not overlap slow refreshes and cancels them on destroy', fakeAsync(() => {
+    const refresh = new Subject<any[]>();
+    const getAllStreamers = jasmine.createSpy().and.returnValues(of([]), refresh);
+    TestBed.configureTestingModule({providers: [
+      {provide: ChangeDetectorRef, useValue: {markForCheck: () => {}, detectChanges: () => {}}},
+      {provide: AuthService, useValue: {getAccessTokenObservable: () => of(null)}},
+      {provide: StreamerService, useValue: {getAllStreamers}}
+    ]});
+    const component = TestBed.runInInjectionContext(() => new HomeComponent());
+    component.ngOnInit();
+    tick(120000);
+    expect(getAllStreamers.calls.count()).toBe(2);
+    component.ngOnDestroy();
+    expect(refresh.observed).toBeFalse();
   }));
   it('shows recent streamers if the full directory API is not available', fakeAsync(() => {
     const streamers = [{twitchId: 1, displayName: 'Example', avatar: ''}];

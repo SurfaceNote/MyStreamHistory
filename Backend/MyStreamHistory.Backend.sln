@@ -63,6 +63,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyStreamHistory.ContentServ
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyStreamHistory.TwitchTrackingService.Api.Tests", "TwitchTrackingService\MyStreamHistory.TwitchTrackingService.Api.Tests\MyStreamHistory.TwitchTrackingService.Api.Tests.csproj", "{57EF5964-6373-4239-B241-D295D6ABE7C9}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyStreamHistory.Gateway.Application.Tests", "Gateway\MyStreamHistory.Gateway.Application.Tests\MyStreamHistory.Gateway.Application.Tests.csproj", "{906B3EAC-0D7A-4B8F-9FEB-6F525B9ADFC3}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -361,6 +363,18 @@ Global
 		{57EF5964-6373-4239-B241-D295D6ABE7C9}.Release|x64.Build.0 = Release|Any CPU
 		{57EF5964-6373-4239-B241-D295D6ABE7C9}.Release|x86.ActiveCfg = Release|Any CPU
 		{57EF5964-6373-4239-B241-D295D6ABE7C9}.Release|x86.Build.0 = Release|Any CPU
+		{906B3EAC-0D7A-4B8F-9FEB-6F525B9ADFC3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{906B3EAC-0D7A-4B8F-9FEB-6F525B9ADFC3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{906B3EAC-0D7A-4B8F-9FEB-6F525B9ADFC3}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{906B3EAC-0D7A-4B8F-9FEB-6F525B9ADFC3}.Debug|x64.Build.0 = Debug|Any CPU
+		{906B3EAC-0D7A-4B8F-9FEB-6F525B9ADFC3}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{906B3EAC-0D7A-4B8F-9FEB-6F525B9ADFC3}.Debug|x86.Build.0 = Debug|Any CPU
+		{906B3EAC-0D7A-4B8F-9FEB-6F525B9ADFC3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{906B3EAC-0D7A-4B8F-9FEB-6F525B9ADFC3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{906B3EAC-0D7A-4B8F-9FEB-6F525B9ADFC3}.Release|x64.ActiveCfg = Release|Any CPU
+		{906B3EAC-0D7A-4B8F-9FEB-6F525B9ADFC3}.Release|x64.Build.0 = Release|Any CPU
+		{906B3EAC-0D7A-4B8F-9FEB-6F525B9ADFC3}.Release|x86.ActiveCfg = Release|Any CPU
+		{906B3EAC-0D7A-4B8F-9FEB-6F525B9ADFC3}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -390,6 +404,7 @@ Global
 		{0F9DA47B-CDF6-4329-AFAD-0478420E7AD4} = {F683A2BF-B18A-76C4-8DFE-125E2E151B1C}
 		{883E7237-9EF0-43F8-BDC5-BEDD51415500} = {F683A2BF-B18A-76C4-8DFE-125E2E151B1C}
 		{57EF5964-6373-4239-B241-D295D6ABE7C9} = {93D32940-C2EE-409E-A5EA-F37CE7D5081D}
+		{906B3EAC-0D7A-4B8F-9FEB-6F525B9ADFC3} = {E08BCE7E-B060-4244-80BB-6FD81FEFA82A}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {ECA7E154-E099-4074-92CC-E4BBE0E2EF71}
