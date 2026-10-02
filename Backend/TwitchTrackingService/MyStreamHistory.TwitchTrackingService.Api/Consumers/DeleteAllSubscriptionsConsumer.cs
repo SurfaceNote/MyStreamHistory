@@ -1,3 +1,4 @@
+using MyStreamHistory.Shared.Api.Features;
 using MassTransit;
 using Microsoft.Extensions.Logging;
 using MyStreamHistory.Shared.Base.Contracts.Diagnostics.Requests;
@@ -11,19 +12,24 @@ namespace MyStreamHistory.TwitchTrackingService.Api.Consumers;
 /// </summary>
 public class DeleteAllSubscriptionsConsumer : IConsumer<DeleteAllSubscriptionsRequestContract>
 {
+    private readonly TwitchDataCollectionFeature _dataCollection;
     private readonly ITwitchApiClient _twitchApiClient;
     private readonly ILogger<DeleteAllSubscriptionsConsumer> _logger;
 
     public DeleteAllSubscriptionsConsumer(
+        TwitchDataCollectionFeature dataCollection,
         ITwitchApiClient twitchApiClient,
         ILogger<DeleteAllSubscriptionsConsumer> logger)
     {
+        _dataCollection = dataCollection;
         _twitchApiClient = twitchApiClient;
         _logger = logger;
     }
 
     public async Task Consume(ConsumeContext<DeleteAllSubscriptionsRequestContract> context)
     {
+        _dataCollection.EnsureEnabled();
+
         _logger.LogWarning("Received request to delete ALL EventSub subscriptions");
 
         try

@@ -1,10 +1,9 @@
-import { Component, inject, OnDestroy, OnInit } from '@angular/core';
+import { afterNextRender, ChangeDetectorRef, Component, inject, OnDestroy } from '@angular/core';
 import { LoginComponentComponent } from '../buttons/login-component/login-component.component';
 import { AuthService } from '../../auth/auth.service';
 import { CommonModule } from '@angular/common';
 import { Subscription } from 'rxjs';
 import { Router, RouterModule } from '@angular/router';
-import {  } from '@angular/router';
 
 @Component({
   selector: 'app-header',
@@ -12,39 +11,46 @@ import {  } from '@angular/router';
   templateUrl: './header.component.html',
   styleUrl: './header.component.scss'
 })
-export class HeaderComponent implements OnInit, OnDestroy {
+export class HeaderComponent implements OnDestroy {
   isLoggedIn: boolean = false;
+  authReady = false;
   private authService = inject(AuthService);
   private router = inject(Router);
+  private changeDetector = inject(ChangeDetectorRef);
   username: string | null = null;
   twitchId: string | null = null;
   isAdmin: boolean = false;
   private subscriptions: Subscription = new Subscription();
 
-  ngOnInit(): void {
-    this.isLoggedIn = this.authService.isLoggedIn();
-    this.username = this.authService.getUsernameFromToken();
-    this.twitchId = this.authService.getTwitchIdFromToken();
-    this.isAdmin = this.authService.isAdmin();
+  constructor() {
+    afterNextRender(() => this.initializeAuth());
+  }
 
+  private initializeAuth(): void {
     this.subscriptions.add(
       this.authService.getAccessTokenObservable().subscribe(token => {
         this.isLoggedIn = !!token;
+        this.authReady = true;
         if (this.isLoggedIn) {
           this.username = this.authService.getUsernameFromToken();
           this.twitchId = this.authService.getTwitchIdFromToken();
           this.isAdmin = this.authService.isAdmin();
         } else {
+          this.username = null;
+          this.twitchId = null;
           this.isAdmin = false;
         }
+        this.changeDetector.markForCheck();
       })
     );
 
     this.subscriptions.add(
       this.authService.getUsernameObservable().subscribe(username => {
         this.username = username;
+        this.changeDetector.markForCheck();
       })
     );
+    this.changeDetector.detectChanges();
   }
 
   ngOnDestroy(): void {
@@ -60,6 +66,6 @@ export class HeaderComponent implements OnInit, OnDestroy {
   }
 
   navigateToAdmin() {
-    this.router.navigate(['/admin']);
+    this.router.navigate(['/admin/publications']);
   }
 }

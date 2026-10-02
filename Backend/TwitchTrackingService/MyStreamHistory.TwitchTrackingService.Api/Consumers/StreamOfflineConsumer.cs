@@ -1,3 +1,4 @@
+using MyStreamHistory.Shared.Api.Features;
 using AutoMapper;
 using MassTransit;
 using MyStreamHistory.Shared.Base.Contracts.TwitchEventSub;
@@ -8,12 +9,14 @@ namespace MyStreamHistory.TwitchTrackingService.Api.Consumers;
 
 public class StreamOfflineConsumer : IConsumer<StreamOfflineEventContract>
 {
+    private readonly TwitchDataCollectionFeature _dataCollection;
     private readonly IStreamSessionService _streamSessionService;
     private readonly IMapper _mapper;
     private readonly ILogger<StreamOfflineConsumer> _logger;
 
-    public StreamOfflineConsumer(IStreamSessionService streamSessionService, IMapper mapper, ILogger<StreamOfflineConsumer> logger)
+    public StreamOfflineConsumer(TwitchDataCollectionFeature dataCollection, IStreamSessionService streamSessionService, IMapper mapper, ILogger<StreamOfflineConsumer> logger)
     {
+        _dataCollection = dataCollection;
         _streamSessionService = streamSessionService;
         _mapper = mapper;
         _logger = logger;
@@ -21,6 +24,8 @@ public class StreamOfflineConsumer : IConsumer<StreamOfflineEventContract>
 
     public async Task Consume(ConsumeContext<StreamOfflineEventContract> context)
     {
+        if (!_dataCollection.Enabled) return;
+
         _logger.LogInformation("Received stream.offline event for {BroadcasterUserLogin}", context.Message.BroadcasterUserLogin);
 
         try

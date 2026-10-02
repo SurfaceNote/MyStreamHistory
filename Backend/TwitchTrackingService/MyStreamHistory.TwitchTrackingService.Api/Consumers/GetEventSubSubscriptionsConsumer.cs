@@ -1,3 +1,4 @@
+using MyStreamHistory.Shared.Api.Features;
 using MassTransit;
 using Microsoft.Extensions.Logging;
 using MyStreamHistory.Shared.Base.Contracts.Diagnostics.Requests;
@@ -11,19 +12,24 @@ namespace MyStreamHistory.TwitchTrackingService.Api.Consumers;
 /// </summary>
 public class GetEventSubSubscriptionsConsumer : IConsumer<GetEventSubSubscriptionsRequestContract>
 {
+    private readonly TwitchDataCollectionFeature _dataCollection;
     private readonly ITwitchApiClient _twitchApiClient;
     private readonly ILogger<GetEventSubSubscriptionsConsumer> _logger;
 
     public GetEventSubSubscriptionsConsumer(
+        TwitchDataCollectionFeature dataCollection,
         ITwitchApiClient twitchApiClient,
         ILogger<GetEventSubSubscriptionsConsumer> logger)
     {
+        _dataCollection = dataCollection;
         _twitchApiClient = twitchApiClient;
         _logger = logger;
     }
 
     public async Task Consume(ConsumeContext<GetEventSubSubscriptionsRequestContract> context)
     {
+        _dataCollection.EnsureEnabled();
+
         _logger.LogInformation("Received request to get EventSub subscriptions");
 
         try

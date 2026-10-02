@@ -12,6 +12,24 @@ services:
       - /etc/letsencrypt/renewal/mystreamhistory.com.conf:/etc/letsencrypt/renewal/mystreamhistory.com.conf:ro
     networks:
       - internalnet
+    depends_on:
+      mystreamhistoryssr:
+        condition: service_healthy
+
+  mystreamhistoryssr:
+    image: ${TWC_REGISTRY_HOST}/mystreamhistoryssr:latest
+    restart: unless-stopped
+    environment:
+      CONTENT_API_URL: https://api.mystreamhistory.com
+      PORT: "4000"
+    expose:
+      - "4000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:4000/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      retries: 5
+    networks:
+      - internalnet
 
 networks:
   internalnet:

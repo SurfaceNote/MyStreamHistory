@@ -4,6 +4,9 @@
   color: #efeff1;
   padding: 24px;
 }
+.admin-links { display: flex; gap: 8px; border-bottom: 1px solid #393240; margin-bottom: 26px; }
+.admin-links a { color: #aaa4b1; padding: 12px 18px; font-size: .9rem; }
+.admin-links .active { color: #fff; border-bottom: 2px solid #af7cf1; }
 
 .admin-header,
 .section-title,

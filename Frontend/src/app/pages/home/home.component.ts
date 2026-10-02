@@ -1,7 +1,7 @@
-import { Component, inject, OnDestroy, OnInit } from '@angular/core';
+import { afterNextRender, ChangeDetectorRef, Component, inject, OnDestroy, OnInit, PLATFORM_ID } from '@angular/core';
 import { StreamerListType } from '../../enums/streamer-list-type.enum';
 import { AuthService } from '../../auth/auth.service';
-import { CommonModule } from '@angular/common';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { Subscription, timer, switchMap, from, mergeMap, map, catchError, of } from 'rxjs';
 import { RouterLink } from '@angular/router';
 import { LoginComponentComponent } from '../../components/buttons/login-component/login-component.component';
@@ -19,8 +19,11 @@ export class HomeComponent implements OnInit, OnDestroy {
 
   private authService = inject(AuthService);
   private streamerService = inject(StreamerService);
+  private platformId = inject(PLATFORM_ID);
+  private changeDetector = inject(ChangeDetectorRef);
   
   isLoggedIn: boolean = false;
+  authReady = false;
   username: string = '';
   twitchId: string = '';
   
@@ -32,26 +35,31 @@ export class HomeComponent implements OnInit, OnDestroy {
   
   private subscriptions: Subscription = new Subscription();
 
-  ngOnInit(): void {
-    this.isLoggedIn = this.authService.isLoggedIn();
-    
-    if (this.isLoggedIn) {
-      this.username = this.authService.getUsernameFromToken() || '';
-      this.twitchId = this.authService.getTwitchIdFromToken() || '';
-    }
+  constructor() {
+    // Keep the initial browser view identical to SSR until hydration has finished.
+    afterNextRender(() => this.initializeAuth());
+  }
 
+  ngOnInit(): void {
+    this.loadStreamers();
+  }
+
+  private initializeAuth(): void {
     this.subscriptions.add(
       this.authService.getAccessTokenObservable().subscribe(token => {
         this.isLoggedIn = !!token;
+        this.authReady = true;
         if (this.isLoggedIn) {
           this.username = this.authService.getUsernameFromToken() || '';
           this.twitchId = this.authService.getTwitchIdFromToken() || '';
+        } else {
+          this.username = '';
+          this.twitchId = '';
         }
+        this.changeDetector.markForCheck();
       })
     );
-
-    // Load the full public directory
-    this.loadStreamers();
+    this.changeDetector.detectChanges();
   }
 
   private loadStreamers(): void {
@@ -80,6 +88,8 @@ export class HomeComponent implements OnInit, OnDestroy {
   }
 
   private watchLiveStatus(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+
     this.subscriptions.add(timer(0, 60000).pipe(
       switchMap(() => from(this.streamers).pipe(
         mergeMap(streamer => this.streamerService.getRecentStreams(streamer.twitchId, 1).pipe(

@@ -1,0 +1,13 @@
+<main class="article-page">
+  <p *ngIf="loading">Loading article…</p>
+  <div *ngIf="missing" class="missing"><h1>Article unavailable</h1><a [routerLink]="type === 'news' ? '/news' : '/reviews'">Browse articles →</a></div>
+  <article *ngIf="article as item">
+    <a class="back" [routerLink]="type === 'news' ? '/news' : '/reviews'">← {{ type === 'news' ? 'News' : 'Reviews' }}</a>
+    <header>
+      <p class="category">{{ type === 'news' ? 'NEWS' : 'REVIEW' }} · {{ item.publishedAt | date:'longDate' }}</p>
+      <h1>{{ item.title }}</h1>
+    </header>
+    <img class="cover" *ngIf="item.coverId" [src]="content.mediaUrl(item.coverId)" [alt]="item.title" />
+    <div class="body"><app-content-renderer [node]="item.body" /></div>
+  </article>
+</main>

@@ -1,3 +1,4 @@
+using MyStreamHistory.Shared.Api.Features;
 using MassTransit;
 using MyStreamHistory.Shared.Base.Contracts.Diagnostics.Requests;
 using MyStreamHistory.Shared.Base.Contracts.Diagnostics.Responses;
@@ -7,19 +8,24 @@ namespace MyStreamHistory.ViewerService.Api.Consumers;
 
 public class GetChatSubscriptionsConsumer : IConsumer<GetChatSubscriptionsRequestContract>
 {
+    private readonly TwitchDataCollectionFeature _dataCollection;
     private readonly ITwitchEventSubClient _eventSubClient;
     private readonly ILogger<GetChatSubscriptionsConsumer> _logger;
 
     public GetChatSubscriptionsConsumer(
+        TwitchDataCollectionFeature dataCollection,
         ITwitchEventSubClient eventSubClient,
         ILogger<GetChatSubscriptionsConsumer> logger)
     {
+        _dataCollection = dataCollection;
         _eventSubClient = eventSubClient;
         _logger = logger;
     }
 
     public async Task Consume(ConsumeContext<GetChatSubscriptionsRequestContract> context)
     {
+        _dataCollection.EnsureEnabled();
+
         _logger.LogInformation("Processing GetChatSubscriptions request");
 
         try

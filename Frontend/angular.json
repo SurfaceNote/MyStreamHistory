@@ -35,9 +35,16 @@
               "src/styles.scss"
             ],
             "stylePreprocessorOptions": {
-                "includePaths": ["src/styles"]
-              },
-            "scripts": []
+              "includePaths": [
+                "src/styles"
+              ]
+            },
+            "scripts": [],
+            "server": "src/main.server.ts",
+            "prerender": false,
+            "ssr": {
+              "entry": "src/server.ts"
+            }
           },
           "configurations": {
             "production": {
@@ -54,7 +61,7 @@
                 }
               ],
               "outputHashing": "all",
-              "optimization": true,
+              "optimization": { "scripts": true, "styles": true, "fonts": false },
               "sourceMap": {
                 "scripts": true,
                 "styles": false,
@@ -85,6 +92,7 @@
             },
             "development": {
               "buildTarget": "MyStreamHistory.Web:build:development",
+              "proxyConfig": "proxy.conf.json",
               "sslKey": "localhost-key.pem",
               "sslCert": "localhost.pem",
               "ssl": true

@@ -1,3 +1,4 @@
+using MyStreamHistory.Shared.Api.Features;
 using System.Text;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -5,6 +6,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using MyStreamHistory.Gateway.Api.Extenstions;
+using MyStreamHistory.Gateway.Api;
 using MyStreamHistory.Gateway.Application.Options;
 using MyStreamHistory.Shared.Api.Authorization;
 using MyStreamHistory.Shared.Api.Extensions;
@@ -15,6 +17,7 @@ using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddSentryObservability();
+var twitchDataCollection = builder.AddTwitchDataCollectionFeature();
 
 builder.Services.AddInfrastructure(builder.Configuration)
     .AddSerilog()
@@ -22,6 +25,16 @@ builder.Services.AddInfrastructure(builder.Configuration)
     .AddTransportBus();
 
 builder.Services.AddControllers();
+var contentServiceUrl = builder.Configuration["ContentService:BaseUrl"]
+    ?? throw new InvalidOperationException("ContentService:BaseUrl is required.");
+if (!Uri.TryCreate(contentServiceUrl, UriKind.Absolute, out var contentServiceUri)
+    || (builder.Environment.IsProduction() && contentServiceUri.IsLoopback))
+    throw new InvalidOperationException("ContentService:BaseUrl must point to the running Content Service.");
+builder.Services.AddHttpClient("content", client =>
+{
+    client.BaseAddress = new Uri(contentServiceUrl.TrimEnd('/') + "/");
+    client.Timeout = TimeSpan.FromSeconds(120);
+});
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddHealthChecks();
 builder.Services.AddSwaggerGen(option =>
@@ -189,6 +202,7 @@ builder.Services.AddAuthorization(options =>
 });
 
 var app = builder.Build();
+app.Logger.LogInformation("Twitch data collection enabled: {Enabled}", twitchDataCollection.Enabled);
 
 app.UseForwardedHeaders();
 
@@ -214,6 +228,7 @@ if (app.Environment.IsDevelopment())
 app.UseHsts();
 
 app.MapControllers();
+app.MapContentProxy();
 app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
 {
     Predicate = _ => false

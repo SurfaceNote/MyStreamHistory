@@ -1,3 +1,4 @@
+using MyStreamHistory.Shared.Api.Features;
 using System.Security.Claims;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -16,6 +17,7 @@ namespace MyStreamHistory.Gateway.Api.Controllers;
 /// Diagnostic endpoints for monitoring system health and EventSub subscriptions
 /// </summary>
 [ApiController]
+[ServiceFilter(typeof(TwitchDataCollectionFilter))]
 [Route("diagnostics")]
 [Authorize(Policy = PolicyNames.DiagnosticsAdmin)]
 [EnableRateLimiting(PolicyNames.DiagnosticsAdmin)]

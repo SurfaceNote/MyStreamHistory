@@ -1,3 +1,4 @@
+using MyStreamHistory.Shared.Api.Features;
 using MassTransit;
 using MyStreamHistory.Shared.Base.Contracts.TwitchEventSub;
 using MyStreamHistory.TwitchTrackingService.Application.Interfaces;
@@ -6,17 +7,21 @@ namespace MyStreamHistory.TwitchTrackingService.Api.Consumers;
 
 public class UserRegisteredConsumer : IConsumer<UserRegisteredEventContract>
 {
+    private readonly TwitchDataCollectionFeature _dataCollection;
     private readonly ITwitchApiClient _twitchApiClient;
     private readonly ILogger<UserRegisteredConsumer> _logger;
 
-    public UserRegisteredConsumer(ITwitchApiClient twitchApiClient, ILogger<UserRegisteredConsumer> logger)
+    public UserRegisteredConsumer(TwitchDataCollectionFeature dataCollection, ITwitchApiClient twitchApiClient, ILogger<UserRegisteredConsumer> logger)
     {
+        _dataCollection = dataCollection;
         _twitchApiClient = twitchApiClient;
         _logger = logger;
     }
 
     public async Task Consume(ConsumeContext<UserRegisteredEventContract> context)
     {
+        if (!_dataCollection.Enabled) return;
+
         _logger.LogInformation("Received user registered event for {DisplayName} (TwitchId: {TwitchId})", 
             context.Message.DisplayName, context.Message.TwitchUserId);
 
