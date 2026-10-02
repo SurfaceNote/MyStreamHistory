@@ -303,6 +303,29 @@ export class ArticleEditorComponent implements OnInit, OnDestroy {
     } catch { this.error = 'Image uploaded, but could not be opened. Try selecting it again.'; }
   }
 
+  async deleteMedia(asset: MediaAsset): Promise<void> {
+    if (this.busy || !this.editorReady) return;
+    if (!window.confirm(`Permanently delete "${asset.fileName}" from the media library and storage?`)) return;
+    this.busy = true;
+    this.error = '';
+    try {
+      // Persist pending insertions/removals before the server checks whether the image is in use.
+      if (!await this.flush()) return;
+      await firstValueFrom(this.content.deleteMedia(asset.id));
+      this.media = this.media.filter(item => item.id !== asset.id);
+      const url = this.blobById.get(asset.id);
+      if (url) { URL.revokeObjectURL(url); this.idByBlob.delete(url); this.blobById.delete(asset.id); }
+    } catch (error: any) { this.error = this.requestError(error, 'Could not delete this image. Try again.'); }
+    finally { this.busy = false; }
+  }
+
+  removeCover(): void {
+    if (!this.article || this.busy) return;
+    this.article.coverId = null;
+    this.coverPreview = '';
+    this.changed();
+  }
+
   async setCover(asset: MediaAsset): Promise<void> {
     if (!this.article) return;
     try {

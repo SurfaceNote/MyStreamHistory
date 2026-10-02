@@ -35,6 +35,7 @@ export class ContentService {
   publish(id: string, revision: number): Observable<Article> { return this.http.post<Article>(`${this.base}/admin/articles/${id}/publish`, revision); }
   unpublish(id: string, revision: number): Observable<Article> { return this.http.post<Article>(`${this.base}/admin/articles/${id}/unpublish`, revision); }
   media(): Observable<MediaAsset[]> { return this.http.get<MediaAsset[]>(`${this.base}/admin/media`); }
+  deleteMedia(id: string): Observable<void> { return this.http.delete<void>(`${this.base}/admin/media/${id}`); }
   mediaBlob(id: string): Observable<Blob> { return this.http.get(`${this.base}/media/${id}`, { responseType: 'blob' }); }
   upload(file: File): Observable<MediaAsset> {
     const form = new FormData();

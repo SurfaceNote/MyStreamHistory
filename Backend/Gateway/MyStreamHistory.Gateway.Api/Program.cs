@@ -34,7 +34,7 @@ builder.Services.AddHttpClient("content", client =>
 {
     client.BaseAddress = new Uri(contentServiceUrl.TrimEnd('/') + "/");
     client.Timeout = TimeSpan.FromSeconds(120);
-});
+}).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddHealthChecks();
 builder.Services.AddSwaggerGen(option =>

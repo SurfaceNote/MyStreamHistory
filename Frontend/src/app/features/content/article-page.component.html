@@ -7,7 +7,7 @@
       <p class="category">{{ type === 'news' ? 'NEWS' : 'REVIEW' }} · {{ item.publishedAt | date:'longDate' }}</p>
       <h1>{{ item.title }}</h1>
     </header>
-    <img class="cover" *ngIf="item.coverId" [src]="content.mediaUrl(item.coverId)" [alt]="item.title" />
+    <img class="cover" *ngIf="item.coverId" [src]="item.coverUrl || content.mediaUrl(item.coverId)" [alt]="item.title" />
     <div class="body"><app-content-renderer [node]="item.body" /></div>
   </article>
 </main>

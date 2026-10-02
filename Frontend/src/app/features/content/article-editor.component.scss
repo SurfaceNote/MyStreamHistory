@@ -46,6 +46,9 @@ button.ghost { background: #27212f; border-color: #55455e; }
 .media-row strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .8rem; }
 .media-row small { color: #a69cad; font-size: .68rem; }
 .media-row button { padding: 6px 8px; font-size: .7rem; }
+.media-row { flex-wrap: wrap; }
+.media-row > div { flex-basis: 120px; }
+.media-row button.delete-media { background: #352123; border-color: #a35b60; }
 .loading { padding: 60px; text-align: center; }
 @media (max-width: 900px) { .editor-layout { grid-template-columns: 1fr; } .settings-pane { position: static; } }
 @media (max-width: 600px) { .topbar { flex-wrap: wrap; } .top-actions { width: 100%; } .top-actions button { flex: 1; padding: 8px 6px; font-size: .75rem; } }

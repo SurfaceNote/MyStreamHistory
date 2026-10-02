@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
+using Amazon.S3;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -9,7 +10,8 @@ namespace MyStreamHistory.ContentService.Api.Controllers;
 
 [ApiController]
 [Route("content")]
-public sealed class ContentController(ContentDbContext db, MediaStorage storage, ILogger<ContentController> logger) : ControllerBase
+public sealed class ContentController(ContentDbContext db, MediaStorage storage, MediaDelivery delivery,
+    MediaDeletion deletion, ILogger<ContentController> logger) : ControllerBase
 {
     public sealed record ArticleInput(string Type, string Slug, string Title, string? Summary,
         string SeoTitle, string SeoDescription, JsonElement Body, Guid? CoverId, int Revision);
@@ -25,7 +27,11 @@ public sealed class ContentController(ContentDbContext db, MediaStorage storage,
         var items = await query.OrderByDescending(x => x.PublishedAt).Skip((page - 1) * 12).Take(12)
             .Select(x => new { x.Id, x.Type, x.Slug, Title = x.PublishedTitle, Summary = x.PublishedSummary,
                 CoverId = x.PublishedCoverId, x.PublishedAt }).ToListAsync();
-        return Ok(new { items, total, page, pageSize = 12 });
+        var coverIds = items.Where(x => x.CoverId.HasValue).Select(x => x.CoverId!.Value).ToList();
+        var covers = await db.Media.AsNoTracking().Where(x => coverIds.Contains(x.Id)).ToListAsync();
+        var urls = covers.ToDictionary(x => x.Id, delivery.Url);
+        return Ok(new { items = items.Select(x => new { x.Id, x.Type, x.Slug, x.Title, x.Summary,
+            x.CoverId, CoverUrl = x.CoverId is Guid id ? urls.GetValueOrDefault(id) : null, x.PublishedAt }), total, page, pageSize = 12 });
     }
 
     [HttpGet("sitemap.xml")]
@@ -47,7 +53,11 @@ public sealed class ContentController(ContentDbContext db, MediaStorage storage,
     {
         if (type is not ("news" or "review")) return NotFound();
         var article = await db.Articles.AsNoTracking().FirstOrDefaultAsync(x => x.Type == type && x.Slug == slug && x.PublishedAt != null);
-        return article is null ? NotFound() : Ok(PublicResponse(article));
+        if (article is null) return NotFound();
+        var mediaIds = ContentDocument.Validate(JsonSerializer.Deserialize<JsonElement>(article.PublishedBody!));
+        if (article.PublishedCoverId is Guid coverId) mediaIds.Add(coverId);
+        var assets = await db.Media.AsNoTracking().Where(x => mediaIds.Contains(x.Id)).ToListAsync();
+        return Ok(PublicResponse(article, assets.ToDictionary(x => x.Id, delivery.Url)));
     }
 
     [HttpGet("admin/articles")]
@@ -70,6 +80,7 @@ public sealed class ContentController(ContentDbContext db, MediaStorage storage,
     [Authorize(Policy = "ContentAuthor")]
     public async Task<IActionResult> Create([FromBody] ArticleInput input)
     {
+        await using var transaction = await db.BeginMediaMutationAsync();
         if (input.Type is not ("news" or "review")) return BadRequest("Invalid article type.");
         var error = await ValidateInput(input);
         if (error is not null) return BadRequest(error);
@@ -78,6 +89,7 @@ public sealed class ContentController(ContentDbContext db, MediaStorage storage,
         db.Articles.Add(article);
         try { await db.SaveChangesAsync(); }
         catch (DbUpdateException) { return Conflict("Article URL is already in use."); }
+        await transaction.CommitAsync();
         logger.LogInformation("Content author created article {ArticleId}", article.Id);
         return Created($"/content/admin/articles/{article.Id}", AdminResponse(article));
     }
@@ -94,6 +106,7 @@ public sealed class ContentController(ContentDbContext db, MediaStorage storage,
     [Authorize(Policy = "ContentAuthor")]
     public async Task<IActionResult> Save(Guid id, [FromBody] ArticleInput input)
     {
+        await using var transaction = await db.BeginMediaMutationAsync();
         var article = await db.Articles.FirstOrDefaultAsync(x => x.Id == id);
         if (article is null) return NotFound();
         if (article.Revision != input.Revision) return Conflict("This article was changed in another tab. Reload before saving.");
@@ -106,6 +119,7 @@ public sealed class ContentController(ContentDbContext db, MediaStorage storage,
         try { await db.SaveChangesAsync(); }
         catch (DbUpdateConcurrencyException) { return Conflict("This article was changed in another tab."); }
         catch (DbUpdateException) { return Conflict("Article URL is already in use."); }
+        await transaction.CommitAsync();
         return Ok(AdminResponse(article));
     }
 
@@ -121,6 +135,7 @@ public sealed class ContentController(ContentDbContext db, MediaStorage storage,
     [Authorize(Policy = "ContentAuthor")]
     public async Task<IActionResult> Publish(Guid id, [FromBody] int revision)
     {
+        await using var transaction = await db.BeginMediaMutationAsync();
         var article = await db.Articles.Include(x => x.PublishedMedia).FirstOrDefaultAsync(x => x.Id == id);
         if (article is null) return NotFound();
         if (revision != article.Revision) return Conflict("Save the current draft before publishing.");
@@ -140,6 +155,7 @@ public sealed class ContentController(ContentDbContext db, MediaStorage storage,
             db.PublishedMedia.Add(new PublishedMedia { ArticleId = id, MediaId = mediaId });
         try { await db.SaveChangesAsync(); }
         catch (DbUpdateConcurrencyException) { return Conflict("This article was changed in another tab."); }
+        await transaction.CommitAsync();
         logger.LogInformation("Content author published article {ArticleId}", id);
         return Ok(AdminResponse(article));
     }
@@ -148,6 +164,7 @@ public sealed class ContentController(ContentDbContext db, MediaStorage storage,
     [Authorize(Policy = "ContentAuthor")]
     public async Task<IActionResult> Unpublish(Guid id, [FromBody] int revision)
     {
+        await using var transaction = await db.BeginMediaMutationAsync();
         var article = await db.Articles.Include(x => x.PublishedMedia).FirstOrDefaultAsync(x => x.Id == id);
         if (article is null) return NotFound();
         if (article.Revision != revision) return Conflict("This article was changed in another tab.");
@@ -155,6 +172,7 @@ public sealed class ContentController(ContentDbContext db, MediaStorage storage,
         db.PublishedMedia.RemoveRange(article.PublishedMedia);
         try { await db.SaveChangesAsync(); }
         catch (DbUpdateConcurrencyException) { return Conflict("This article was changed in another tab."); }
+        await transaction.CommitAsync();
         logger.LogInformation("Content author unpublished article {ArticleId}", id);
         return Ok(AdminResponse(article));
     }
@@ -192,6 +210,23 @@ public sealed class ContentController(ContentDbContext db, MediaStorage storage,
         return Created($"/content/media/{asset.Id}", new { asset.Id, asset.FileName, asset.ContentType, asset.Size, asset.CreatedAt });
     }
 
+    [HttpDelete("admin/media/{id:guid}")]
+    [Authorize(Policy = "ContentAuthor")]
+    public async Task<IActionResult> DeleteMedia(Guid id, CancellationToken cancellationToken)
+    {
+        MediaDeleteResult result;
+        try { result = await deletion.DeleteAsync(id, cancellationToken); }
+        catch (AmazonS3Exception exception)
+        {
+            logger.LogError(exception, "Could not delete content media {MediaId} from S3", id);
+            return StatusCode(StatusCodes.Status502BadGateway, "Could not delete the file from storage. Try again.");
+        }
+        if (result == MediaDeleteResult.NotFound) return NotFound();
+        if (result == MediaDeleteResult.InUse) return Conflict("This image is used in a draft or published article. Remove it from all articles and update any published versions before deleting.");
+        logger.LogInformation("Content author deleted media {MediaId}", id);
+        return NoContent();
+    }
+
     [HttpGet("media/{id:guid}")]
     public async Task<IActionResult> GetMedia(Guid id, CancellationToken cancellationToken)
     {
@@ -202,6 +237,9 @@ public sealed class ContentController(ContentDbContext db, MediaStorage storage,
             && User.HasClaim("TwitchId", HttpContext.RequestServices.GetRequiredService<IConfiguration>()["ContentAuthor:TwitchId"] ?? "")))
             return NotFound();
         Response.Headers.CacheControl = published ? "public, max-age=300" : "private, no-store";
+        // Authenticated editor requests stay on the API to avoid requiring CDN CORS for Blob previews.
+        if (published && delivery.Enabled && User.Identity?.IsAuthenticated != true)
+            return Redirect(delivery.Url(asset));
         Response.ContentType = asset.ContentType;
         using var objectResponse = await storage.OpenAsync(asset, cancellationToken);
         await objectResponse.ResponseStream.CopyToAsync(Response.Body, cancellationToken);
@@ -243,11 +281,12 @@ public sealed class ContentController(ContentDbContext db, MediaStorage storage,
         Body = JsonSerializer.Deserialize<JsonElement>(a.Body), a.CoverId, a.PublishedAt, a.UpdatedAt, a.Revision
     };
 
-    private static object PublicResponse(Article a) => new
+    private object PublicResponse(Article a, IReadOnlyDictionary<Guid, string> urls) => new
     {
         a.Id, a.Type, a.Slug, Title = a.PublishedTitle, Summary = a.PublishedSummary,
         SeoTitle = a.PublishedSeoTitle, SeoDescription = a.PublishedSeoDescription,
-        Body = JsonSerializer.Deserialize<JsonElement>(a.PublishedBody!), CoverId = a.PublishedCoverId, a.PublishedAt
+        Body = delivery.Body(a.PublishedBody!, urls), CoverId = a.PublishedCoverId,
+        CoverUrl = a.PublishedCoverId is Guid id ? urls.GetValueOrDefault(id) : null, a.PublishedAt
     };
 
 }

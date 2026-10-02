@@ -210,4 +210,58 @@ describe('Article editor writing and persistence', () => {
       expect(fixture.componentInstance.article!.summary).toBe('');
     }));
   }
+
+  it('deletes a confirmed unused image and removes it from the library', fakeAsync(() => {
+    load();
+    spyOn(window, 'confirm').and.returnValue(true);
+    const asset = { id: 'unused', fileName: 'image.webp', contentType: 'image/webp', size: 10, createdAt: '' };
+    const component = fixture.componentInstance;
+    component.media = [asset];
+    void component.deleteMedia(asset);
+    flushMicrotasks();
+    const request = http.expectOne('/api/content/admin/media/unused');
+    expect(request.request.method).toBe('DELETE');
+    request.flush(null);
+    flushMicrotasks();
+    expect(component.media).toEqual([]);
+    expect(component.busy).toBeFalse();
+  }));
+
+  it('keeps the image in the library when deletion is cancelled or rejected', fakeAsync(() => {
+    load();
+    const confirm = spyOn(window, 'confirm').and.returnValue(false);
+    const asset = { id: 'used', fileName: 'image.webp', contentType: 'image/webp', size: 10, createdAt: '' };
+    const component = fixture.componentInstance;
+    component.media = [asset];
+    void component.deleteMedia(asset);
+    flushMicrotasks();
+    http.expectNone(request => request.method === 'DELETE');
+    confirm.and.returnValue(true);
+    void component.deleteMedia(asset);
+    flushMicrotasks();
+    http.expectOne('/api/content/admin/media/used').flush('This image is used in an article.', { status: 409, statusText: 'Conflict' });
+    flushMicrotasks();
+    expect(component.media).toEqual([asset]);
+    expect(component.error).toBe('This image is used in an article.');
+    expect(component.busy).toBeFalse();
+  }));
+
+  it('saves pending image references before checking whether deletion is allowed', fakeAsync(() => {
+    load();
+    spyOn(window, 'confirm').and.returnValue(true);
+    const component = fixture.componentInstance;
+    const asset = { id: 'used', fileName: 'image.webp', contentType: 'image/webp', size: 10, createdAt: '' };
+    component.article!.coverId = asset.id;
+    component.changed();
+    void component.deleteMedia(asset);
+    http.expectNone(request => request.method === 'DELETE');
+    const save = http.expectOne(endpoint);
+    expect(save.request.body.coverId).toBe(asset.id);
+    save.flush({ ...draft, revision: 2 });
+    flushMicrotasks();
+    http.expectOne('/api/content/admin/media/used').flush('Image in use', { status: 409, statusText: 'Conflict' });
+    flushMicrotasks();
+    expect(component.error).toBe('Image in use');
+    tick(1200);
+  }));
 });

@@ -8,7 +8,7 @@
   <p *ngIf="!loading && !error && !articles.length" class="state">No articles yet. Check back soon.</p>
   <div class="card-grid" *ngIf="!loading && !error">
     <a *ngFor="let article of articles" class="article-card" [routerLink]="['/', type === 'news' ? 'news' : 'reviews', article.slug]">
-      <img *ngIf="article.coverId" [src]="content.mediaUrl(article.coverId)" [alt]="article.title" loading="lazy" />
+      <img *ngIf="article.coverId" [src]="article.coverUrl || content.mediaUrl(article.coverId)" [alt]="article.title" loading="lazy" />
       <div class="card-copy">
         <span class="card-meta">{{ type === 'news' ? 'NEWS' : 'REVIEW' }} · {{ article.publishedAt | date:'mediumDate' }}</span>
         <h2>{{ article.title }}</h2>

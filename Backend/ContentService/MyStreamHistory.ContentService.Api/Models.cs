@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace MyStreamHistory.ContentService.Api;
 
@@ -70,6 +71,23 @@ public sealed class ContentDbContext(DbContextOptions<ContentDbContext> options)
     public DbSet<Article> Articles => Set<Article>();
     public DbSet<MediaAsset> Media => Set<MediaAsset>();
     public DbSet<PublishedMedia> PublishedMedia => Set<PublishedMedia>();
+
+    // Serialize reference changes and deletion across API replicas and the cleanup worker.
+    public async Task<IDbContextTransaction> BeginMediaMutationAsync(CancellationToken cancellationToken = default)
+    {
+        var transaction = await Database.BeginTransactionAsync(cancellationToken);
+        try
+        {
+            if (Database.IsNpgsql())
+                await Database.ExecuteSqlRawAsync("SELECT pg_advisory_xact_lock(739120, 1)", cancellationToken);
+            return transaction;
+        }
+        catch
+        {
+            await transaction.DisposeAsync();
+            throw;
+        }
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

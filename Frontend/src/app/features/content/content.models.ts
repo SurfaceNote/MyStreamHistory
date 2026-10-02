@@ -34,6 +34,7 @@ export interface ArticleSummary {
   title: string;
   summary: string;
   coverId: string | null;
+  coverUrl?: string | null;
   publishedAt: string | null;
   updatedAt?: string;
   revision?: number;
@@ -41,6 +42,7 @@ export interface ArticleSummary {
 
 export interface PublicArticle extends Omit<ArticleInput, 'revision'> {
   id: string;
+  coverUrl?: string | null;
   publishedAt: string;
 }
 

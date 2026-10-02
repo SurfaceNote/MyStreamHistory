@@ -9,7 +9,7 @@ public static class ContentProxyEndpoint
 
     public static void MapContentProxy(this WebApplication app)
     {
-        var methods = new[] { "GET", "POST", "PUT" };
+        var methods = new[] { "GET", "POST", "PUT", "DELETE" };
         app.MapMethods("/content", methods, Forward);
         app.MapMethods("/content/{**path}", methods, Forward);
     }

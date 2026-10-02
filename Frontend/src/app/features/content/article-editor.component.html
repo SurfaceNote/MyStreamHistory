@@ -44,6 +44,7 @@
         <img *ngIf="coverPreview" [src]="coverPreview" alt="Selected cover" />
         <span *ngIf="!coverPreview">+ Choose cover</span>
       </button>
+      <button type="button" class="text-button" *ngIf="item.coverId" (click)="removeCover()" [disabled]="busy || !editorReady">Remove cover</button>
       <label>SEO title<input [(ngModel)]="item.seoTitle" (ngModelChange)="changed()" maxlength="180" placeholder="Defaults to headline" /></label>
       <label>SEO description<textarea [(ngModel)]="item.seoDescription" (ngModelChange)="changed()" maxlength="300" rows="3" placeholder="Optional description for search engines"></textarea></label>
       <p class="hint" *ngIf="item.publishedAt">Published {{ item.publishedAt | date:'medium' }}. Draft edits remain private until you update the published version.</p>
@@ -56,7 +57,8 @@
     <p class="hint">JPEG, PNG and WebP up to 10 MB; GIF up to 20 MB.</p>
     <button type="button" class="upload-button" (click)="chooseFile()" [disabled]="busy || !editorReady">+ Upload image</button>
     <input #fileInput hidden type="file" accept="image/jpeg,image/png,image/webp,image/gif" (change)="onFile($event)" />
-    <div class="media-list"><div class="media-row" *ngFor="let asset of media"><app-private-media-thumb [asset]="asset" /><div><strong>{{ asset.fileName }}</strong><small>{{ asset.contentType }} · {{ asset.size / 1024 | number:'1.0-0' }} KB</small></div><button type="button" (click)="insertImage(asset)">Insert</button><button type="button" (click)="setCover(asset)">Cover</button></div></div>
+    <p class="error" role="alert" *ngIf="error">{{ error }}</p>
+    <div class="media-list"><div class="media-row" *ngFor="let asset of media"><app-private-media-thumb [asset]="asset" /><div><strong>{{ asset.fileName }}</strong><small>{{ asset.contentType }} · {{ asset.size / 1024 | number:'1.0-0' }} KB</small></div><button type="button" (click)="insertImage(asset)" [disabled]="busy || !editorReady">Insert</button><button type="button" (click)="setCover(asset)" [disabled]="busy || !editorReady">Cover</button><button type="button" class="delete-media" (click)="deleteMedia(asset)" [disabled]="busy || !editorReady" [attr.aria-label]="'Delete ' + asset.fileName">Delete</button></div></div>
   </aside>
 </main>
 <div class="loading" *ngIf="loading">Loading editor…</div>

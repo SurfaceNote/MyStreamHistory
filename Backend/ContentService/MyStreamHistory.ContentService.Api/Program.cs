@@ -25,6 +25,11 @@ builder.Services.AddSingleton<IAmazonS3>(_ => new AmazonS3Client(
     new BasicAWSCredentials(storage.AccessKey, storage.SecretKey),
     new AmazonS3Config { ServiceURL = storage.Endpoint, AuthenticationRegion = storage.Region, ForcePathStyle = true }));
 builder.Services.AddScoped<MediaStorage>();
+var delivery = builder.Configuration.GetSection("ContentDelivery").Get<ContentDeliveryOptions>() ?? new();
+delivery.Validate();
+builder.Services.AddSingleton(delivery);
+builder.Services.AddSingleton<MediaDelivery>();
+builder.Services.AddScoped<MediaDeletion>();
 builder.Services.AddHostedService<MediaCleanupService>();
 
 var jwtKey = builder.Configuration["Jwt:Key"] ?? throw new InvalidOperationException("Jwt:Key is required.");
