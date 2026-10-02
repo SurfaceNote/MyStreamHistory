@@ -2,7 +2,6 @@
   <div class="page-heading">
     <p class="eyebrow">MyStreamHistory / Editorial</p>
     <h1>{{ heading }}</h1>
-    <p>{{ type === 'news' ? 'Updates and stories from the world of streaming.' : 'Thoughtful reviews and hands-on impressions.' }}</p>
   </div>
   <p *ngIf="loading" class="state">Loading articles…</p>
   <p *ngIf="error" class="state">Articles could not be loaded. <button type="button" (click)="load(page)">Try again</button></p>
