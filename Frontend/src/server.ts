@@ -37,7 +37,7 @@ app.get(/^\/(news|reviews)(?:\/([a-z0-9-]+))?\/?$/, async (req, res, next) => {
   }).then(html => res.send(html)).catch(next);
 });
 
-app.get('*', (_req, res) => res.sendFile(join(browserDistFolder, 'index.html')));
+app.get('*', (_req, res) => res.sendFile(join(browserDistFolder, 'index.csr.html')));
 
 if (isMainModule(import.meta.url)) {
   app.listen(Number(process.env['PORT'] || 4000), '0.0.0.0');

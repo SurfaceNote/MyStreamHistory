@@ -66,12 +66,13 @@ jobs:
           end=$(( $(date +%s) + 90 ))
 
           while [ $(date +%s) -lt $end ]; do
-            code=$(curl -k -s -o /dev/null -w "%{http_code}" https://localhost/ || true)
-            if [ "$code" = "200" ]; then
-              echo "Web is up! (HTTP 200)"
+            response=$(curl -k -sS --resolve mystreamhistory.com:443:127.0.0.1 -w '\n%{http_code}' https://mystreamhistory.com/ || true)
+            code=$(printf '%s\n' "$response" | tail -n 1)
+            if [ "$code" = "200" ] && [[ "$response" == *"<app-root"* ]]; then
+              echo "Web is up! (HTTP 200, Angular app shell verified)"
               exit 0
             fi
-            echo "Waiting... (https://localhost) code=$code"
+            echo "Waiting for Angular app... code=$code"
             sleep 5
           done
 

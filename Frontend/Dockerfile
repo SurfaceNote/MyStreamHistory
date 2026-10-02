@@ -65,5 +65,10 @@ COPY nginx/default.conf /etc/nginx/conf.d/default.conf
 
 COPY --from=build /app/dist/my-stream-history.web/browser/ /usr/share/nginx/html
 
+# Angular's SSR build emits the client shell as index.csr.html.
+# Replace the base image's welcome page used by nginx's SPA fallback.
+COPY --from=build /app/dist/my-stream-history.web/browser/index.csr.html /usr/share/nginx/html/index.html
+RUN test -s /usr/share/nginx/html/index.html && grep -q '<app-root' /usr/share/nginx/html/index.html
+
 EXPOSE 80 443
 CMD ["nginx", "-g", "daemon off;"]
