@@ -62,3 +62,31 @@ jobs:
             sentry_auth_token=${{ secrets.SENTRY_AUTH_TOKEN }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Docker metadata (SSR)
+        id: ssr-meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.TWC_REGISTRY_HOST }}/mystreamhistoryssr
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,format=short
+
+      - name: Build SSR image
+        uses: docker/build-push-action@v6
+        with:
+          context: Frontend
+          file: Frontend/Dockerfile
+          target: ssr
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.ssr-meta.outputs.tags }}
+          build-args: |
+            SENTRY_DSN=${{ secrets.SENTRY_FRONTEND_DSN }}
+            SENTRY_ENVIRONMENT=production
+            SENTRY_RELEASE=${{ github.sha }}
+            SENTRY_TRACES_SAMPLE_RATE=${{ secrets.SENTRY_FRONTEND_TRACES_SAMPLE_RATE }}
+            SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE=${{ secrets.SENTRY_FRONTEND_REPLAYS_ON_ERROR_SAMPLE_RATE }}
+            SENTRY_ORG=${{ secrets.SENTRY_ORG }}
+            SENTRY_PROJECT=${{ secrets.SENTRY_FRONTEND_PROJECT }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

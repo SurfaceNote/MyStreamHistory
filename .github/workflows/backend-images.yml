@@ -30,6 +30,10 @@ jobs:
             context: Backend
             dockerfile: Backend/Gateway/MyStreamHistory.Gateway.Api/Dockerfile
             image: gateway
+          - service: contentservice
+            context: Backend
+            dockerfile: Backend/ContentService/MyStreamHistory.ContentService.Api/Dockerfile
+            image: contentservice
           - service: twitchtrackingservice
             context: Backend
             dockerfile: Backend/TwitchTrackingService/MyStreamHistory.TwitchTrackingService.Api/Dockerfile
