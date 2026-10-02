@@ -1,0 +1,7 @@
+{
+  "/content/media": {
+    "target": "https://localhost:5000",
+    "secure": false,
+    "changeOrigin": true
+  }
+}

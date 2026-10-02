@@ -50,7 +50,16 @@ RUN --mount=type=secret,id=sentry_auth_token,required=false \
     fi; \
     find "$artifacts" -type f -name '*.map' -delete
 
-FROM nginx:stable-alpine
+FROM node:20.17.0-alpine AS ssr
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --omit=dev --legacy-peer-deps --no-audit --no-fund
+COPY --from=build /app/dist/my-stream-history.web/ ./dist/my-stream-history.web/
+ENV PORT=4000
+EXPOSE 4000
+CMD ["node", "dist/my-stream-history.web/server/server.mjs"]
+
+FROM nginx:stable-alpine AS web
 
 COPY nginx/default.conf /etc/nginx/conf.d/default.conf
 

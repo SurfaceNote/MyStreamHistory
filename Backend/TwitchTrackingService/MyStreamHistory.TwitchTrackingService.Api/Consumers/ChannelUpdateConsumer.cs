@@ -1,3 +1,4 @@
+using MyStreamHistory.Shared.Api.Features;
 using MassTransit;
 using MyStreamHistory.Shared.Base.Contracts.TwitchEventSub;
 using MyStreamHistory.TwitchTrackingService.Application.Interfaces;
@@ -6,15 +7,18 @@ namespace MyStreamHistory.TwitchTrackingService.Api.Consumers;
 
 public class ChannelUpdateConsumer : IConsumer<ChannelUpdateEventContract>
 {
+    private readonly TwitchDataCollectionFeature _dataCollection;
     private readonly ICategoryTrackingService _categoryTrackingService;
     private readonly IStreamSessionRepository _streamSessionRepository;
     private readonly ILogger<ChannelUpdateConsumer> _logger;
 
     public ChannelUpdateConsumer(
+        TwitchDataCollectionFeature dataCollection,
         ICategoryTrackingService categoryTrackingService,
         IStreamSessionRepository streamSessionRepository,
         ILogger<ChannelUpdateConsumer> logger)
     {
+        _dataCollection = dataCollection;
         _categoryTrackingService = categoryTrackingService;
         _streamSessionRepository = streamSessionRepository;
         _logger = logger;
@@ -22,6 +26,8 @@ public class ChannelUpdateConsumer : IConsumer<ChannelUpdateEventContract>
 
     public async Task Consume(ConsumeContext<ChannelUpdateEventContract> context)
     {
+        if (!_dataCollection.Enabled) return;
+
         var message = context.Message;
         
         _logger.LogInformation("Received channel.update event for {BroadcasterUserLogin}, category: {CategoryName}", 

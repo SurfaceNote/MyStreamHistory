@@ -1,0 +1,64 @@
+<main class="editor-page" *ngIf="article as item">
+  <div class="topbar">
+    <a routerLink="/admin/publications">← Publications</a>
+    <span role="status" aria-live="polite" class="save-state" [class.failed]="saveState === 'Save failed'">● {{ saveState }}</span>
+    <div class="top-actions">
+      <button type="button" class="ghost" (click)="flush()" [disabled]="busy || !editorReady">Save now</button>
+      <button type="button" class="ghost" (click)="preview()" [disabled]="busy || !editorReady">Preview</button>
+      <button type="button" (click)="publish()" [disabled]="busy || !editorReady">{{ item.publishedAt ? 'Update published' : 'Publish' }}</button>
+    </div>
+  </div>
+  <p class="error" role="alert" *ngIf="error">{{ error }} <button type="button" class="text-button" (click)="flush()" *ngIf="saveState === 'Save failed'">Retry</button></p>
+  <div class="editor-layout">
+    <section class="writing-pane">
+      <p class="hint writing-guide">Start with a headline, then write your article below. Summary is optional. Drafts save automatically; Publish makes the article visible to readers.</p>
+      <p class="eyebrow">{{ item.type === 'news' ? 'NEWS STORY' : 'REVIEW' }}</p>
+      <input class="title-input" [(ngModel)]="item.title" (ngModelChange)="titleChanged()" placeholder="Your headline goes here" aria-label="Article title" maxlength="180" />
+      <label class="body-label" for="article-summary">Summary (optional)</label><textarea id="article-summary" class="summary-input" [(ngModel)]="item.summary" (ngModelChange)="changed()" [placeholder]="item.type === 'news' ? 'Optional description for search engines; hidden on news cards' : 'Optional introduction for review cards'" aria-label="Summary" maxlength="500" rows="2"></textarea>
+      <label class="body-label">Article text</label>
+      <div class="toolbar" role="toolbar" aria-label="Text formatting">
+        <button type="button" title="Heading 2" (click)="editor?.chain()?.focus()?.toggleHeading({level: 2})?.run()">H2</button>
+        <button type="button" title="Heading 3" (click)="editor?.chain()?.focus()?.toggleHeading({level: 3})?.run()">H3</button>
+        <button type="button" title="Bold" (click)="editor?.chain()?.focus()?.toggleBold()?.run()"><b>B</b></button>
+        <button type="button" title="Italic" (click)="editor?.chain()?.focus()?.toggleItalic()?.run()"><i>I</i></button>
+        <button type="button" title="Bullet list" (click)="editor?.chain()?.focus()?.toggleBulletList()?.run()">• List</button>
+        <button type="button" title="Numbered list" (click)="editor?.chain()?.focus()?.toggleOrderedList()?.run()">1. List</button>
+        <button type="button" title="Quote" (click)="editor?.chain()?.focus()?.toggleBlockquote()?.run()">❝</button>
+        <button type="button" title="Link" (click)="link()">Link</button>
+        <button type="button" title="Insert image" (click)="mediaOpen = true">Image</button>
+      </div>
+      <div class="link-form" *ngIf="linkOpen"><input [(ngModel)]="linkUrl" placeholder="https://example.com" aria-label="Link URL" /><button type="button" (click)="applyLink()">Apply link</button><button type="button" class="ghost" (click)="editor?.chain()?.focus()?.unsetLink()?.run(); linkOpen = false">Remove</button></div>
+      <div #editorHost class="editor-host" [class.empty]="editorReady && editor?.isEmpty" [attr.aria-busy]="!editorReady" data-placeholder="Write your article here…"></div>
+      <p class="hint">Tip: paste or drop an image into the article. Drafts save automatically.</p>
+    </section>
+    <aside class="settings-pane">
+      <h2>Article settings</h2>
+      <p class="hint" *ngIf="publicationRequirements.length">Before publishing, add: {{ publicationRequirements.join(", ") }}. Incomplete drafts can be saved.</p>
+      <p class="hint" *ngIf="!publicationRequirements.length">Ready to publish. Preview your article before publishing.</p>
+      <label>Type<select [(ngModel)]="item.type" (ngModelChange)="changed()" [disabled]="item.slugLocked"><option value="news">News</option><option value="review">Review</option></select></label>
+      <label>URL slug<input [(ngModel)]="item.slug" (ngModelChange)="slugEdited = true; changed()" [disabled]="item.slugLocked" maxlength="100" /></label>
+      <p class="hint" *ngIf="!item.slugLocked">Generated from the headline. Use lowercase English letters, numbers and hyphens.</p>
+      <p class="hint" *ngIf="item.slugLocked">The URL is fixed after first publication.</p>
+      <label>Cover image</label>
+      <button type="button" class="cover-picker" (click)="mediaOpen = true">
+        <img *ngIf="coverPreview" [src]="coverPreview" alt="Selected cover" />
+        <span *ngIf="!coverPreview">+ Choose cover</span>
+      </button>
+      <label>SEO title<input [(ngModel)]="item.seoTitle" (ngModelChange)="changed()" maxlength="180" placeholder="Defaults to headline" /></label>
+      <label>SEO description<textarea [(ngModel)]="item.seoDescription" (ngModelChange)="changed()" maxlength="300" rows="3" placeholder="Optional description for search engines"></textarea></label>
+      <p class="hint" *ngIf="item.publishedAt">Published {{ item.publishedAt | date:'medium' }}. Draft edits remain private until you update the published version.</p>
+      <button type="button" class="unpublish" *ngIf="item.publishedAt" (click)="unpublish()" [disabled]="busy || !editorReady">Unpublish article</button>
+    </aside>
+  </div>
+  <div class="media-backdrop" *ngIf="mediaOpen" (click)="mediaOpen = false"></div>
+  <aside class="media-drawer" *ngIf="mediaOpen" aria-label="Media library">
+    <div class="drawer-head"><div><p class="eyebrow">ASSETS</p><h2>Media library</h2></div><button type="button" class="ghost" (click)="mediaOpen = false">✕</button></div>
+    <p class="hint">JPEG, PNG and WebP up to 10 MB; GIF up to 20 MB.</p>
+    <button type="button" class="upload-button" (click)="chooseFile()" [disabled]="busy || !editorReady">+ Upload image</button>
+    <input #fileInput hidden type="file" accept="image/jpeg,image/png,image/webp,image/gif" (change)="onFile($event)" />
+    <div class="media-list"><div class="media-row" *ngFor="let asset of media"><app-private-media-thumb [asset]="asset" /><div><strong>{{ asset.fileName }}</strong><small>{{ asset.contentType }} · {{ asset.size / 1024 | number:'1.0-0' }} KB</small></div><button type="button" (click)="insertImage(asset)">Insert</button><button type="button" (click)="setCover(asset)">Cover</button></div></div>
+  </aside>
+</main>
+<div class="loading" *ngIf="loading">Loading editor…</div>
+
+<div class="loading" *ngIf="!loading && !article && error"><p class="error" role="alert">{{ error }}</p><a routerLink="/admin/publications">← Publications</a></div>

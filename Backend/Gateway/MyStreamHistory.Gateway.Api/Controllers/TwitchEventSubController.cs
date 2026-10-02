@@ -1,10 +1,12 @@
-﻿using MediatR;
+using MyStreamHistory.Shared.Api.Features;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using MyStreamHistory.Gateway.Application.Commands.TwitchEventSub;
 
 namespace MyStreamHistory.Gateway.Api.Controllers;
 
 [ApiController]
+[ServiceFilter(typeof(TwitchDataCollectionFilter))]
 [Route("api/eventsub")]
 public class TwitchEventSubController : ControllerBase
 {

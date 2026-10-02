@@ -9,17 +9,19 @@
             </div>
         </div>
     </div>
-    <div class="auth">
-        <app-login-component *ngIf="!isLoggedIn"/>
-        <div *ngIf="isLoggedIn" class="user-menu">
+    <nav class="editorial-links" aria-label="Editorial"><a routerLink="/news" routerLinkActive="active">News</a><a routerLink="/reviews" routerLinkActive="active">Reviews</a></nav>
+    <div class="auth" [attr.aria-busy]="!authReady">
+        <span *ngIf="!authReady" class="auth-placeholder" aria-hidden="true"></span>
+        <app-login-component *ngIf="authReady && !isLoggedIn"/>
+        <div *ngIf="authReady && isLoggedIn" class="user-menu">
             <div>Hello, <a [routerLink]="['/profile', twitchId]">{{username}}</a></div>
-            <button *ngIf="isAdmin" class="admin-btn" (click)="navigateToAdmin()" title="Admin diagnostics">
+            <button *ngIf="isAdmin" class="admin-btn" (click)="navigateToAdmin()" title="Publications admin">
                 <i class="fa fa-shield"></i>
             </button>
             <button class="settings-btn" (click)="navigateToSettings()" title="Settings">
                 <i class="fa fa-gear"></i>
             </button>
         </div>
-        <button *ngIf="isLoggedIn" (click)="logout()">Logout</button>
+        <button *ngIf="authReady && isLoggedIn" (click)="logout()">Logout</button>
     </div>
 </header>

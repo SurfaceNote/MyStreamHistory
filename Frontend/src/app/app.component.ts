@@ -24,7 +24,7 @@ export class AppComponent implements OnInit {
       .pipe(filter(event => event instanceof NavigationEnd))
       .subscribe(() => {
         // Instant scroll to top without animation
-        window.scrollTo(0, 0);
+        if (typeof window !== 'undefined') window.scrollTo(0, 0);
         let route = this.activatedRoute;
         while (route.firstChild) {
           route = route.firstChild;

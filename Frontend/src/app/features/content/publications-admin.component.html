@@ -1,0 +1,24 @@
+<main class="editor-shell">
+  <div class="admin-nav"><a routerLink="/admin/publications" class="active">Publications</a><a routerLink="/admin">Diagnostics</a></div>
+  <div class="heading-row">
+    <div><p class="eyebrow">EDITORIAL WORKSPACE</p><h1>Publications</h1><p class="muted">Write, review and publish your stories.</p></div>
+    <div class="create-actions"><button (click)="create('news')" [disabled]="creating">+ News</button><button class="secondary" (click)="create('review')" [disabled]="creating">+ Review</button></div>
+  </div>
+  <div class="filters">
+    <label>Search<input [(ngModel)]="search" (keyup.enter)="load()" placeholder="Search titles" /></label>
+    <label>Type<select [(ngModel)]="type" (change)="load()"><option value="">All types</option><option value="news">News</option><option value="review">Reviews</option></select></label>
+    <label>Status<select [(ngModel)]="status" (change)="load()"><option value="">All statuses</option><option value="draft">Drafts</option><option value="published">Published</option></select></label>
+    <button class="secondary" (click)="load()">Search</button>
+  </div>
+  <p class="error" *ngIf="error">{{ error }}</p>
+  <p class="empty" *ngIf="loading">Loading publications…</p>
+  <p class="empty" *ngIf="!loading && !items.length">No publications match these filters.</p>
+  <div class="rows" *ngIf="!loading">
+    <a class="row" *ngFor="let item of items" [routerLink]="['/admin/publications', item.id]">
+      <span class="thumbnail">{{ item.coverId ? '▣' : '✦' }}</span>
+      <span class="row-main"><strong>{{ item.title || 'Untitled draft' }}</strong><small>{{ item.type === 'news' ? 'News' : 'Review' }} · {{ item.updatedAt | date:'medium' }}</small></span>
+      <span class="badge" [class.live]="item.publishedAt">{{ item.publishedAt ? 'Published' : 'Draft' }}</span><span class="arrow">→</span>
+    </a>
+  </div>
+  <div class="pager" *ngIf="total > 20"><button [disabled]="page === 1" (click)="load(page - 1)">Previous</button><span>{{ page }}</span><button [disabled]="page * 20 >= total" (click)="load(page + 1)">Next</button></div>
+</main>

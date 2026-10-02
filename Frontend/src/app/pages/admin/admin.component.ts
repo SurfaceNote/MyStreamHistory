@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { forkJoin, Observable } from 'rxjs';
 import { AuthService } from '../../auth/auth.service';
 import {
@@ -17,7 +18,7 @@ type AdminAction = 'refresh' | 'subscribeAll' | 'deleteEventSub' | 'cleanupChat'
 @Component({
   selector: 'app-admin',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './admin.component.html',
   styleUrl: './admin.component.scss'
 })

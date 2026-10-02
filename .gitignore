@@ -26,6 +26,7 @@ Thumbs.db
 # Configuration files with secrets
 **/appsettings.Development.json
 infra/dev/.env
+infra/content-local/.env
 infra/dev/docker-compose-infra.local.yml
 infra/dev/start-local.bat
 **/appsettings.Local.json

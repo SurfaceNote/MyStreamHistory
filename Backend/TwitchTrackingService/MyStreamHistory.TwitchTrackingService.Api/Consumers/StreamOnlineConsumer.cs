@@ -1,3 +1,4 @@
+using MyStreamHistory.Shared.Api.Features;
 using AutoMapper;
 using MassTransit;
 using MyStreamHistory.Shared.Base.Contracts.TwitchEventSub;
@@ -8,12 +9,14 @@ namespace MyStreamHistory.TwitchTrackingService.Api.Consumers;
 
 public class StreamOnlineConsumer : IConsumer<StreamOnlineEventContract>
 {
+    private readonly TwitchDataCollectionFeature _dataCollection;
     private readonly IStreamSessionService _streamSessionService;
     private readonly IMapper _mapper;
     private readonly ILogger<StreamOnlineConsumer> _logger;
 
-    public StreamOnlineConsumer(IStreamSessionService streamSessionService, IMapper mapper, ILogger<StreamOnlineConsumer> logger)
+    public StreamOnlineConsumer(TwitchDataCollectionFeature dataCollection, IStreamSessionService streamSessionService, IMapper mapper, ILogger<StreamOnlineConsumer> logger)
     {
+        _dataCollection = dataCollection;
         _streamSessionService = streamSessionService;
         _mapper = mapper;
         _logger = logger;
@@ -21,6 +24,8 @@ public class StreamOnlineConsumer : IConsumer<StreamOnlineEventContract>
 
     public async Task Consume(ConsumeContext<StreamOnlineEventContract> context)
     {
+        if (!_dataCollection.Enabled) return;
+
         _logger.LogInformation("Received stream.online event for {BroadcasterUserLogin}", context.Message.BroadcasterUserLogin);
 
         try

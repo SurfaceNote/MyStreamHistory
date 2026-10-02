@@ -88,6 +88,7 @@ export class AuthService {
     }
 
     getAccessToken(): string | null {
+        if (typeof localStorage === 'undefined') return null;
         return localStorage.getItem(this.accessTokenKey);
     }
 

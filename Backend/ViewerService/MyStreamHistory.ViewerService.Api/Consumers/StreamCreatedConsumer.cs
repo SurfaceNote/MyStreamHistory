@@ -1,3 +1,4 @@
+using MyStreamHistory.Shared.Api.Features;
 using MassTransit;
 using MyStreamHistory.Shared.Base.Contracts.TwitchEventSub;
 using MyStreamHistory.ViewerService.Application.Interfaces;
@@ -6,15 +7,18 @@ namespace MyStreamHistory.ViewerService.Api.Consumers;
 
 public class StreamCreatedConsumer : IConsumer<StreamCreatedEventContract>
 {
+    private readonly TwitchDataCollectionFeature _dataCollection;
     private readonly IViewerTrackingService _trackingService;
     private readonly IStreamCategoryService _categoryService;
     private readonly ILogger<StreamCreatedConsumer> _logger;
 
     public StreamCreatedConsumer(
+        TwitchDataCollectionFeature dataCollection,
         IViewerTrackingService trackingService,
         IStreamCategoryService categoryService,
         ILogger<StreamCreatedConsumer> logger)
     {
+        _dataCollection = dataCollection;
         _trackingService = trackingService;
         _categoryService = categoryService;
         _logger = logger;
@@ -22,6 +26,8 @@ public class StreamCreatedConsumer : IConsumer<StreamCreatedEventContract>
 
     public async Task Consume(ConsumeContext<StreamCreatedEventContract> context)
     {
+        if (!_dataCollection.Enabled) return;
+
         var message = context.Message;
 
         _logger.LogInformation("Processing StreamCreated event for TwitchUserId: {TwitchUserId}, StreamSessionId: {StreamSessionId}", 

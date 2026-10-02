@@ -27,26 +27,13 @@
 
 .hero-content {
     display: grid;
+    width: 100%;
+    min-width: 0;
     grid-template-columns: 1fr;
     gap: 3rem;
     align-items: center;
     position: relative;
     z-index: 1;
-}
-
-.hero-text {
-    animation: fadeInUp 1s ease-out;
-}
-
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(30px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
 }
 
 .hero-title {
@@ -74,9 +61,34 @@
 
 .hero-buttons {
     display: flex;
+    align-items: center;
+    min-height: 3.75rem;
     gap: 1rem;
     flex-wrap: wrap;
     margin-bottom: 2rem;
+}
+
+.auth-slot {
+    display: flex;
+    align-items: center;
+    max-width: 100%;
+    height: 3.75rem;
+}
+
+.auth-placeholder {
+    display: block;
+    width: 12rem;
+    height: 3rem;
+    visibility: hidden;
+}
+
+.hero-buttons.auth-pending,
+.cta-buttons.auth-pending {
+    visibility: hidden;
+}
+
+.cta-buttons .auth-slot {
+    justify-content: center;
 }
 
 .btn {
@@ -440,7 +452,7 @@
     position: relative;
     aspect-ratio: 1;
     border-radius: 50%;
-    overflow: hidden;
+    overflow: visible;
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     border: 3px solid $bg-4-color;
@@ -450,6 +462,14 @@
     display: flex;
     align-items: center;
     justify-content: center;
+
+    .avatar-image {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        border-radius: inherit;
+        overflow: hidden;
+    }
 
     img {
         width: 100%;
@@ -650,4 +670,4 @@
     }
 }
 
-.streamer-live { position: absolute; top: 4px; right: 4px; z-index: 2; padding: 4px 6px; border-radius: 5px; background: #e73550; color: white; font-size: 10px; font-weight: 700; }
+.streamer-live { position: absolute; top: 4px; right: 4px; z-index: 2; padding: 4px 6px; border-radius: 5px; background: #e73550; color: white; font-size: 10px; font-weight: 700; white-space: nowrap; pointer-events: none; }

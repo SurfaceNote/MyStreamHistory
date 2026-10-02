@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "MyStreamHistory.ContentService.Api": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:50343;http://localhost:50344"
+    }
+  }
+}

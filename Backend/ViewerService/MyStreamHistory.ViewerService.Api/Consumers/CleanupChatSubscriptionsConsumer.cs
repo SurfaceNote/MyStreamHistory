@@ -1,3 +1,4 @@
+using MyStreamHistory.Shared.Api.Features;
 using MassTransit;
 using MyStreamHistory.Shared.Base.Contracts.Diagnostics.Requests;
 using MyStreamHistory.Shared.Base.Contracts.Diagnostics.Responses;
@@ -7,19 +8,24 @@ namespace MyStreamHistory.ViewerService.Api.Consumers;
 
 public class CleanupChatSubscriptionsConsumer : IConsumer<CleanupChatSubscriptionsRequestContract>
 {
+    private readonly TwitchDataCollectionFeature _dataCollection;
     private readonly ITwitchEventSubClient _eventSubClient;
     private readonly ILogger<CleanupChatSubscriptionsConsumer> _logger;
 
     public CleanupChatSubscriptionsConsumer(
+        TwitchDataCollectionFeature dataCollection,
         ITwitchEventSubClient eventSubClient,
         ILogger<CleanupChatSubscriptionsConsumer> logger)
     {
+        _dataCollection = dataCollection;
         _eventSubClient = eventSubClient;
         _logger = logger;
     }
 
     public async Task Consume(ConsumeContext<CleanupChatSubscriptionsRequestContract> context)
     {
+        _dataCollection.EnsureEnabled();
+
         _logger.LogWarning("Processing CleanupChatSubscriptions request - this will delete ALL chat subscriptions");
 
         try
