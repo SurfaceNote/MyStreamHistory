@@ -32,6 +32,7 @@ import {
 import { PlaythroughStatistics } from '../../models/playthrough-statistics.model';
 import { Chart, registerables } from 'chart.js';
 import { SeoService } from '../../service/seo.service';
+import { AnalyticsService } from '../../service/analytics.service';
 
 Chart.register(...registerables);
 
@@ -103,6 +104,9 @@ export class StreamerProfileComponent
   selectSection(section: string): void {
     this.activeSection = section;
     if (section === 'Overview') this.scheduleDashboardRender();
+    this.analytics.trackEvent('profile_tab_select', {
+      tab_name: section.toLowerCase(),
+    });
   }
 
   gameShare(hours: number): number {
@@ -139,6 +143,7 @@ export class StreamerProfileComponent
   private router = inject(Router);
   private changeDetector = inject(ChangeDetectorRef);
   private seo = inject(SeoService);
+  private analytics = inject(AnalyticsService);
 
   ngOnInit(): void {
     this.routeSub = this.route.paramMap.subscribe((params) => {

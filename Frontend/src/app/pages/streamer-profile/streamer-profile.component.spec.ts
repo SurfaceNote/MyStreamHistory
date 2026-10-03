@@ -5,9 +5,14 @@ import { StreamerProfileComponent } from './streamer-profile.component';
 import { StreamerService } from '../../service/streamer.service';
 import { SeoService } from '../../service/seo.service';
 
+type TestAnalyticsWindow = Window & { gtag?: jasmine.Spy };
+
 describe('StreamerProfileComponent', () => {
   let component: StreamerProfileComponent;
   let fixture: ComponentFixture<StreamerProfileComponent>;
+  let analyticsWindow: TestAnalyticsWindow;
+  let originalGtag: TestAnalyticsWindow['gtag'];
+  let gtag: jasmine.Spy;
   const statistics: any = {
     totalStreamsCount: 20,
     totalUniqueGamesCount: 8,
@@ -32,6 +37,10 @@ describe('StreamerProfileComponent', () => {
     categories: [],
   }));
   beforeEach(async () => {
+    analyticsWindow = window as TestAnalyticsWindow;
+    originalGtag = analyticsWindow.gtag;
+    gtag = jasmine.createSpy('gtag');
+    analyticsWindow.gtag = gtag;
     await TestBed.configureTestingModule({
       imports: [StreamerProfileComponent],
       providers: [
@@ -61,6 +70,51 @@ describe('StreamerProfileComponent', () => {
     fixture = TestBed.createComponent(StreamerProfileComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
+  });
+  afterEach(() => {
+    if (originalGtag === undefined) {
+      delete analyticsWindow.gtag;
+    } else {
+      analyticsWindow.gtag = originalGtag;
+    }
+  });
+
+  it('tracks each tab button click without counting the default overview', () => {
+    expect(gtag).not.toHaveBeenCalled();
+    const buttons: HTMLButtonElement[] = Array.from(
+      fixture.nativeElement.querySelectorAll('.section-nav button'),
+    );
+    for (const button of buttons) {
+      button.click();
+      fixture.detectChanges();
+      expect(gtag.calls.mostRecent().args).toEqual([
+        'event', 'profile_tab_select',
+        { tab_name: button.textContent!.trim().toLowerCase() },
+      ]);
+      expect(component.activeSection).toBe(button.textContent!.trim());
+    }
+    expect(gtag.calls.count()).toBe(4);
+  });
+
+  it('tracks selecting a section through its overview shortcut', () => {
+    const button = Array.from<HTMLButtonElement>(
+      fixture.nativeElement.querySelectorAll('button.text-button'),
+    ).find(button => button.textContent?.includes('View all games'))!;
+    button.click();
+    fixture.detectChanges();
+    expect(component.activeSection).toBe('Games');
+    expect(gtag).toHaveBeenCalledOnceWith('event', 'profile_tab_select', {
+      tab_name: 'games',
+    });
+  });
+
+  it('allows tab navigation when analytics is unavailable', () => {
+    delete analyticsWindow.gtag;
+    const button: HTMLButtonElement = fixture.nativeElement.querySelectorAll('.section-nav button')[1];
+    button.click();
+    fixture.detectChanges();
+    expect(component.activeSection).toBe('Streams');
+    expect(gtag).not.toHaveBeenCalled();
   });
   it('prioritizes a live stream and falls back to the latest stream when offline', () => {
     expect(component.featuredStream?.id).toBe('1');
