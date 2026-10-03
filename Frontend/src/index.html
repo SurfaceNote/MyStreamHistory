@@ -2,6 +2,23 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
+  <!-- Google Analytics: production website only; skip OAuth callbacks and OBS overlays. -->
+  <script>
+    (function () {
+      if (!['mystreamhistory.com', 'www.mystreamhistory.com'].includes(window.location.hostname)) return;
+      if (/^\/(callback|overlay)(\/|$)/.test(window.location.pathname)) return;
+
+      window.dataLayer = window.dataLayer || [];
+      window.gtag = function () { window.dataLayer.push(arguments); };
+      window.gtag('js', new Date());
+      window.gtag('config', 'G-RHXGDQL65J');
+
+      var script = document.createElement('script');
+      script.async = true;
+      script.src = 'https://www.googletagmanager.com/gtag/js?id=G-RHXGDQL65J';
+      document.head.appendChild(script);
+    })();
+  </script>
   <title>MyStreamHistory — Twitch Stream Analytics &amp; History</title>
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
