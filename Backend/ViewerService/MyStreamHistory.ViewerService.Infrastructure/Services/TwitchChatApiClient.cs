@@ -24,6 +24,7 @@ public class TwitchChatApiClient : ITwitchChatApiClient
     {
         var chatters = new List<TwitchChatterDto>();
         string? cursor = null;
+        var cursors = new HashSet<string>();
 
         do
         {
@@ -33,11 +34,11 @@ public class TwitchChatApiClient : ITwitchChatApiClient
                 url += $"&after={cursor}";
             }
 
-            var request = new HttpRequestMessage(HttpMethod.Get, url);
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
             request.Headers.Add("Client-Id", _options.ClientId);
 
-            var response = await _httpClient.SendAsync(request, cancellationToken);
+            using var response = await _httpClient.SendAsync(request, cancellationToken);
             
             if (!response.IsSuccessStatusCode)
             {
@@ -53,7 +54,11 @@ public class TwitchChatApiClient : ITwitchChatApiClient
                 PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
             });
 
-            if (result?.Data != null)
+            if (result?.Data == null)
+                throw new InvalidDataException("Twitch returned an incomplete chatters response.");
+            if (result.Data.Any(c => string.IsNullOrWhiteSpace(c.UserId)))
+                throw new InvalidDataException("Twitch returned a chatter without an ID.");
+            if (result.Data != null)
             {
                 chatters.AddRange(result.Data.Select(c => new TwitchChatterDto
                 {
@@ -64,6 +69,8 @@ public class TwitchChatApiClient : ITwitchChatApiClient
             }
 
             cursor = result?.Pagination?.Cursor;
+            if (!string.IsNullOrEmpty(cursor) && !cursors.Add(cursor))
+                throw new InvalidDataException("Twitch repeated a chatters pagination cursor.");
 
         } while (!string.IsNullOrEmpty(cursor));
 

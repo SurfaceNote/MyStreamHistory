@@ -1,5 +1,20 @@
 @use "../../../styles/variables" as *;
 
+.audience-section {
+  margin-bottom: 2rem;
+  min-width: 0;
+  padding: 1rem;
+  border: 1px solid $bg-3-color;
+  border-radius: 12px;
+  p { line-height: 1.5; }
+  summary { cursor: pointer; padding: .75rem 0; }
+}
+.audience-chart { position: relative; height: 280px; min-width: 0; max-width: 100%; }
+.category-legend { display:flex; flex-wrap:wrap; gap:.75rem 1.5rem; margin:1rem 0 0; padding:0; list-style:none; }
+.category-legend li { display:flex; align-items:flex-start; gap:.5rem; font-size:.8rem; min-width:0; overflow-wrap:anywhere; }
+.category-key { width:.65rem; height:.65rem; border-radius:3px; margin-top:.2rem; flex-shrink:0; }
+.category-legend small { display:block; color:$text-2-color; margin-top:.25rem; }
+
 .stream-detail-container {
   max-width: 1600px;
   margin: 0 auto;

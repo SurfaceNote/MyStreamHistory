@@ -9,6 +9,7 @@ public interface IChatMessageBufferService
     bool IsStreamActive(string twitchUserId, Guid streamSessionId);
     bool IsAccrualEnabled(string twitchUserId, Guid streamSessionId);
     int GetActiveStreamCount();
+    Guid? GetActiveSessionId(string twitchUserId) => null;
     void AddChatMessage(string twitchUserId, string chatterUserId, int characterCount);
     bool UpdateStreamCategory(string twitchUserId, Guid streamSessionId, Guid newCategoryId);
     void PauseStream(string twitchUserId, Guid streamSessionId);

@@ -33,6 +33,11 @@ describe('Header authentication', () => {
       expect(element.querySelector('.auth-placeholder')).toBeNull();
       expect(!!element.querySelector('app-login-component')).toBe(!token);
       expect(!!element.querySelector('.user-menu')).toBe(!!token);
+      expect(!!element.querySelector('nav a[href="/analytics/community"]')).toBe(!!token);
+      if (token) {
+        expect(element.querySelector('.profile-link')?.textContent).toBe('kination');
+        expect(element.querySelector('button[aria-label="Settings"]')).not.toBeNull();
+      }
       fixture.destroy();
     });
   }

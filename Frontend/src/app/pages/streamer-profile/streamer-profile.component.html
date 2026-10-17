@@ -9,6 +9,7 @@
         />
         <div>
           <span class="eyebrow">STREAMER PROFILE</span>
+          @if (canViewCommunity) { <a routerLink="/analytics/community" [queryParams]="isOwnProfile ? {} : { channelId: twitchId }">Community analytics →</a> }
           <h1>
             {{ streamer.displayName }}
             @if (featuredStream?.isLive) {
@@ -277,7 +278,7 @@
             ></ng-container>
             <div class="stream-footer">
               <span>{{ formatDuration(stream.startedAt, stream.endedAt) }}</span
-              ><span>{{ stream.uniqueViewersCount ?? 0 }} unique viewers</span>
+              ><span>{{ stream.uniqueViewersCount ?? '—' }} unique chat accounts</span>
             </div>
           </button>
         } @empty {

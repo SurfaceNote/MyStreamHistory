@@ -44,6 +44,7 @@ builder.Services.AddInfrastructure(builder.Configuration)
         configurator.AddConsumer<GetActiveStreamCategoryConsumer>();
         configurator.AddConsumer<GetStreamerStatisticsConsumer>();
         configurator.AddConsumer<GetViewerWatchHistoryConsumer>();
+        configurator.AddConsumer<GetCommunitySessionsConsumer>();
         configurator.AddConsumer<GetPlaythroughSettingsConsumer>();
         configurator.AddConsumer<UpsertPlaythroughConsumer>();
         configurator.AddConsumer<DeletePlaythroughConsumer>();

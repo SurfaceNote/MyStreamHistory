@@ -57,6 +57,7 @@ public class GetStreamDetailsByIdQueryHandler : IRequestHandler<GetStreamDetails
             new GetStreamViewersRequestContract 
             { 
                 StreamSessionId = request.StreamSessionId,
+                IncludeSessionPresence = true,
                 StreamCategoryIds = categoryIds
             }, 
             cancellationToken
@@ -80,7 +81,7 @@ public class GetStreamDetailsByIdQueryHandler : IRequestHandler<GetStreamDetails
 
         // Calculate unique viewers per category
         // For this, we need to get viewer watches per category (not aggregated)
-        var categoryViewerCounts = new Dictionary<Guid, int>();
+        var categoryViewerCounts = new Dictionary<Guid, int?>();
         
         // We'll need to make individual requests per category to get unique viewer counts
         foreach (var category in streamSession.Categories)
@@ -93,6 +94,8 @@ public class GetStreamDetailsByIdQueryHandler : IRequestHandler<GetStreamDetails
                 new GetStreamViewersRequestContract 
                 { 
                     StreamSessionId = request.StreamSessionId,
+                    StartedAt = category.StartedAt,
+                    EndedAt = category.EndedAt ?? streamSession.EndedAt ?? DateTime.UtcNow,
                     StreamCategoryIds = new List<Guid> { category.StreamCategoryId }
                 }, 
                 cancellationToken
@@ -107,7 +110,7 @@ public class GetStreamDetailsByIdQueryHandler : IRequestHandler<GetStreamDetails
             }
             else
             {
-                categoryViewerCounts[category.StreamCategoryId] = 0;
+                categoryViewerCounts[category.StreamCategoryId] = null;
             }
         }
 
@@ -126,6 +129,7 @@ public class GetStreamDetailsByIdQueryHandler : IRequestHandler<GetStreamDetails
             StreamTitle = streamSession.StreamTitle,
             GameName = streamSession.GameName,
             ViewerCount = streamSession.ViewerCount,
+            Audience = streamSession.Audience,
             Categories = streamSession.Categories.Select(c => new CategoryDetailsDto
             {
                 StreamCategoryId = c.StreamCategoryId,
@@ -135,9 +139,10 @@ public class GetStreamDetailsByIdQueryHandler : IRequestHandler<GetStreamDetails
                 StartedAt = c.StartedAt,
                 EndedAt = c.EndedAt,
                 DurationMinutes = c.DurationMinutes,
-                UniqueViewers = categoryViewerCounts.GetValueOrDefault(c.StreamCategoryId, 0)
+                UniqueViewers = categoryViewerCounts.GetValueOrDefault(c.StreamCategoryId)
             }).ToList(),
-            Viewers = viewers
+            Viewers = viewers,
+            ViewerDataAvailable = viewersResponse.IsSuccess && viewersResponse.Success!.Success
         };
 
         return result;

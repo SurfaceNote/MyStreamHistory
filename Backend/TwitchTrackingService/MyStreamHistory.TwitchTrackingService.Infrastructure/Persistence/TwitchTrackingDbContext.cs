@@ -11,6 +11,7 @@ public class TwitchTrackingDbContext : DbContext
     }
 
     public DbSet<StreamSession> StreamSessions => Set<StreamSession>();
+    public DbSet<ViewerCountSample> ViewerCountSamples => Set<ViewerCountSample>();
     public DbSet<EventSubSubscription> EventSubSubscriptions => Set<EventSubSubscription>();
     public DbSet<TwitchCategory> TwitchCategories => Set<TwitchCategory>();
     public DbSet<StreamCategory> StreamCategories => Set<StreamCategory>();
@@ -20,6 +21,8 @@ public class TwitchTrackingDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        modelBuilder.Entity<ViewerCountSample>().HasKey(x => new { x.StreamSessionId, x.Minute });
+        modelBuilder.Entity<ViewerCountSample>().HasOne<StreamSession>().WithMany().HasForeignKey(x => x.StreamSessionId).OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.AddInboxStateEntity();
         modelBuilder.AddOutboxMessageEntity();

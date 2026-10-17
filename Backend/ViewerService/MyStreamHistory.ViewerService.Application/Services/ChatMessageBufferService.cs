@@ -41,6 +41,9 @@ public class ChatMessageBufferService : IChatMessageBufferService
         return _streamBuffers.Count;
     }
 
+    public Guid? GetActiveSessionId(string twitchUserId) =>
+        _streamBuffers.TryGetValue(twitchUserId, out var buffer) && !buffer.IsPaused ? buffer.StreamSessionId : null;
+
     public void AddChatMessage(string twitchUserId, string chatterUserId, int characterCount)
     {
         if (!_streamBuffers.TryGetValue(twitchUserId, out var buffer) || buffer.IsPaused)

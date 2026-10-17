@@ -11,8 +11,16 @@ export interface StreamDetails {
   streamTitle: string | null;
   gameName: string | null;
   viewerCount: number | null;
+  audience?: AudiencePoint[];
   categories: CategoryDetails[];
   viewers: StreamViewer[];
+  viewerDataAvailable?: boolean;
+}
+
+export interface AudiencePoint {
+  startedAt: string;
+  averageViewers: number | null;
+  sampleCount: number;
 }
 
 export interface CategoryDetails {
@@ -23,7 +31,7 @@ export interface CategoryDetails {
   startedAt: Date;
   endedAt: Date | null;
   durationMinutes: number;
-  uniqueViewers: number;
+  uniqueViewers: number | null;
 }
 
 export interface StreamViewer {

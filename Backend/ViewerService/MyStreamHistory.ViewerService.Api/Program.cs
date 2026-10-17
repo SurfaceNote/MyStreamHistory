@@ -28,6 +28,7 @@ builder.Services.AddInfrastructure(builder.Configuration)
         configurator.AddConsumer<StreamLiveConfirmationLostConsumer>();
         configurator.AddConsumer<StreamLiveConfirmationRestoredConsumer>();
         configurator.AddConsumer<ChatMessageConsumer>();
+        configurator.AddConsumer<CommunityConsumer>();
         configurator.AddConsumer<StreamCategoryChangedConsumer>();
         configurator.AddConsumer<GetStreamViewersConsumer>();
         configurator.AddConsumer<GetUniqueViewerCountsConsumer>();
@@ -47,6 +48,9 @@ if (twitchDataCollection.Enabled)
     builder.Services.AddHostedService<ViewerDataProcessingBackgroundService>();
     builder.Services.AddHostedService<EventSubHistoryCleanupBackgroundService>();
 }
+
+if (builder.Configuration.GetValue<bool>("Features:CommunityAnalytics:Enabled"))
+    builder.Services.AddHostedService<CommunityCalculationBackgroundService>();
 
 var app = builder.Build();
 app.Logger.LogInformation("Twitch data collection enabled: {Enabled}", twitchDataCollection.Enabled);

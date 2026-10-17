@@ -8,7 +8,8 @@ import {
   OnInit,
   ViewChild,
 } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { AuthService } from '../../auth/auth.service';
 import { StreamerService } from '../../service/streamer.service';
 import { StreamerShortDTO } from '../../models/streamer-short.dto';
 import {
@@ -50,7 +51,7 @@ interface DashboardSummaryCard {
 
 @Component({
   selector: 'app-streamer-profile',
-  imports: [CommonModule],
+  imports: [CommonModule, RouterLink],
   templateUrl: './streamer-profile.component.html',
   styleUrl: './streamer-profile.component.scss',
 })
@@ -144,6 +145,9 @@ export class StreamerProfileComponent
   private changeDetector = inject(ChangeDetectorRef);
   private seo = inject(SeoService);
   private analytics = inject(AnalyticsService);
+  private auth = inject(AuthService);
+  get isOwnProfile(): boolean { return this.auth.getTwitchIdFromToken() === String(this.twitchId); }
+  get canViewCommunity(): boolean { return this.isOwnProfile || this.auth.isAdmin(); }
 
   ngOnInit(): void {
     this.routeSub = this.route.paramMap.subscribe((params) => {
@@ -299,14 +303,14 @@ export class StreamerProfileComponent
               this.streamerService.getStreamDetails(stream.id).pipe(
                 map((details) => ({
                   ...stream,
-                  uniqueViewersCount: details.viewers.length,
+                  uniqueViewersCount: details.viewerDataAvailable === false ? null : details.viewers.length,
                 })),
                 catchError((err) => {
                   console.error(
                     `Error loading unique viewers for stream ${stream.id}`,
                     err,
                   );
-                  return of({ ...stream, uniqueViewersCount: 0 });
+                  return of({ ...stream, uniqueViewersCount: null });
                 }),
               ),
             ),

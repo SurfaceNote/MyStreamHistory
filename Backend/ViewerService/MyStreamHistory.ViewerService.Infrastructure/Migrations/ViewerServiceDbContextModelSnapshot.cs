@@ -22,6 +22,180 @@ namespace MyStreamHistory.ViewerService.Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("MyStreamHistory.ViewerService.Domain.Entities.CommunityDailyState", b =>
+                {
+                    b.Property<string>("StreamerTwitchUserId")
+                        .HasColumnType("text");
+
+                    b.Property<int>("Revision")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MethodVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<string>("ViewerTwitchUserId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Level")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Quality")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Transition")
+                        .HasColumnType("text");
+
+                    b.HasKey("StreamerTwitchUserId", "Revision", "MethodVersion", "Date", "ViewerTwitchUserId");
+
+                    b.ToTable("CommunityDailyStates");
+                });
+
+            modelBuilder.Entity("MyStreamHistory.ViewerService.Domain.Entities.CommunityExclusion", b =>
+                {
+                    b.Property<string>("StreamerTwitchUserId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ViewerTwitchUserId")
+                        .HasColumnType("text");
+
+                    b.HasKey("StreamerTwitchUserId", "ViewerTwitchUserId");
+
+                    b.ToTable("CommunityExclusions");
+                });
+
+            modelBuilder.Entity("MyStreamHistory.ViewerService.Domain.Entities.CommunityMessageAggregate", b =>
+                {
+                    b.Property<string>("StreamerTwitchUserId")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("StreamSessionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ViewerTwitchUserId")
+                        .HasColumnType("text");
+
+                    b.Property<int>("Count")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("Provisional")
+                        .HasColumnType("boolean");
+
+                    b.HasKey("StreamerTwitchUserId", "StreamSessionId", "ViewerTwitchUserId");
+
+                    b.ToTable("CommunityMessageAggregates");
+                });
+
+            modelBuilder.Entity("MyStreamHistory.ViewerService.Domain.Entities.CommunityMessageReceipt", b =>
+                {
+                    b.Property<string>("StreamerTwitchUserId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("MessageId")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("Provisional")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("ReceivedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("StreamSessionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ViewerTwitchUserId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("StreamerTwitchUserId", "MessageId");
+
+                    b.ToTable("CommunityMessageReceipts");
+                });
+
+            modelBuilder.Entity("MyStreamHistory.ViewerService.Domain.Entities.CommunityPoll", b =>
+                {
+                    b.Property<string>("StreamerTwitchUserId")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("Minute")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("Complete")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("ObservedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("StreamSessionId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("StreamerTwitchUserId", "Minute");
+
+                    b.HasIndex("StreamSessionId");
+
+                    b.ToTable("CommunityPolls");
+                });
+
+            modelBuilder.Entity("MyStreamHistory.ViewerService.Domain.Entities.CommunityPresence", b =>
+                {
+                    b.Property<string>("StreamerTwitchUserId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ViewerTwitchUserId")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("Minute")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("StreamSessionId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("StreamerTwitchUserId", "ViewerTwitchUserId", "Minute");
+
+                    b.HasIndex("StreamerTwitchUserId", "StreamSessionId");
+
+                    b.ToTable("CommunityPresences");
+                });
+
+            modelBuilder.Entity("MyStreamHistory.ViewerService.Domain.Entities.CommunitySettings", b =>
+                {
+                    b.Property<string>("StreamerTwitchUserId")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("CalculatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("MembersJson")
+                        .HasColumnType("jsonb");
+
+                    b.Property<bool>("Pending")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("ReportJson")
+                        .HasColumnType("jsonb");
+
+                    b.Property<int>("Revision")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("TimeZoneConfigured")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("TimeZoneId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("TrackingStartedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("StreamerTwitchUserId");
+
+                    b.ToTable("CommunitySettings");
+                });
+
             modelBuilder.Entity("MyStreamHistory.ViewerService.Domain.Entities.ProcessedEventSubMessage", b =>
                 {
                     b.Property<Guid>("Id")

@@ -428,6 +428,25 @@ namespace MyStreamHistory.TwitchTrackingService.Infrastructure.Persistence.Migra
                     b.ToTable("TwitchCategories");
                 });
 
+            modelBuilder.Entity("MyStreamHistory.TwitchTrackingService.Domain.Entities.ViewerCountSample", b =>
+                {
+                    b.Property<Guid>("StreamSessionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("Minute")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("ObservedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("ViewerCount")
+                        .HasColumnType("integer");
+
+                    b.HasKey("StreamSessionId", "Minute");
+
+                    b.ToTable("ViewerCountSamples");
+                });
+
             modelBuilder.Entity("MassTransit.EntityFrameworkCoreIntegration.OutboxMessage", b =>
                 {
                     b.HasOne("MassTransit.EntityFrameworkCoreIntegration.OutboxState", null)
@@ -487,6 +506,15 @@ namespace MyStreamHistory.TwitchTrackingService.Infrastructure.Persistence.Migra
                     b.Navigation("StreamSession");
 
                     b.Navigation("TwitchCategory");
+                });
+
+            modelBuilder.Entity("MyStreamHistory.TwitchTrackingService.Domain.Entities.ViewerCountSample", b =>
+                {
+                    b.HasOne("MyStreamHistory.TwitchTrackingService.Domain.Entities.StreamSession", null)
+                        .WithMany()
+                        .HasForeignKey("StreamSessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("MyStreamHistory.TwitchTrackingService.Domain.Entities.Playthrough", b =>

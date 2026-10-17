@@ -12,17 +12,20 @@ public class ChatMessageConsumer : IConsumer<ChatMessageEventContract>
     private readonly IChatMessageBufferService _bufferService;
     private readonly IProcessedEventSubMessageRepository _processedMessageRepository;
     private readonly ILogger<ChatMessageConsumer> _logger;
+    private readonly ICommunityService? _community;
 
     public ChatMessageConsumer(
         TwitchDataCollectionFeature dataCollection,
         IChatMessageBufferService bufferService,
         IProcessedEventSubMessageRepository processedMessageRepository,
-        ILogger<ChatMessageConsumer> logger)
+        ILogger<ChatMessageConsumer> logger,
+        ICommunityService? community = null)
     {
         _dataCollection = dataCollection;
         _bufferService = bufferService;
         _processedMessageRepository = processedMessageRepository;
         _logger = logger;
+        _community = community;
     }
 
     public async Task Consume(ConsumeContext<ChatMessageEventContract> context)
@@ -30,6 +33,8 @@ public class ChatMessageConsumer : IConsumer<ChatMessageEventContract>
         if (!_dataCollection.Enabled) return;
 
         var message = context.Message;
+        if (_community != null && _bufferService.GetActiveSessionId(message.BroadcasterUserId) is { } session)
+            await _community.RecordMessageAsync(message, session, context.CancellationToken);
         
         // Check for duplicate
         if (await _processedMessageRepository.ExistsAsync(message.MessageId, context.CancellationToken))

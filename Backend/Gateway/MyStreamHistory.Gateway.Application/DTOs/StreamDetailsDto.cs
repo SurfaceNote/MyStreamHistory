@@ -17,9 +17,11 @@ public class StreamDetailsDto
     public string? StreamTitle { get; set; }
     public string? GameName { get; set; }
     public int? ViewerCount { get; set; }
+    public List<MyStreamHistory.Shared.Base.Contracts.StreamSessions.Responses.AudiencePointDto> Audience { get; set; } = new();
     
     public List<CategoryDetailsDto> Categories { get; set; } = new();
     public List<StreamViewerDto> Viewers { get; set; } = new();
+    public bool ViewerDataAvailable { get; set; }
 }
 
 public class CategoryDetailsDto
@@ -31,7 +33,7 @@ public class CategoryDetailsDto
     public DateTime StartedAt { get; set; }
     public DateTime? EndedAt { get; set; }
     public int DurationMinutes { get; set; }
-    public int UniqueViewers { get; set; }
+    public int? UniqueViewers { get; set; }
 }
 
 public class StreamViewerDto

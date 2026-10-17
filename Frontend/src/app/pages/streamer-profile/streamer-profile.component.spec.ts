@@ -4,6 +4,7 @@ import { of } from 'rxjs';
 import { StreamerProfileComponent } from './streamer-profile.component';
 import { StreamerService } from '../../service/streamer.service';
 import { SeoService } from '../../service/seo.service';
+import { AuthService } from '../../auth/auth.service';
 
 type TestAnalyticsWindow = Window & { gtag?: jasmine.Spy };
 
@@ -53,6 +54,7 @@ describe('StreamerProfileComponent', () => {
           useValue: { navigate: jasmine.createSpy('navigate') },
         },
         { provide: SeoService, useValue: { update: () => {} } },
+        { provide: AuthService, useValue: { getTwitchIdFromToken: () => null, isAdmin: () => false } },
         {
           provide: StreamerService,
           useValue: {

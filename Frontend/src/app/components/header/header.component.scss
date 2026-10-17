@@ -1,233 +1,48 @@
 @use "variables.scss" as *;
 
-header {
-    display: flex;
-    flex-direction: column;
-    padding: 1.25rem;
-    column-gap: 1rem;
-    row-gap: 1.5rem;
-    justify-content: space-between;
-    align-items: center;
-    background: transparent;
-    position: relative;
-    z-index: 10;
+:host { display: block; }
+header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem 1.75rem; padding: 1.25rem; position: relative; z-index: 10; }
+a { text-decoration: none; transition: color .2s; }
+a:focus-visible, button:focus-visible { outline: 2px solid $purple-color; outline-offset: 4px; }
+.left-side { display: flex; align-items: center; gap: .75rem; flex: 1 1 auto; min-width: 0; }
+.brand {
+    display: inline-flex; align-items: center; gap: .75rem; color: $text-2-color; font: 700 1.25rem 'Montserrat', sans-serif; white-space: nowrap;
+    img { width: 2.5rem; height: 2.5rem; border-radius: 50%; }
+    &:hover { color: $text-1-color; }
 }
-.editorial-links { display: flex; gap: 22px; align-items: center; font-size: .88rem; font-weight: 700; }
-.editorial-links a { color: #c9c1d0; }
-.editorial-links a.active { color: #c398fa; }
-.editorial-links { display: flex; gap: 22px; align-items: center; font-size: .88rem; font-weight: 700; }
-.editorial-links a { color: #c9c1d0; }
-.editorial-links a.active { color: #c398fa; }
-
-header .web-name {
-    margin-left: 1em;
-    font-size: 1.5em;
+.alpha-label { color: #bba8d5; background: #a78bfa12; border: 1px solid #a78bfa30; border-radius: 5px; padding: 4px 6px; font-size: 9px; letter-spacing: 1px; }
+.editorial-links {
+    display: flex; align-items: center; gap: 1.25rem; flex: 0 0 auto; font-size: .875rem; font-weight: 700; white-space: nowrap;
+    a { color: #c9c1d0; }
+    a:hover, a.active { color: #c398fa; }
 }
-
-header .web-name a {
-    text-decoration: none;
-}
-
-header .login {
-    padding-top: 0.5em;
-    padding-bottom: 0.5em;
-    color: white;
-}
-
-header a {
-    color: white;
-    transition: color 0.2s ease;
-
-    &:hover {
-        color: $purple-color;
-    }
-}
-
-header .nav-options {
-    margin-left: 5em;
-}
-
-header .nav-options a {
-    text-decoration: none;
-}
-
-header .left-side {
-    display: flex;
-    width: 100%;
-    flex-direction: column;
-    align-items: center;
-    gap: 1rem;
-    min-width: fit-content;
-    flex: 1;
-}
-
-header .logo-menu {
-    display: flex;
-    align-items: center;
-    gap: 2.5rem;
-}
-
-header .logo-menu .logo {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-}
-
-header .logo-menu .logo img {
-    width: 2.5rem;
-    height: 2.5rem;
-    border-radius: 50%;
-    transition: transform 0.3s ease;
-
-    &:hover {
-        transform: scale(1.05);
-    }
-}
-
-header .logo-menu .logo a {
-    color: $text-2-color;
-    font-family: 'Montserrat', serif;
-    font-size: 1.25rem;
-    font-style: normal;
-    font-weight: 700;
-    line-height: normal;
-    text-decoration: none;
-    transition: color 0.2s ease;
-
-    &:hover {
-        color: $text-1-color;
-    }
-}
-
-header .logo-menu .burger-menu {
-    display: flex;
-    padding: 0.5rem;
-    align-items: center;
-    gap: 0.75rem;
-    border-radius: 0.5rem;
-    background: $bg-2-color;
-}
-
-header .logo-menu .burger-menu i {
-    color: $text-4-color;
-    font-size: 1rem;
-    font-style: normal;
-    line-height: normal;
-}
-
-header .logo-menu .burger-menu span {
-    color: $text-4-color;
-    font-family: 'Montserrat', serif;
-    font-size: 0.875rem;
-    font-style: normal;
-    font-weight: 600;
-    line-height: normal;
-}
-
-header .auth {
-    display: flex;
-    width: 24rem;
-    max-width: 100%;
-    min-height: 3.75rem;
-    flex-shrink: 0;
-    justify-content: flex-end;
-    align-items: center;
-    gap: 1.5rem;
-
-    .auth-placeholder {
-        width: 100%;
-        height: 3rem;
-        visibility: hidden;
-    }
-
+.auth {
+    display: flex; align-items: center; justify-content: flex-end; gap: 1rem; flex: 0 1 auto; min-width: 0; max-width: 100%; min-height: 2.5rem;
+    .auth-placeholder { width: 12rem; height: 2.5rem; visibility: hidden; }
     button {
-        padding: 0.625rem 1.5rem;
-        border-radius: 8px;
-        background: $bg-3-color;
-        border: 1px solid $bg-4-color;
-        color: $text-1-color;
-        font-family: 'Montserrat', serif;
-        font-size: 0.875rem;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.2s ease;
-
-        &:hover {
-            background: $bg-4-color;
-            border-color: $purple-color;
-            transform: translateY(-1px);
-        }
+        display: inline-flex; justify-content: center; align-items: center; min-height: 2.5rem; border: 1px solid $bg-4-color; border-radius: 8px;
+        background: $bg-3-color; color: $text-1-color; font: 600 .875rem 'Montserrat', sans-serif; cursor: pointer; flex-shrink: 0;
+        &:hover { border-color: $purple-color; background: $bg-4-color; }
     }
-
-    .user-menu {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        color: $text-2-color;
-        font-size: 0.875rem;
-        
-        a {
-            font-weight: 600;
-            color: $text-1-color;
-            
-            &:hover {
-                color: $purple-color;
-            }
-        }
-
-        .settings-btn,
-        .admin-btn {
-            padding: 0.5rem 0.75rem;
-            background: $purple-color;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-
-            i {
-                color: $text-1-color;
-                font-size: 1rem;
-            }
-
-            &:hover {
-                background: darken($purple-color, 10%);
-                transform: scale(1.05);
-            }
-
-            &:active {
-                transform: scale(0.95);
-            }
-        }
-
-        .admin-btn {
-            background: #2b6cb0;
-
-            &:hover {
-                background: #245a93;
-            }
-        }
-    }
+    .logout-btn { padding: .5rem 1rem; }
+    .icon-btn { width: 2.5rem; padding: .6rem; }
+    svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linejoin: round; }
 }
-
-@media screen and (min-width: 1000px) {
-
-    header {
-        flex-direction: row;
-        min-height: 100%;
-    }
-
-    header .login {
-        margin-left: auto;
-        margin-right: 1em;
-    }
-
-    header .left-side {
-        flex-direction: row;
-        gap: 2.5rem;
-    }
+.user-menu { display: flex; align-items: center; gap: .65rem; min-width: 0; }
+.profile-link {
+    display: block; max-width: 16ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: $text-1-color; font-size: .875rem; font-weight: 600;
+    &:hover { color: $purple-color; }
 }
-
-.alpha-label { color: #bba8d5; background: #a78bfa12; border: 1px solid #a78bfa30; border-radius: 5px; padding: 4px 6px; font-size: 9px; letter-spacing: 1px; align-self: center; }
+@media (max-width: 900px) {
+    .left-side { flex-basis: 100%; justify-content: center; }
+    .editorial-links { margin-left: auto; }
+    .auth { margin-right: auto; }
+}
+@media (max-width: 480px) {
+    header { padding: 1rem .75rem; gap: .75rem; justify-content: center; }
+    .brand { font-size: 1rem; gap: .5rem; img { width: 2rem; height: 2rem; } }
+    .left-side { gap: .5rem; }
+    .editorial-links { justify-content: center; flex-basis: 100%; margin: 0; gap: 1.25rem; }
+    .auth { justify-content: center; margin: 0; gap: .75rem; }
+    .profile-link { max-width: 13ch; }
+}

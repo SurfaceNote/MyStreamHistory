@@ -14,6 +14,7 @@ public class ViewerDataProcessingService : IViewerDataProcessingService
     private readonly IViewerCategoryWatchRepository _categoryWatchRepository;
     private readonly IViewerStatsRepository _viewerStatsRepository;
     private readonly ILogger<ViewerDataProcessingService> _logger;
+    private readonly ICommunityService? _community;
     
     // Sync viewer data if not synced for 7 days
     private static readonly TimeSpan DataSyncInterval = TimeSpan.FromDays(7);
@@ -25,7 +26,8 @@ public class ViewerDataProcessingService : IViewerDataProcessingService
         IViewerRepository viewerRepository,
         IViewerCategoryWatchRepository categoryWatchRepository,
         IViewerStatsRepository viewerStatsRepository,
-        ILogger<ViewerDataProcessingService> logger)
+        ILogger<ViewerDataProcessingService> logger,
+        ICommunityService? community = null)
     {
         _chatApiClient = chatApiClient;
         _usersApiClient = usersApiClient;
@@ -34,6 +36,7 @@ public class ViewerDataProcessingService : IViewerDataProcessingService
         _categoryWatchRepository = categoryWatchRepository;
         _viewerStatsRepository = viewerStatsRepository;
         _logger = logger;
+        _community = community;
     }
 
     public async Task ProcessSnapshotAsync(DataCollectionSnapshot snapshot, CancellationToken cancellationToken = default)
@@ -55,16 +58,11 @@ public class ViewerDataProcessingService : IViewerDataProcessingService
 
     private async Task ProcessStreamSnapshotAsync(string twitchUserId, StreamDataSnapshot streamSnapshot, CancellationToken cancellationToken)
     {
-        if (!streamSnapshot.CurrentCategoryId.HasValue)
-        {
-            _logger.LogWarning("No category for stream TwitchUserId: {TwitchUserId}, skipping", twitchUserId);
-            return;
-        }
-
         // Get access token
         var tokenResult = await _authTokenService.GetTwitchAccessTokenAsync(twitchUserId, cancellationToken);
         if (tokenResult == null)
         {
+            await RecordCommunityPollAsync(twitchUserId, streamSnapshot.StreamSessionId, null, cancellationToken);
             _logger.LogError("Failed to get access token for TwitchUserId: {TwitchUserId}", twitchUserId);
             return;
         }
@@ -85,6 +83,7 @@ public class ViewerDataProcessingService : IViewerDataProcessingService
             var refreshResult = await _authTokenService.RefreshTwitchAccessTokenAsync(twitchUserId, cancellationToken);
             if (refreshResult == null)
             {
+                await RecordCommunityPollAsync(twitchUserId, streamSnapshot.StreamSessionId, null, cancellationToken);
                 _logger.LogError("Failed to refresh token for TwitchUserId: {TwitchUserId}", twitchUserId);
                 return;
             }
@@ -99,19 +98,24 @@ public class ViewerDataProcessingService : IViewerDataProcessingService
             }
             catch (Exception retryEx)
             {
+                await RecordCommunityPollAsync(twitchUserId, streamSnapshot.StreamSessionId, null, cancellationToken);
                 _logger.LogError(retryEx, "Failed to get chatters even after token refresh for TwitchUserId: {TwitchUserId}", twitchUserId);
                 return;
             }
         }
         catch (Exception ex)
         {
+            await RecordCommunityPollAsync(twitchUserId, streamSnapshot.StreamSessionId, null, cancellationToken);
             _logger.LogError(ex, "Failed to get chatters for TwitchUserId: {TwitchUserId}", twitchUserId);
             return;
         }
 
+        var observedAt = DateTime.UtcNow;
         // Prepare viewer data
         var viewerData = chatters.Select(c => (c.UserId, c.UserLogin, c.UserName)).ToList();
         var viewers = await _viewerRepository.GetOrCreateViewersAsync(viewerData, cancellationToken);
+        await RecordCommunityPollAsync(twitchUserId, streamSnapshot.StreamSessionId, chatters, cancellationToken, observedAt);
+        if (!streamSnapshot.CurrentCategoryId.HasValue) return;
 
         // Check if we need to sync viewer data (for viewers that haven't been synced or synced long ago)
         await SyncViewerDataIfNeededAsync(viewers, accessToken, cancellationToken);
@@ -166,6 +170,17 @@ public class ViewerDataProcessingService : IViewerDataProcessingService
         {
             await _viewerStatsRepository.BulkIncrementAsync(statsUpdates, cancellationToken);
             _logger.LogInformation("Updated {Count} viewer stats records for TwitchUserId: {TwitchUserId}", statsUpdates.Count, twitchUserId);
+        }
+    }
+
+    private async Task RecordCommunityPollAsync(string channel, Guid session, IReadOnlyCollection<TwitchChatterDto>? chatters,
+        CancellationToken ct, DateTime? observedAt = null)
+    {
+        if (_community == null) return;
+        try { await _community.RecordPollAsync(channel, session, observedAt ?? DateTime.UtcNow, chatters, ct); }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogError(ex, "Community observation could not be saved for channel {Channel}", channel);
         }
     }
 

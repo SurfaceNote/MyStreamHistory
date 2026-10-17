@@ -143,6 +143,9 @@ public class ProcessEventSubCommandHandler : IRequestHandler<ProcessEventSubComm
         {
             MessageId = messageId,
             BroadcasterUserId = eventData.GetProperty("broadcaster_user_id").GetString()!,
+            TwitchMessageId = eventData.TryGetProperty("message_id", out var chatMessageId) ? chatMessageId.GetString() : null,
+            SourceBroadcasterUserId = eventData.TryGetProperty("source_broadcaster_user_id", out var sourceChannel) ? sourceChannel.GetString() : null,
+            HasSourceMetadata = true,
             BroadcasterUserLogin = eventData.GetProperty("broadcaster_user_login").GetString()!,
             BroadcasterUserName = eventData.GetProperty("broadcaster_user_name").GetString()!,
             ChatterUserId = eventData.GetProperty("chatter_user_id").GetString()!,

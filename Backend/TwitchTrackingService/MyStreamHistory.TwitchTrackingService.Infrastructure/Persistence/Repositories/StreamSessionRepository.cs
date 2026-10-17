@@ -179,6 +179,15 @@ public class StreamSessionRepository : IStreamSessionRepository
         return _context.StreamSessions.AsQueryable();
     }
 
+    public Task RecordAudienceSampleAsync(Guid streamSessionId, DateTime observedAt, int viewerCount, CancellationToken cancellationToken = default)
+    {
+        var minute = new DateTime(observedAt.Ticks - observedAt.Ticks % TimeSpan.TicksPerMinute, DateTimeKind.Utc);
+        return _context.Database.ExecuteSqlInterpolatedAsync($"""
+            INSERT INTO "ViewerCountSamples" ("StreamSessionId", "Minute", "ObservedAt", "ViewerCount")
+            VALUES ({streamSessionId}, {minute}, {observedAt}, {viewerCount}) ON CONFLICT DO NOTHING
+            """, cancellationToken);
+    }
+
     public async Task<List<StreamSessionDto>> GetRecentStreamsByTwitchUserIdAsync(
         int twitchUserId,
         int count = 10,

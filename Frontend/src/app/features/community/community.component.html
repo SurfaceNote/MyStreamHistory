@@ -1,0 +1,78 @@
+<main class="community-page" lang="en">
+  <header class="page-heading">
+    <div><span class="eyebrow">ANALYTICS</span><h1>Community</h1></div>
+    <div class="heading-actions">
+      @if (report?.from) { <span class="period">{{ report!.from | date:'MMM d, y' }} — {{ report!.asOf | date:'MMM d, y' }}</span> }
+    </div>
+  </header>
+  @if (canViewOtherChannels) {
+    <div class="channel-picker"><label for="community-channel">Channel</label><select id="community-channel" [ngModel]="selectedChannelId" (ngModelChange)="viewChannel($event)">
+      <option [ngValue]="ownerId">Your channel</option>
+      @if (missingChannel) { <option [ngValue]="channelId">Channel {{ channelId }}</option> }
+      @for (channel of otherChannels; track channel.twitchId) { <option [ngValue]="channel.twitchId.toString()">{{ channel.displayName }}</option> }
+    </select>@if (readOnly) { <span class="status-badge">Read only</span> }</div>
+  }
+  @if (loading) { <p role="status">Loading community…</p> }
+  @if (error) { <div class="notice error" role="alert">{{ error }} <button type="button" (click)="load()">Retry</button></div> }
+  @if (report; as r) {
+    <div class="report-status" role="status">
+      @if (!r.collectionEnabled) { <span class="status-badge">Collection paused</span> }
+      @if (r.recalculating) { <span class="status-badge">Updating report…</span> }
+      @if (!r.recalculating && r.quality === 'insufficient') { <span class="status-badge">Not enough data · {{ format(r.eligibleDays) }} of 8 broadcast days</span> }
+      @if (!r.recalculating && r.quality === 'provisional') { <span class="status-badge">Preliminary data</span> }
+    </div>
+    <div class="metrics" aria-label="Community overview">
+      <article class="metric"><span>Core members</span><strong>{{ format(r.core) }}</strong><small>Previously {{ format(r.previousCore) }}</small></article>
+      <article class="metric" title="Includes core members"><span>Regulars</span><strong>{{ format(r.regularIncludingCore) }}</strong></article>
+      <article class="metric"><span>First seen</span><strong>{{ format(r.firstObserved) }}</strong></article>
+      <button class="metric metric-button" type="button" (click)="selectLevel('declining')" [disabled]="r.recalculating"><span>Less active</span><strong>{{ format(r.declining) }}</strong></button>
+    </div>
+    <div class="panels">
+      <section class="panel"><h2>Engagement</h2>
+        <div class="distribution" role="group" aria-label="Engagement levels">
+          @for (level of levels; track level.id) {
+            <button type="button" [title]="level.rule" [attr.aria-pressed]="selectedLevel === level.id" (click)="selectLevel(level.id)" [disabled]="r.recalculating"><span>{{ level.label }}</span><strong>{{ format(r.distribution?.[level.id]) }}</strong></button>
+          }
+        </div>
+        <button type="button" (click)="selectLevel('')" [attr.aria-pressed]="selectedLevel === ''" [disabled]="r.recalculating">All members</button>
+        <p class="caption">{{ format(r.eligibleDays) }} broadcast days · {{ r.windowDays }}-day period</p>
+      </section>
+      <section class="panel"><h2>Core growth</h2><p class="caption">Last 28 days</p>
+        <div class="chart">@if (hasTrend()) { <canvas #trend role="img" aria-label="Core members over the last 28 days"></canvas> } @else { <p class="caption">No chart data yet.</p> }</div>
+        <div class="transitions">@for (t of r.transitions | keyvalue; track t.key) { <span>{{ transitionLabels[t.key] }}: <strong>{{ t.value }}</strong></span> }</div>
+      </section>
+    </div>
+    <section class="panel participants"><h2>{{ selectedLevel === 'declining' ? 'Less active members' : 'Members' }}</h2>
+      <div class="member-head" aria-hidden="true"><span>Account</span><span>Attendance</span><span>msg pts</span><span>Status</span></div>
+      @for (member of members; track member.twitchUserId) {
+        <details class="member" (toggle)="opened($event)"><summary>
+          <span class="identity">{{ member.displayName }}@if (member.quality !== 'verified') { <small>{{ member.quality === 'provisional' ? 'Preliminary' : 'Not enough data' }}</small> }</span>
+          <span>{{ member.visitedDays }} / {{ member.eligibleDays }} days</span>
+          <span class="messages">{{ member.messagePoints == null ? '—' : (member.messagePoints | number:'1.2-2') + ' msg pts' }}</span>
+          <span>{{ memberChange(member) }}</span>
+        </summary><div class="member-detail">
+          <p>{{ member.messagePoints == null ? 'msg pts unavailable' : (member.messagePoints | number:'1.2-2') + ' msg pts' }} · {{ r.from | date:'MMM d, y' }} — {{ r.asOf | date:'MMM d, y' }}</p>
+          <p>First seen: {{ member.firstObserved ? (member.firstObserved | date:'MMM d, y') : 'Unknown' }}</p>
+          <div class="history" aria-label="Last 12 broadcast days">@for (day of member.history; track day.date) { <span [class.visited]="day.status === 'visited'" [class.unknown]="day.status === 'unknown'">{{ day.date | date:'MMM d' }}<small>{{ day.status === 'visited' ? 'Present' : day.status === 'unknown' ? 'No data' : 'Not observed' }}{{ day.quality === 'provisional' ? ' · preliminary' : '' }}</small></span> }</div>
+          @if (member.declining) { <p>Not observed for {{ member.consecutiveMisses }} broadcast days.</p> }
+          @if (!readOnly) { <button type="button" (click)="exclusion(member.twitchUserId, false)" [disabled]="saving">Exclude account</button> }
+        </div></details>
+      }
+      @if (membersLoading) { <p role="status">Loading members…</p> }
+      @if (!membersLoading && !members.length && !r.recalculating) { <p class="caption">No members in this group.</p> }
+      @if (nextCursor) { <button type="button" (click)="loadMembers(true)" [disabled]="membersLoading">Load more</button> }
+    </section>
+    <section class="panel settings">
+      <details class="method"><summary>How it works</summary>
+        <p>Based on accounts connected to chat, not confirmed video views. A visit requires observations in at least five different minutes of a broadcast day.</p>
+        <p>The period starts at 28 days and extends to 84 days if needed to include eight eligible broadcast days. Broadcasts are grouped by their local start date.</p>
+        <p>Your browser time zone is saved automatically.</p>
+        <p>Regulars: at least 30% attendance, three days across two weeks. Core: at least 60%, four days across three weeks. Messages do not affect these levels.</p>
+        <p>Days with incomplete collection do not count as absences. Historical estimates are preliminary. msg pts are recorded category points for the selected period.</p>
+        <p>Updated {{ calculatedLabel() }} · {{ r.timeZoneId }} · Method {{ r.methodVersion }}. @if (r.coverage != null) { Coverage {{ r.coverage | percent:'1.0-1' }}. } {{ format(r.unknownDays) }} days with incomplete data.</p>
+      </details>
+      <details class="excluded"><summary>Excluded accounts ({{ exclusions.length }})</summary>@for (account of exclusions; track account.twitchUserId) { <div class="excluded-row"><span>{{ account.displayName }}</span>@if (!readOnly) { <button type="button" (click)="exclusion(account.twitchUserId, true)" [disabled]="saving">Restore</button> }</div> } @if (!exclusions.length) { <p>No excluded accounts.</p> }</details>
+      @if (settingsError) { <p class="error" role="alert">{{ settingsError }}</p> }
+    </section>
+  }
+</main>

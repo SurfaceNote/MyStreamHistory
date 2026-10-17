@@ -27,6 +27,20 @@
     </div>
   </div>
 
+  <section class="audience-section" aria-labelledby="audience-title">
+    <h2 id="audience-title" class="section-title">Viewers</h2>
+    @if (audience.length) {
+      <div class="audience-chart"><canvas #audienceChart role="img" aria-label="Concurrent viewers over time, with category changes marked on the timeline."></canvas></div>
+      @if (categorySegments.length > 1) {
+        <ul class="category-legend" aria-label="Category timeline">
+          @for (category of categorySegments; track category.id) {
+            <li><span class="category-key" [style.background]="category.color" aria-hidden="true"></span><span>{{ category.name }}<small>{{ elapsedMinutes(category.start) }}–{{ elapsedMinutes(category.end) }}</small></span></li>
+          }
+        </ul>
+      }
+    } @else { <p class="audience-empty">No audience history for this stream.</p> }
+  </section>
+
   <div class="content-wrapper">
     <!-- Categories Section -->
     <div class="categories-section">
@@ -50,8 +64,8 @@
               </div>
               <div class="category-stat">
                 <span class="stat-icon">👁</span>
-                <span class="stat-label">Viewers count</span>
-                <span class="stat-value">{{ category.uniqueViewers }}</span>
+                <span class="stat-label">Unique chat accounts</span>
+                <span class="stat-value">{{ category.uniqueViewers ?? '—' }}</span>
               </div>
             </div>
           </div>
@@ -61,7 +75,8 @@
 
     <!-- Viewers Sidebar -->
     <div class="viewers-section">
-      <h2 class="section-title">Viewers <span class="viewers-count">({{ streamDetails.viewers.length }})</span></h2>
+      <h2 class="section-title">Chat accounts <span class="viewers-count">({{ streamDetails.viewerDataAvailable === false ? '—' : streamDetails.viewers.length }})</span></h2>
+      @if (streamDetails.viewerDataAvailable === false) { <p role="status">Chat accounts are temporarily unavailable.</p> }
       <div class="viewers-list">
         <button type="button" class="viewer-card" *ngFor="let viewer of streamDetails.viewers; let i = index"
                 (click)="navigateToViewerStats(viewer)"

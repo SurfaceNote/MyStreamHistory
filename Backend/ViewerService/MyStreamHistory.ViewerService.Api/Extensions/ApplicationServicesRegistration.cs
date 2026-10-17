@@ -13,6 +13,7 @@ public static class ApplicationServicesRegistration
         services.AddScoped<IViewerRepository, ViewerRepository>();
         services.AddScoped<IViewerCategoryWatchRepository, ViewerCategoryWatchRepository>();
         services.AddScoped<IViewerStatsRepository, ViewerStatsRepository>();
+        services.AddScoped<ICommunityService, CommunityService>();
         services.AddScoped<IProcessedEventSubMessageRepository, ProcessedEventSubMessageRepository>();
 
         // Application Services

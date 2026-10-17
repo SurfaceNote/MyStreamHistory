@@ -11,6 +11,7 @@ public class StreamDataPollingBackgroundService : BackgroundService
     private readonly ILogger<StreamDataPollingBackgroundService> _logger;
     private readonly TimeSpan _pollingInterval = TimeSpan.FromMinutes(1);
     private readonly string _sentryMonitorSlug;
+    private readonly bool _communityEnabled;
 
     public StreamDataPollingBackgroundService(
         IServiceProvider serviceProvider, 
@@ -20,6 +21,7 @@ public class StreamDataPollingBackgroundService : BackgroundService
         _serviceProvider = serviceProvider;
         _logger = logger;
         _sentryMonitorSlug = configuration["Sentry:CronMonitorSlug"] ?? "twitch-stream-polling";
+        _communityEnabled = configuration.GetValue<bool>("Features:CommunityAnalytics:Enabled");
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -94,6 +96,18 @@ public class StreamDataPollingBackgroundService : BackgroundService
                         var streamGameIds = new Dictionary<Guid, string>();
                         var currentActiveSessions = await streamSessionRepository.GetActiveAsync(stoppingToken);
                         var sessionsByUserId = currentActiveSessions.ToDictionary(s => s.TwitchUserId);
+                        if (_communityEnabled)
+                        {
+                            foreach (var stream in streams)
+                            {
+                                if (int.TryParse(stream.UserId, out var sampledUser) && sessionsByUserId.TryGetValue(sampledUser, out var sampledSession))
+                                {
+                                    try { await streamSessionRepository.RecordAudienceSampleAsync(sampledSession.Id, checkedAt, stream.ViewerCount, stoppingToken); }
+                                    catch (Exception ex) when (ex is not OperationCanceledException)
+                                    { _logger.LogError(ex, "Failed to store audience sample for session {Session}", sampledSession.Id); }
+                                }
+                            }
+                        }
                         
                         foreach (var stream in streams)
                         {

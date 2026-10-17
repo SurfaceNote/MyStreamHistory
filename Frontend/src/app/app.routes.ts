@@ -13,6 +13,7 @@ import { TopViewersOverlayComponent } from './pages/top-viewers-overlay/top-view
 const saveBeforeLeaving: CanDeactivateFn<ArticleEditorComponent> = component => component.flush();
 
 export const routes: Routes = [
+    { path: 'analytics/community', loadComponent: () => import('./features/community/community.component').then(m => m.CommunityComponent), canActivate: [authGuard], data: { seo: { title: 'Community — MyStreamHistory', description: 'Your channel community analytics.', noIndex: true } } },
     { path: 'callback', component: CallbackComponent, data: { seo: { title: 'Signing in — MyStreamHistory', description: 'Completing Twitch sign-in.', noIndex: true } } },
     { path: 'overlay/top-viewers/:twitchId', component: TopViewersOverlayComponent, data: { seo: { title: 'Top Viewers Overlay — MyStreamHistory', description: 'OBS top viewers overlay.', noIndex: true } } },
     { path: 'profile/:twitchId/viewer/:viewerTwitchId', component: ViewerStatsComponent, data: { seo: { title: 'Viewer Statistics — MyStreamHistory', description: 'Detailed Twitch viewer activity and watch statistics.', noIndex: true } } },

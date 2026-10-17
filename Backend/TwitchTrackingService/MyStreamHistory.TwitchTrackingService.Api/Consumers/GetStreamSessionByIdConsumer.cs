@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using MyStreamHistory.Shared.Base.Contracts.StreamSessions.Requests;
 using MyStreamHistory.Shared.Base.Contracts.StreamSessions.Responses;
 using MyStreamHistory.TwitchTrackingService.Application.Interfaces;
+using MyStreamHistory.TwitchTrackingService.Application.Services;
 using MyStreamHistory.TwitchTrackingService.Infrastructure.Persistence;
 
 namespace MyStreamHistory.TwitchTrackingService.Api.Consumers;
@@ -83,6 +84,10 @@ public class GetStreamSessionByIdConsumer : IConsumer<GetStreamSessionByIdReques
             {
                 category.DurationMinutes = (int)((category.EndedAt ?? now) - category.StartedAt).TotalMinutes;
             }
+
+            var samples = await _dbContext.ViewerCountSamples.AsNoTracking()
+                .Where(s => s.StreamSessionId == session.Id).ToListAsync(context.CancellationToken);
+            session.Audience = AudienceSeriesBuilder.Build(session.StartedAt, session.EndedAt ?? now, samples);
 
             // Get actual streamer profile from AuthService
             var userProfile = await _userProfileService.GetUserProfileAsync(session.TwitchUserId, context.CancellationToken);

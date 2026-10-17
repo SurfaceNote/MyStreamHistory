@@ -21,8 +21,16 @@ public class StreamSessionDetailsDto
     public string? StreamTitle { get; set; }
     public string? GameName { get; set; }
     public int? ViewerCount { get; set; }
+    public List<AudiencePointDto> Audience { get; set; } = new();
     
     public List<StreamCategoryDetailsDto> Categories { get; set; } = new();
+}
+
+public class AudiencePointDto
+{
+    public DateTime StartedAt { get; set; }
+    public decimal? AverageViewers { get; set; }
+    public int SampleCount { get; set; }
 }
 
 public class StreamCategoryDetailsDto

@@ -32,6 +32,7 @@ public interface IStreamSessionRepository
         DateTime endedAt,
         CancellationToken cancellationToken = default);
     IQueryable<StreamSession> Query();
+    Task RecordAudienceSampleAsync(Guid streamSessionId, DateTime observedAt, int viewerCount, CancellationToken cancellationToken = default) => Task.CompletedTask;
     Task<List<StreamSessionDto>> GetRecentStreamsByTwitchUserIdAsync(
         int twitchUserId,
         int count = 10,
