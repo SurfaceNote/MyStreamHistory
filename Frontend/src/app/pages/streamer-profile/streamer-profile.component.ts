@@ -1,3 +1,4 @@
+import { GameArtComponent } from '../../components/game-art/game-art.component';
 import {
   AfterViewInit,
   ChangeDetectorRef,
@@ -51,7 +52,7 @@ interface DashboardSummaryCard {
 
 @Component({
   selector: 'app-streamer-profile',
-  imports: [CommonModule, RouterLink],
+  imports: [GameArtComponent, CommonModule, RouterLink],
   templateUrl: './streamer-profile.component.html',
   styleUrl: './streamer-profile.component.scss',
 })

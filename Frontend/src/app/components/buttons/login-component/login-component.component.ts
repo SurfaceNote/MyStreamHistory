@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, Input } from '@angular/core';
 import { AuthService } from '../../../auth/auth.service';
 
 @Component({
@@ -8,6 +8,7 @@ import { AuthService } from '../../../auth/auth.service';
   styleUrl: './login-component.component.scss'
 })
 export class LoginComponentComponent {
+  @Input() compact = false;
   private authService = inject(AuthService);
 
   loginWithTwitch() {

@@ -1,48 +1,41 @@
-@use "variables.scss" as *;
-
-:host { display: block; }
-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem 1.75rem; padding: 1.25rem; position: relative; z-index: 10; }
-a { text-decoration: none; transition: color .2s; }
-a:focus-visible, button:focus-visible { outline: 2px solid $purple-color; outline-offset: 4px; }
-.left-side { display: flex; align-items: center; gap: .75rem; flex: 1 1 auto; min-width: 0; }
-.brand {
-    display: inline-flex; align-items: center; gap: .75rem; color: $text-2-color; font: 700 1.25rem 'Montserrat', sans-serif; white-space: nowrap;
-    img { width: 2.5rem; height: 2.5rem; border-radius: 50%; }
-    &:hover { color: $text-1-color; }
+:host { display: block; border-bottom: 1px solid var(--border); background: #18181b; }
+header {
+  display: flex; align-items: center; gap: 36px;
+  min-height: 76px; width: 100%; margin: 0 auto; padding: 0 var(--page-gutter);
 }
-.alpha-label { color: #bba8d5; background: #a78bfa12; border: 1px solid #a78bfa30; border-radius: 5px; padding: 4px 6px; font-size: 9px; letter-spacing: 1px; }
+.left-side { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.brand {
+  display: inline-flex; align-items: center; gap: 10px;
+  font-size: 17px; font-weight: 650; letter-spacing: -.5px;
+  img { width: 30px; height: 30px; border-radius: 6px; }
+}
+.alpha-label { color: var(--muted); border: 1px solid #414147; border-radius: 3px; padding: 2px 4px; font-size: 9px; letter-spacing: .4px; }
 .editorial-links {
-    display: flex; align-items: center; gap: 1.25rem; flex: 0 0 auto; font-size: .875rem; font-weight: 700; white-space: nowrap;
-    a { color: #c9c1d0; }
-    a:hover, a.active { color: #c398fa; }
+  display: flex; align-self: stretch; align-items: stretch; gap: 24px;
+  font-size: 14px; white-space: nowrap;
+  a { display: flex; align-items: center; color: var(--muted); border-bottom: 2px solid transparent; padding-top: 2px; }
+  a:hover { color: #f7f7f7; }
+  a.active { color: #f7f7f7; border-bottom-color: #b8a2ed; }
 }
 .auth {
-    display: flex; align-items: center; justify-content: flex-end; gap: 1rem; flex: 0 1 auto; min-width: 0; max-width: 100%; min-height: 2.5rem;
-    .auth-placeholder { width: 12rem; height: 2.5rem; visibility: hidden; }
-    button {
-        display: inline-flex; justify-content: center; align-items: center; min-height: 2.5rem; border: 1px solid $bg-4-color; border-radius: 8px;
-        background: $bg-3-color; color: $text-1-color; font: 600 .875rem 'Montserrat', sans-serif; cursor: pointer; flex-shrink: 0;
-        &:hover { border-color: $purple-color; background: $bg-4-color; }
-    }
-    .logout-btn { padding: .5rem 1rem; }
-    .icon-btn { width: 2.5rem; padding: .6rem; }
-    svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linejoin: round; }
+  display: flex; align-items: center; gap: 12px; margin-left: auto; min-width: 0;
+  .auth-placeholder { visibility: hidden; width: 146px; height: 40px; }
+  button { display: inline-flex; align-items: center; justify-content: center; min-height: 40px; background: transparent; border: 1px solid var(--border); border-radius: 5px; color: var(--muted); cursor: pointer; }
+  button:hover { color: white; background: var(--surface-hover); }
+  .logout-btn { padding: 8px 12px; font-size: 12px; }
+  .icon-btn { width: 40px; }
+  svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linejoin: round; }
 }
-.user-menu { display: flex; align-items: center; gap: .65rem; min-width: 0; }
-.profile-link {
-    display: block; max-width: 16ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: $text-1-color; font-size: .875rem; font-weight: 600;
-    &:hover { color: $purple-color; }
+.user-menu { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.profile-link { max-width: 14ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; &:hover { color: var(--accent); } }
+@media (max-width: 1100px) {
+  header { flex-wrap: wrap; gap: 0 20px; padding-top: 16px; }
+  .editorial-links { order: 3; width: 100%; min-height: 52px; }
 }
-@media (max-width: 900px) {
-    .left-side { flex-basis: 100%; justify-content: center; }
-    .editorial-links { margin-left: auto; }
-    .auth { margin-right: auto; }
-}
-@media (max-width: 480px) {
-    header { padding: 1rem .75rem; gap: .75rem; justify-content: center; }
-    .brand { font-size: 1rem; gap: .5rem; img { width: 2rem; height: 2rem; } }
-    .left-side { gap: .5rem; }
-    .editorial-links { justify-content: center; flex-basis: 100%; margin: 0; gap: 1.25rem; }
-    .auth { justify-content: center; margin: 0; gap: .75rem; }
-    .profile-link { max-width: 13ch; }
+@media (max-width: 600px) {
+  header { padding: 16px 16px 0; gap: 12px; }
+  .left-side { flex: 1 1 auto; }
+  .brand { font-size: 16px; }
+  .auth { flex-wrap: wrap; justify-content: flex-end; }
+  .editorial-links { min-height: 44px; gap: 24px; overflow-x: auto; }
 }

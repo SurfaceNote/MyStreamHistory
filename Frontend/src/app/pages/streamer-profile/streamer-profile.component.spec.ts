@@ -178,8 +178,9 @@ describe('StreamerProfileComponent', () => {
     ];
     fixture.detectChanges();
     const card = fixture.nativeElement.querySelector('.stream-card');
-    expect(card.querySelectorAll('.stream-covers img').length).toBe(4);
+    expect(card.querySelectorAll('.stream-game-item').length).toBe(4);
     expect(card.querySelector('.more-games').textContent).toContain('+21');
+    expect(card.querySelector('.stream-game-item').textContent).toContain('Category 0');
     expect(card.textContent).toContain('25 games played');
     expect(fixture.nativeElement.textContent).not.toContain(
       'Hidden stream title',

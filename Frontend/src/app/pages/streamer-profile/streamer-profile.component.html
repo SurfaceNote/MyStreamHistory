@@ -187,10 +187,8 @@
               track game.twitchCategoryId
             ) {
               <div class="game-mix-row">
-                <img
-                  [src]="getCategoryBoxArt(game.boxArtUrl, 80, 106)"
-                  alt=""
-                />
+                <app-game-art [src]="game.boxArtUrl" />
+
                 <div>
                   <div class="game-label">
                     <strong>{{ game.name }}</strong
@@ -348,21 +346,21 @@
           "
         ></ng-container>
       } @else {
-        <div class="summary-grid">
+        <div class="game-library" role="list" aria-label="Games played">
           @for (
             game of activeSection === "Overview"
               ? (statistics?.categories || []).slice(0, 6)
               : filteredGames;
             track game.twitchCategoryId
           ) {
-            <article class="summary-card">
-              <img
-                loading="lazy"
-                [src]="getCategoryBoxArt(game.boxArtUrl, 285, 380)"
-                [alt]="game.name"
-              />
-              <h3>{{ game.name }}</h3>
-              <span>{{ formatNumber(game.totalHours) }} hours</span>
+            <article class="summary-card game-entry" role="listitem">
+              <app-game-art [src]="game.boxArtUrl" />
+              <div class="game-copy">
+                <h3 class="game-name">{{ game.name }}</h3>
+                <dl class="game-facts">
+                  <div><dt>Time streamed</dt><dd>{{ formatNumber(game.totalHours) }} h</dd></div>
+                </dl>
+              </div>
             </article>
           } @empty {
             <p class="state">
@@ -432,34 +430,17 @@
 <ng-template #streamGames let-stream>
   <div class="stream-games">
     @if (stream.categories?.length) {
-      <div class="stream-covers">
+      <div class="stream-game-list">
         @for (game of stream.categories.slice(0, 4); track game.twitchId) {
-          <img
-            [src]="getCategoryBoxArt(game.boxArtUrl, 120, 160)"
-            [alt]="game.name"
-            [title]="game.name"
-            loading="lazy"
-          />
-        }
-        @if (stream.categories.length > 4) {
-          <span
-            class="more-games"
-            [attr.aria-label]="
-              stream.categories.length -
-              4 +
-              ' more games. Open stream to see all games.'
-            "
-            >+{{ stream.categories.length - 4 }}</span
-          >
+          <span class="stream-game-item">
+            <app-game-art [src]="game.boxArtUrl" />
+            <span>{{ game.name }}</span>
+          </span>
         }
       </div>
-      <p class="stream-games-label">
-        {{
-          stream.categories.length === 1
-            ? stream.categories[0].name
-            : stream.categories.length + " games played"
-        }}
-      </p>
+      @if (stream.categories.length > 4) {
+        <span class="more-games">+{{ stream.categories.length - 4 }} more · {{ stream.categories.length }} games played</span>
+      }
     } @else {
       <p class="stream-games-label">{{ stream.gameName || "No category" }}</p>
     }
@@ -467,19 +448,17 @@
 </ng-template>
 
 <ng-template #playthroughCards let-games>
-  <div class="playthrough-list">
+  <div class="game-library game-library--playthroughs" role="list" aria-label="Game playthroughs">
     @for (game of games; track game.playthroughId) {
-      <article class="playthrough-card">
-        <img
-          loading="lazy"
-          [src]="getCategoryBoxArt(game.boxArtUrl, 80, 106)"
-          [alt]="game.gameName"
-        />
-        <div>
-          <h3>{{ game.gameName }}</h3>
-          <p>{{ game.title }}</p>
-        </div>
-        <dl>
+      <article class="playthrough-card game-entry" role="listitem">
+        <app-game-art [src]="game.boxArtUrl" />
+        <div class="game-copy">
+          <div class="game-title-line">
+            <h3 class="game-name">{{ game.gameName }}</h3>
+            <span class="game-status" [attr.data-status]="game.status">{{ game.status === 'Planned' ? 'Planned' : game.status }}</span>
+          </div>
+          @if (game.title && game.title !== game.gameName) { <p class="game-subtitle">{{ game.title }}</p> }
+        <dl class="game-facts">
           <div>
             <dt>First stream</dt>
             <dd>
@@ -509,6 +488,7 @@
             <dd>{{ formatNumber(game.totalHours) }} h</dd>
           </div>
         </dl>
+        </div>
       </article>
     } @empty {
       <p class="state">

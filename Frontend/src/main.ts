@@ -1,3 +1,4 @@
+import { GameLayoutPreviewComponent, gamePreviewProviders } from './game-layout-preview';
 import { bootstrapApplication } from '@angular/platform-browser';
 import * as Sentry from '@sentry/angular';
 import { appConfig } from './app/app.config';
@@ -48,8 +49,9 @@ if (environment.sentry.dsn) {
   });
 }
 
-bootstrapApplication(AppComponent, appConfig)
+(location.pathname === '/__games-preview' ? bootstrapApplication(GameLayoutPreviewComponent, { ...appConfig, providers: [...appConfig.providers, ...gamePreviewProviders] }) : bootstrapApplication(AppComponent, appConfig))
   .catch((err) => {
     Sentry.captureException(err);
     console.error(err);
   });
+

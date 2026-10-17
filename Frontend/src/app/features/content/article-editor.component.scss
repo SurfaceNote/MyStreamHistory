@@ -1,4 +1,4 @@
-.editor-page { color: #f5f2f8; max-width: 1500px; margin: 0 auto; padding: 0 20px 80px; }
+.editor-page { color: #f5f2f8; width: 100%; margin: 0 auto; padding: 0 var(--page-gutter) 80px; }
 .topbar { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 22px; justify-content: space-between; padding: 15px 10px; background: #131116ee; border-bottom: 1px solid #393240; backdrop-filter: blur(12px); }
 .topbar a { color: #c9b4e0; font-size: .9rem; white-space: nowrap; }
 .top-actions { display: flex; gap: 9px; }

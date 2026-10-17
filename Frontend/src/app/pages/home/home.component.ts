@@ -7,10 +7,11 @@ import { RouterLink } from '@angular/router';
 import { LoginComponentComponent } from '../../components/buttons/login-component/login-component.component';
 import { StreamerService } from '../../service/streamer.service';
 import { StreamerShortDTO } from '../../models/streamer-short.dto';
+import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-home',
-  imports: [CommonModule, RouterLink, LoginComponentComponent],
+  imports: [CommonModule, FormsModule, RouterLink, LoginComponentComponent],
   templateUrl: './home.component.html',
   styleUrl: './home.component.scss'
 })
@@ -32,6 +33,27 @@ export class HomeComponent implements OnInit, OnDestroy {
   streamersLoadFailed = false;
   showingRecentStreamers = false;
   isLoadingStreamers: boolean = true;
+  searchQuery = '';
+  liveOnly = false;
+  private liveStatusSubscription?: Subscription;
+
+  get filteredStreamers(): StreamerShortDTO[] {
+    const query = this.searchQuery.trim().toLocaleLowerCase();
+    return this.streamers
+      .filter(streamer => (!this.liveOnly || this.liveStreamerIds.has(streamer.twitchId)) &&
+        streamer.displayName.toLocaleLowerCase().includes(query))
+      .sort((a, b) => Number(this.liveStreamerIds.has(b.twitchId)) - Number(this.liveStreamerIds.has(a.twitchId)) ||
+        a.displayName.localeCompare(b.displayName));
+  }
+
+  resetFilters(): void {
+    this.searchQuery = '';
+    this.liveOnly = false;
+  }
+
+  retryStreamers(): void {
+    if (!this.isLoadingStreamers) this.loadStreamers();
+  }
   
   private subscriptions: Subscription = new Subscription();
 
@@ -64,6 +86,8 @@ export class HomeComponent implements OnInit, OnDestroy {
 
   private loadStreamers(): void {
     this.isLoadingStreamers = true;
+    this.streamersLoadFailed = false;
+    this.showingRecentStreamers = false;
     this.subscriptions.add(
       this.streamerService.getAllStreamers().pipe(
         catchError(() => {
@@ -76,12 +100,15 @@ export class HomeComponent implements OnInit, OnDestroy {
           this.updateStreamers(streamers);
           this.watchLiveStatus();
           this.isLoadingStreamers = false;
+          this.changeDetector.markForCheck();
         },
         error: (error) => {
           this.streamersLoadFailed = true;
+          this.showingRecentStreamers = false;
           console.error('Error loading streamers:', error);
           this.isLoadingStreamers = false;
           this.streamers = [];
+          this.changeDetector.markForCheck();
         }
       })
     );
@@ -90,7 +117,8 @@ export class HomeComponent implements OnInit, OnDestroy {
   private watchLiveStatus(): void {
     if (!isPlatformBrowser(this.platformId)) return;
 
-    this.subscriptions.add(timer(60000, 60000).pipe(
+    this.liveStatusSubscription?.unsubscribe();
+    this.liveStatusSubscription = timer(60000, 60000).pipe(
       exhaustMap(() => this.streamerService.getAllStreamers().pipe(
         // Keep the last successful snapshot and retry on the next tick.
         catchError(() => EMPTY)
@@ -98,7 +126,8 @@ export class HomeComponent implements OnInit, OnDestroy {
     ).subscribe(streamers => {
       this.updateStreamers(streamers);
       this.showingRecentStreamers = false;
-    }));
+    });
+    this.subscriptions.add(this.liveStatusSubscription);
   }
 
   private updateStreamers(streamers: StreamerShortDTO[]): void {

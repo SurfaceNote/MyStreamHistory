@@ -46,7 +46,7 @@
 
       <div class="segment-picker" *ngIf="selectedGame; else noGameSelected">
         <div class="segment-picker-header">
-          <img *ngIf="selectedGameImageUrl" [src]="selectedGameImageUrl" [alt]="selectedGame.name">
+          <app-game-art [src]="selectedGame.boxArtUrl" />
           <div>
             <h4>{{ selectedGame.name }}</h4>
             <p>Select existing stream categories for this playthrough.</p>
@@ -59,6 +59,7 @@
             [checked]="isSelected(streamCategory.streamCategoryId)"
             (change)="toggleStreamCategory(streamCategory.streamCategoryId, $any($event.target).checked)">
           <div>
+            <strong>{{ streamCategory.streamTitle || 'Untitled stream' }}</strong>
             <span>{{ formatStreamCategoryDate(streamCategory.categoryStartedAt) }}</span>
           </div>
         </label>
@@ -87,16 +88,17 @@
       <article *ngFor="let playthrough of settings.playthroughs; trackBy: trackByPlaythrough" class="playthrough-item">
         <div class="playthrough-top">
           <div class="playthrough-title">
-            <img *ngIf="playthrough.boxArtUrl" [src]="playthrough.boxArtUrl" [alt]="playthrough.gameName">
+            <app-game-art [src]="playthrough.boxArtUrl" />
             <div>
-              <h4>{{ playthrough.title }}</h4>
-              <p>{{ playthrough.gameName }} | {{ playthrough.status }}</p>
+              <h4>{{ playthrough.gameName }}</h4>
+              <p *ngIf="playthrough.title && playthrough.title !== playthrough.gameName">{{ playthrough.title }}</p>
+              <span class="game-status" [attr.data-status]="playthrough.status">{{ playthrough.status }}</span>
             </div>
           </div>
 
           <div class="playthrough-actions">
-            <button type="button" class="secondary-btn small" (click)="startEdit(playthrough)">Edit</button>
-            <button type="button" class="danger-btn small" (click)="delete(playthrough)">Delete</button>
+            <button type="button" class="secondary-btn small" (click)="startEdit(playthrough)" [attr.aria-label]="'Edit ' + (playthrough.title || playthrough.gameName)">Edit</button>
+            <button type="button" class="danger-btn small" (click)="delete(playthrough)" [attr.aria-label]="'Delete ' + (playthrough.title || playthrough.gameName)">Delete</button>
           </div>
         </div>
 
@@ -105,11 +107,15 @@
           <span class="badge active" *ngIf="playthrough.autoAddNewStreams">Auto Add Enabled</span>
         </div>
 
-        <div class="segment-summary" *ngIf="playthrough.streamCategories.length">
-          <div *ngFor="let streamCategory of playthrough.streamCategories" class="segment-summary-item">
-            <span>{{ formatStreamCategoryDate(streamCategory.categoryStartedAt) }}</span>
+        <details class="segment-disclosure" *ngIf="playthrough.streamCategories.length">
+          <summary>View {{ playthrough.streamCategories.length }} stream segments</summary>
+          <div class="segment-summary">
+            <div *ngFor="let streamCategory of playthrough.streamCategories" class="segment-summary-item">
+              <strong>{{ streamCategory.streamTitle || 'Untitled stream' }}</strong>
+              <span>{{ formatStreamCategoryDate(streamCategory.categoryStartedAt) }}</span>
+            </div>
           </div>
-        </div>
+        </details>
       </article>
     </section>
   </div>

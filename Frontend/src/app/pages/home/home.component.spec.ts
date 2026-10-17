@@ -7,6 +7,74 @@ import { AuthService } from '../../auth/auth.service';
 import { StreamerService } from '../../service/streamer.service';
 
 describe('Home streamer directory', () => {
+  it('searches names, combines the live filter, and clears an empty result through the UI', fakeAsync(() => {
+    const directory = [
+      { twitchId: 1, displayName: 'Alice', avatar: '', isLive: false },
+      { twitchId: 2, displayName: 'ALINA', avatar: '', isLive: true },
+      { twitchId: 3, displayName: 'Bob', avatar: '', isLive: true }
+    ];
+    TestBed.configureTestingModule({
+      imports: [HomeComponent],
+      providers: [
+        provideRouter([]),
+        { provide: AuthService, useValue: { getAccessTokenObservable: () => of(null) } },
+        { provide: StreamerService, useValue: { getAllStreamers: () => of(directory) } }
+      ]
+    });
+    const fixture = TestBed.createComponent(HomeComponent);
+    fixture.detectChanges(); tick(); fixture.detectChanges();
+    const element: HTMLElement = fixture.nativeElement;
+    const names = () => Array.from(element.querySelectorAll('.streamer-copy strong')).map(node => node.textContent?.trim());
+    expect(names()).toEqual(['ALINA', 'Bob', 'Alice']);
+    const search = element.querySelector<HTMLInputElement>('input[type="search"]')!;
+    search.value = '  ali  ';
+    search.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    expect(names()).toEqual(['ALINA', 'Alice']);
+    const liveButton = element.querySelectorAll<HTMLButtonElement>('.directory-filters button')[1];
+    liveButton.click(); fixture.detectChanges();
+    expect(liveButton.getAttribute('aria-pressed')).toBe('true');
+    expect(names()).toEqual(['ALINA']);
+    expect(element.querySelector('.streamer-row')?.getAttribute('href')).toBe('/profile/2');
+    search.value = 'missing';
+    search.dispatchEvent(new Event('input')); fixture.detectChanges();
+    expect(element.textContent).toContain('No matching streamers');
+    element.querySelector<HTMLButtonElement>('.empty-state button')!.click();
+    fixture.detectChanges(); tick(); fixture.detectChanges();
+    expect(names()).toEqual(['ALINA', 'Bob', 'Alice']);
+    expect(search.value).toBe('');
+    expect(directory.map(item => item.twitchId)).toEqual([1, 2, 3]);
+    fixture.destroy();
+  }));
+
+  it('recovers from an initial failure and starts only one live refresh', fakeAsync(() => {
+    const directory = [{ twitchId: 1, displayName: 'Alice', avatar: '', isLive: true }];
+    const getAllStreamers = jasmine.createSpy().and.returnValues(
+      throwError(() => new Error('Unavailable')), of(directory), of(directory)
+    );
+    TestBed.configureTestingModule({
+      imports: [HomeComponent],
+      providers: [
+        provideRouter([]),
+        { provide: AuthService, useValue: { getAccessTokenObservable: () => of(null) } },
+        { provide: StreamerService, useValue: { getAllStreamers, getStreamers: () => throwError(() => new Error('Unavailable')) } }
+      ]
+    });
+    spyOn(console, 'error');
+    const fixture = TestBed.createComponent(HomeComponent);
+    fixture.detectChanges(); tick(); fixture.detectChanges();
+    const element: HTMLElement = fixture.nativeElement;
+    expect(element.textContent).toContain("We couldn't load the streamers");
+    element.querySelector<HTMLButtonElement>('.empty-state button')!.click();
+    fixture.detectChanges();
+    expect(element.querySelectorAll('.streamer-row').length).toBe(1);
+    expect(fixture.componentInstance.streamersLoadFailed).toBeFalse();
+    expect(fixture.componentInstance.showingRecentStreamers).toBeFalse();
+    tick(60000);
+    expect(getAllStreamers.calls.count()).toBe(3);
+    fixture.destroy();
+  }));
+
   it('loads every streamer and refreshes live status', fakeAsync(() => {
     const streamers = Array.from({length: 15}, (_, i) => ({twitchId: i, displayName: `Streamer ${i}`, avatar: ''}));
     let live = true;
@@ -117,14 +185,14 @@ describe('Home authentication after the first render', () => {
       tick(0);
       fixture.detectChanges();
       const element: HTMLElement = fixture.nativeElement;
-      expect(element.querySelectorAll('.auth-placeholder').length).toBe(2);
+      expect(element.querySelectorAll('.auth-placeholder').length).toBe(1);
       expect(element.querySelectorAll('app-login-component').length).toBe(0);
       expect(element.querySelectorAll('a[href="/profile/106010980"]').length).toBe(0);
       tokens.next(token);
       fixture.detectChanges();
       expect(element.querySelectorAll('.auth-placeholder').length).toBe(0);
-      expect(element.querySelectorAll('app-login-component').length).toBe(token ? 0 : 2);
-      expect(element.querySelectorAll('a[href="/profile/106010980"]').length).toBe(token ? 2 : 0);
+      expect(element.querySelectorAll('app-login-component').length).toBe(token ? 0 : 1);
+      expect(element.querySelectorAll('a[href="/profile/106010980"]').length).toBe(token ? 1 : 0);
       fixture.destroy();
     }));
   }
@@ -152,7 +220,7 @@ describe('Home authentication after the first render', () => {
     component.ngOnDestroy();
   });
 
-  it('replaces both login prompts with profile links for a stored session and restores them on logout', fakeAsync(() => {
+  it('replaces the sign-in prompt with a profile link for a stored session and restores them on logout', fakeAsync(() => {
     const tokens = new BehaviorSubject<string | null>('stored-session');
     TestBed.configureTestingModule({
       imports: [HomeComponent],
@@ -177,16 +245,13 @@ describe('Home authentication after the first render', () => {
 
     const element: HTMLElement = fixture.nativeElement;
     expect(element.querySelectorAll('app-login-component').length).toBe(0);
-    expect(element.querySelectorAll('a[href="/profile/106010980"]').length).toBe(2);
+    expect(element.querySelectorAll('a[href="/profile/106010980"]').length).toBe(1);
 
-    const profile = element.querySelector<HTMLElement>('.hero-buttons .btn-primary')!;
-    const discord = element.querySelector<HTMLElement>('.hero-buttons .btn-secondary')!;
-    expect(discord.getBoundingClientRect().left - profile.getBoundingClientRect().right).toBeCloseTo(16, 0);
-    expect(getComputedStyle(element.querySelector('.hero-text')!).animationName).toBe('none');
+    expect(element.querySelector('.auth-slot .primary-button')?.textContent).toContain('Open my profile');
 
     tokens.next(null);
     fixture.detectChanges();
-    expect(element.querySelectorAll('app-login-component').length).toBe(2);
+    expect(element.querySelectorAll('app-login-component').length).toBe(1);
     expect(element.querySelectorAll('a[href="/profile/106010980"]').length).toBe(0);
     expect(fixture.componentInstance.twitchId).toBe('');
     fixture.destroy();

@@ -33,9 +33,9 @@
 .list-card,
 .state-card,
 .empty-card {
-  background: linear-gradient(180deg, rgba(34, 34, 40, 0.92), rgba(24, 24, 27, 0.98));
+  background: var(--surface);
   border: 1px solid #2f2f39;
-  border-radius: 16px;
+  border-radius: 6px;
 }
 
 .form-card,
@@ -70,7 +70,7 @@
   padding: 12px 14px;
   border-radius: 10px;
   border: 1px solid #3b3b46;
-  background: #111114;
+  background: var(--surface);
   color: #efeff1;
 }
 
@@ -83,7 +83,7 @@
   margin-top: 12px;
   padding: 16px;
   border: 1px solid #343440;
-  border-radius: 14px;
+  border-radius: 6px;
   background: #121216;
 }
 
@@ -149,8 +149,8 @@
 .playthrough-item {
   padding: 18px;
   border: 1px solid #32323b;
-  border-radius: 14px;
-  background: #111114;
+  border-radius: 6px;
+  background: var(--surface);
 }
 
 .playthrough-item + .playthrough-item {
@@ -287,4 +287,24 @@
   .playthrough-actions {
     width: 100%;
   }
+}
+
+.playthrough-title { min-width: 0; --game-art-width: 48px; }
+.playthrough-title > div { min-width: 0; }
+.playthrough-title h4 { font-size: 15px; line-height: 1.45; overflow-wrap: anywhere; }
+.playthrough-title p { font-size: 12px; overflow-wrap: anywhere; }
+.playthrough-title .game-status { margin-top: 8px; }
+.playthrough-actions { flex-shrink: 0; flex-wrap: wrap; }
+.segment-picker-header { --game-art-width: 42px; }
+.segment-picker-header > div, .segment-option > div { min-width: 0; overflow-wrap: anywhere; }
+.segment-option strong, .segment-summary-item strong { font-size: 13px; font-weight: 500; overflow-wrap: anywhere; }
+.segment-disclosure { border-top: 1px solid var(--border); }
+.segment-disclosure summary { padding: 14px 0; font-size: 12px; color: var(--muted); cursor: pointer; }
+.segment-summary-item { padding: 10px 12px; border-radius: 4px; }
+.playthrough-item .badges { margin: 12px 0; }
+.playthrough-item .badge { border-radius: 4px; padding: 4px 8px; font-size: 11px; }
+@media (max-width: 600px) {
+  .playthrough-top { flex-direction: column; gap: 16px; }
+  .playthrough-actions { align-self: flex-end; }
+  .playthrough-item { padding: 14px; }
 }

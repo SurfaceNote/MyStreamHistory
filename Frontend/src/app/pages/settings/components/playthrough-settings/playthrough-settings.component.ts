@@ -1,3 +1,4 @@
+import { GameArtComponent } from '../../../../components/game-art/game-art.component';
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -27,7 +28,7 @@ interface PlaythroughFormState {
 @Component({
   selector: 'app-playthrough-settings',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [GameArtComponent, CommonModule, FormsModule],
   templateUrl: './playthrough-settings.component.html',
   styleUrls: ['./playthrough-settings.component.scss']
 })

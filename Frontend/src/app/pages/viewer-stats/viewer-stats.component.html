@@ -95,14 +95,16 @@
               <h2>Favorite categories</h2>
             </div>
           </div>
-          <div class="categories-grid">
+          <div class="game-library" role="list" aria-label="Favorite categories">
             @for (category of stats.favoriteCategories; track category.twitchCategoryId) {
-              <article class="category-card">
-                <img [src]="getCategoryBoxArt(category.boxArtUrl, 180, 240)" [alt]="category.name + ' cover'">
-                <div>
-                  <h3>{{ category.name }}</h3>
-                  <strong>{{ formatWatchTime(category.minutesWatched) }}</strong>
-                  <small>{{ category.streamsCount }} streams</small>
+              <article class="game-entry" role="listitem">
+                <app-game-art [src]="category.boxArtUrl" />
+                <div class="game-copy">
+                  <h3 class="game-name">{{ category.name }}</h3>
+                  <dl class="game-facts">
+                    <div><dt>Time watched</dt><dd>{{ formatWatchTime(category.minutesWatched) }}</dd></div>
+                    <div><dt>Streams watched</dt><dd>{{ category.streamsCount }}</dd></div>
+                  </dl>
                 </div>
               </article>
             }
@@ -124,7 +126,10 @@
                 <div class="history-main">
                   <strong>{{ stream.streamTitle || 'Untitled stream' }}</strong>
                   <span>{{ formatDate(stream.startedAt) }}</span>
-                  <small>{{ stream.categories.join(' · ') || 'No category' }}</small>
+                  <span class="game-tokens">
+                    @for (name of stream.categories; track $index) { <span class="game-token">{{ name }}</span> }
+                    @empty { <span class="game-token">No category</span> }
+                  </span>
                 </div>
                 <div class="history-watch-time">
                   <strong>{{ formatWatchTime(stream.minutesWatched) }}</strong>

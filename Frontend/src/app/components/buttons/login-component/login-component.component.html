@@ -1,7 +1,4 @@
-<span class="join-text">Join now for <b>FREE</b></span>
-<div class="login-btn">
-    <button (click)="loginWithTwitch()">
-        <span><b>Log in</b> via</span>
-        <i class="fa-brands fa-twitch"></i>
-    </button>
-</div>
+<button type="button" (click)="loginWithTwitch()" aria-label="Sign in with Twitch">
+  <svg width="17" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 2 1 6v16h6v2l4-4h5l7-7V2H3zm18 10-4 4h-6l-4 4v-4H3V4h18v8zM16 6h2v6h-2V6zm-5 0h2v6h-2V6z"/></svg>
+  {{ compact ? 'Sign in' : 'Sign in with Twitch' }}
+</button>

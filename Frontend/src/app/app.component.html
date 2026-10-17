@@ -1,8 +1,8 @@
-<!-- Background effects -->
 @if (!isOverlayRoute) {
-  <div class="bg-effect bg-effect-top-right"></div>
-  <div class="bg-effect bg-effect-bottom-left"></div>
+  <a class="skip-link" [href]="mainContentLink">Skip to content</a>
   <app-header></app-header>
 }
 
-<router-outlet />
+<div id="main-content" tabindex="-1">
+  <router-outlet />
+</div>

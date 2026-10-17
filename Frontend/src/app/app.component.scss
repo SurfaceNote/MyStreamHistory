@@ -1,47 +1,8 @@
-@use "variables" as *;
-
-// Background effects
-.bg-effect {
-    position: fixed;
-    border-radius: 50%;
-    pointer-events: none;
-    z-index: 0;
-    opacity: 0.3;
+:host { display: block; }
+.skip-link {
+  position: fixed; top: 8px; left: 16px; z-index: 100;
+  padding: 12px 20px; background: #ececee; color: #171719; border-radius: 4px;
+  transform: translateY(-150%);
+  &:focus { transform: translateY(0); }
 }
-
-.bg-effect-top-right {
-    top: 0;
-    right: 0;
-    width: 700px;
-    height: 700px;
-    background: radial-gradient(
-        circle at top right, 
-        rgba(100, 65, 165, 0.4) 0%, 
-        rgba(100, 65, 165, 0.25) 20%,
-        rgba(100, 65, 165, 0.15) 40%,
-        transparent 70%
-    );
-    transform: translate(35%, -35%);
-}
-
-.bg-effect-bottom-left {
-    bottom: 0;
-    left: 0;
-    width: 600px;
-    height: 600px;
-    background: radial-gradient(
-        circle at bottom left, 
-        rgba(255, 102, 0, 0.3) 0%, 
-        rgba(255, 102, 0, 0.18) 20%,
-        rgba(255, 102, 0, 0.1) 40%,
-        transparent 70%
-    );
-    transform: translate(-35%, 35%);
-}
-
-// Ensure content is above background effects
-app-header,
-router-outlet {
-    position: relative;
-    z-index: 1;
-}
+#main-content:focus { outline: none; }

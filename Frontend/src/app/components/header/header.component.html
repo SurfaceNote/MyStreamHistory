@@ -4,13 +4,14 @@
         <span class="alpha-label" title="Alpha version in development">ALPHA</span>
     </div>
     <nav class="editorial-links" aria-label="Main navigation">
-        <a routerLink="/news" routerLinkActive="active">News</a>
-        <a routerLink="/reviews" routerLinkActive="active">Reviews</a>
-        <a *ngIf="authReady && isLoggedIn" routerLink="/analytics/community" routerLinkActive="active">Community</a>
+        <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" ariaCurrentWhenActive="page">Streamers</a>
+        <a routerLink="/news" routerLinkActive="active" ariaCurrentWhenActive="page">News</a>
+        <a routerLink="/reviews" routerLinkActive="active" ariaCurrentWhenActive="page">Reviews</a>
+        <a *ngIf="authReady && isLoggedIn" routerLink="/analytics/community" routerLinkActive="active" ariaCurrentWhenActive="page">Community</a>
     </nav>
     <div class="auth" [attr.aria-busy]="!authReady">
         <span *ngIf="!authReady" class="auth-placeholder" aria-hidden="true"></span>
-        <app-login-component *ngIf="authReady && !isLoggedIn"/>
+        <app-login-component *ngIf="authReady && !isLoggedIn" [compact]="true"/>
         <div *ngIf="authReady && isLoggedIn" class="user-menu">
             <a class="profile-link" [routerLink]="['/profile', twitchId]" [title]="username || ''" [attr.aria-label]="'Profile: ' + username">{{username}}</a>
             <button *ngIf="isAdmin" class="icon-btn admin-btn" (click)="navigateToAdmin()" title="Publications admin" aria-label="Publications admin">

@@ -19,6 +19,10 @@ export class AppComponent implements OnInit {
     return this.router.url.startsWith('/overlay/');
   }
 
+  get mainContentLink(): string {
+    return this.router.url.split('#')[0] + '#main-content';
+  }
+
   ngOnInit(): void {
     this.router.events
       .pipe(filter(event => event instanceof NavigationEnd))

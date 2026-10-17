@@ -1,3 +1,4 @@
+import { GameArtComponent } from '../../components/game-art/game-art.component';
 import { CommonModule } from '@angular/common';
 import { Component, inject, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -9,7 +10,7 @@ import { SeoService } from '../../service/seo.service';
 
 @Component({
   selector: 'app-viewer-stats',
-  imports: [CommonModule],
+  imports: [GameArtComponent, CommonModule],
   templateUrl: './viewer-stats.component.html',
   styleUrl: './viewer-stats.component.scss'
 })

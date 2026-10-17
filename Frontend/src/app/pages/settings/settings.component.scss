@@ -1,18 +1,21 @@
 .settings-container {
   display: flex;
+  width: 100%;
+  margin: 0 auto;
   min-height: calc(100vh - 80px);
-  background: #0e0e10;
+  background: transparent;
   color: #efeff1;
-  padding: 20px;
+  padding: 32px var(--page-gutter);
   gap: 20px;
 }
 
 .settings-content {
   flex: 1;
-  background: #18181b;
+  min-width: 0;
+  background: var(--surface);
   border-radius: 8px;
   padding: 30px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border);
 }
 
 .in-development {
@@ -37,3 +40,5 @@
   }
 }
 
+
+@media (max-width: 600px) { .settings-container { padding: 16px; } .settings-content { padding: 20px; } }

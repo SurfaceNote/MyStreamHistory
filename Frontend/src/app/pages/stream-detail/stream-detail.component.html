@@ -44,32 +44,22 @@
   <div class="content-wrapper">
     <!-- Categories Section -->
     <div class="categories-section">
-      <h2 class="section-title">Categories:</h2>
-      <div class="categories-grid">
-        <div class="category-card" *ngFor="let category of streamDetails.categories">
-          <div class="category-image-wrapper">
-            <img 
-              [src]="getCategoryBoxArt(category.boxArtUrl, 285, 380)" 
-              alt="{{ category.name }}"
-              class="category-image"
-            />
-          </div>
-          <div class="category-details">
-            <h3 class="category-name">{{ category.name }}</h3>
-            <div class="category-stats">
-              <div class="category-stat">
-                <span class="stat-icon">⏱</span>
-                <span class="stat-label">Duration</span>
-                <span class="stat-value">{{ formatMinutes(category.durationMinutes) }}</span>
-              </div>
-              <div class="category-stat">
-                <span class="stat-icon">👁</span>
-                <span class="stat-label">Unique chat accounts</span>
-                <span class="stat-value">{{ category.uniqueViewers ?? '—' }}</span>
-              </div>
+      <h2 class="section-title">Games & categories <span class="viewers-count">({{ streamDetails.categories.length }})</span></h2>
+      <div class="game-library" role="list" aria-label="Games in this stream">
+        @for (category of streamDetails.categories; track category.streamCategoryId) {
+          <article class="game-entry" role="listitem">
+            <app-game-art [src]="category.boxArtUrl" />
+            <div class="game-copy">
+              <h3 class="game-name">{{ category.name }}</h3>
+              <dl class="game-facts">
+                <div><dt>Time streamed</dt><dd>{{ formatMinutes(category.durationMinutes) }}</dd></div>
+                <div><dt>Unique chat accounts</dt><dd>{{ category.uniqueViewers ?? '—' }}</dd></div>
+              </dl>
             </div>
-          </div>
-        </div>
+          </article>
+        } @empty {
+          <p class="game-empty">No games recorded for this stream.</p>
+        }
       </div>
     </div>
 
