@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using MyStreamHistory.Shared.Application.Transport;
 using MyStreamHistory.Shared.Base.Contracts.Community;
 using MyStreamHistory.Shared.Base.Contracts.TwitchEventSub;
@@ -10,14 +11,16 @@ using MyStreamHistory.ViewerService.Application.Interfaces;
 using MyStreamHistory.ViewerService.Application.Services;
 using MyStreamHistory.ViewerService.Domain.Entities;
 using MyStreamHistory.ViewerService.Infrastructure.Persistence;
+using MyStreamHistory.ViewerService.Infrastructure.Options;
 
 namespace MyStreamHistory.ViewerService.Infrastructure.Services;
 
 public class CommunityService(ViewerServiceDbContext db, ITransportBus bus, IConfiguration configuration, IHostEnvironment environment,
-    ILogger<CommunityService> logger) : ICommunityService
+    ILogger<CommunityService> logger, IOptions<CommunityAnalyticsOptions> options) : ICommunityService
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
     private bool Enabled => configuration.GetValue<bool>("Features:CommunityAnalytics:Enabled");
+    private TimeSpan MessageReceiptRetention => TimeSpan.FromDays(options.Value.MessageReceiptRetentionDays);
 
     private async Task EnsureSettings(string channel, DateTime? trackingAt, CancellationToken ct)
     {
@@ -62,10 +65,17 @@ public class CommunityService(ViewerServiceDbContext db, ITransportBus bus, ICon
     public async Task RecordMessageAsync(ChatMessageEventContract message, Guid session, CancellationToken ct)
     {
         if (!Enabled || message.SourceBroadcasterUserId != null && message.SourceBroadcasterUserId != message.BroadcasterUserId) return;
+        var received = DateTime.SpecifyKind(message.MessageTimestamp, DateTimeKind.Utc);
+        // Once the deduplication key expires, an old replay must not increment the aggregate again.
+        if (received < DateTime.UtcNow - MessageReceiptRetention)
+        {
+            logger.LogWarning("Ignoring chat message outside the retention window for channel {Channel}, received at {ReceivedAt}",
+                message.BroadcasterUserId, received);
+            return;
+        }
         var channel = message.BroadcasterUserId;
         var id = message.TwitchMessageId ?? "legacy:" + message.MessageId;
         var provisional = message.TwitchMessageId == null || !message.HasSourceMetadata;
-        var received = DateTime.SpecifyKind(message.MessageTimestamp, DateTimeKind.Utc);
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         await EnsureSettings(channel, null, ct);
         await db.Database.ExecuteSqlInterpolatedAsync($"""
@@ -74,8 +84,8 @@ public class CommunityService(ViewerServiceDbContext db, ITransportBus bus, ICon
             ON CONFLICT ("TwitchUserId") DO NOTHING
             """, ct);
         var inserted = await db.Database.ExecuteSqlInterpolatedAsync($"""
-            INSERT INTO "CommunityMessageReceipts" ("StreamerTwitchUserId", "MessageId", "StreamSessionId", "ViewerTwitchUserId", "ReceivedAt", "Provisional")
-            VALUES ({channel}, {id}, {session}, {message.ChatterUserId}, {received}, {provisional}) ON CONFLICT DO NOTHING
+            INSERT INTO "CommunityMessageReceipts" ("StreamerTwitchUserId", "MessageId", "ReceivedAt")
+            VALUES ({channel}, {id}, {received}) ON CONFLICT DO NOTHING
             """, ct);
         if (inserted > 0)
             await db.Database.ExecuteSqlInterpolatedAsync($"""
@@ -86,6 +96,29 @@ public class CommunityService(ViewerServiceDbContext db, ITransportBus bus, ICon
                     "Provisional" = "CommunityMessageAggregates"."Provisional" OR EXCLUDED."Provisional"
                 """, ct);
         await tx.CommitAsync(ct);
+    }
+
+    public async Task<int> DeleteExpiredMessageReceiptsAsync(CancellationToken ct)
+    {
+        var threshold = DateTime.UtcNow - MessageReceiptRetention;
+        const int batchSize = 1000;
+        var total = 0;
+        int deleted;
+        do
+        {
+            // Commit each batch separately; do not load the journal or hold a transaction over the whole backlog.
+            deleted = await db.Database.ExecuteSqlInterpolatedAsync($"""
+                DELETE FROM "CommunityMessageReceipts"
+                WHERE ("StreamerTwitchUserId", "MessageId") IN (
+                    SELECT "StreamerTwitchUserId", "MessageId" FROM "CommunityMessageReceipts"
+                    WHERE "ReceivedAt" < {threshold}
+                    ORDER BY "ReceivedAt"
+                    LIMIT {batchSize}
+                )
+                """, ct);
+            total += deleted;
+        } while (deleted == batchSize);
+        return total;
     }
 
     public async Task<CommunityResponse> HandleAsync(CommunityRequest request, CancellationToken ct)

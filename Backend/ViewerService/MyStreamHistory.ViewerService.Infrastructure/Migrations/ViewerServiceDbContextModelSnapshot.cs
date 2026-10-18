@@ -98,20 +98,12 @@ namespace MyStreamHistory.ViewerService.Infrastructure.Migrations
                     b.Property<string>("MessageId")
                         .HasColumnType("text");
 
-                    b.Property<bool>("Provisional")
-                        .HasColumnType("boolean");
-
                     b.Property<DateTime>("ReceivedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid>("StreamSessionId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("ViewerTwitchUserId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.HasKey("StreamerTwitchUserId", "MessageId");
+
+                    b.HasIndex("ReceivedAt");
 
                     b.ToTable("CommunityMessageReceipts");
                 });

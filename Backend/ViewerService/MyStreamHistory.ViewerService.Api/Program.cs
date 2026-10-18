@@ -46,8 +46,10 @@ builder.Services
 if (twitchDataCollection.Enabled)
 {
     builder.Services.AddHostedService<ViewerDataProcessingBackgroundService>();
-    builder.Services.AddHostedService<EventSubHistoryCleanupBackgroundService>();
 }
+
+// Retention maintenance must continue even when collection or community analytics is disabled.
+builder.Services.AddHostedService<EventSubHistoryCleanupBackgroundService>();
 
 if (builder.Configuration.GetValue<bool>("Features:CommunityAnalytics:Enabled"))
     builder.Services.AddHostedService<CommunityCalculationBackgroundService>();

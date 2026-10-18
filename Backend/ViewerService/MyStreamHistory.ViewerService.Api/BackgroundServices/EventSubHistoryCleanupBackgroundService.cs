@@ -21,17 +21,18 @@ public class EventSubHistoryCleanupBackgroundService : BackgroundService
 
         using var timer = new PeriodicTimer(TimeSpan.FromHours(2));
 
-        while (await timer.WaitForNextTickAsync(stoppingToken))
+        do
         {
             try
             {
                 await CleanupOldMessagesAsync(stoppingToken);
             }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { break; }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error cleaning up old EventSub messages");
             }
-        }
+        } while (await timer.WaitForNextTickAsync(stoppingToken));
     }
 
     private async Task CleanupOldMessagesAsync(CancellationToken cancellationToken)
@@ -43,6 +44,10 @@ public class EventSubHistoryCleanupBackgroundService : BackgroundService
         await repository.DeleteOlderThanAsync(threshold, cancellationToken);
         
         _logger.LogInformation("Cleaned up EventSub messages older than {Threshold}", threshold);
+
+        var community = scope.ServiceProvider.GetRequiredService<ICommunityService>();
+        var deleted = await community.DeleteExpiredMessageReceiptsAsync(cancellationToken);
+        _logger.LogInformation("Cleaned up {Count} expired community message receipts", deleted);
     }
 }
 

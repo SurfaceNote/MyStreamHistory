@@ -32,6 +32,7 @@ public class ViewerServiceDbContext : DbContext
         modelBuilder.Entity<CommunityPresence>().HasKey(x => new { x.StreamerTwitchUserId, x.ViewerTwitchUserId, x.Minute });
         modelBuilder.Entity<CommunityPresence>().HasIndex(x => new { x.StreamerTwitchUserId, x.StreamSessionId });
         modelBuilder.Entity<CommunityMessageReceipt>().HasKey(x => new { x.StreamerTwitchUserId, x.MessageId });
+        modelBuilder.Entity<CommunityMessageReceipt>().HasIndex(x => x.ReceivedAt);
         modelBuilder.Entity<CommunityMessageAggregate>().HasKey(x => new { x.StreamerTwitchUserId, x.StreamSessionId, x.ViewerTwitchUserId });
         modelBuilder.Entity<CommunityExclusion>().HasKey(x => new { x.StreamerTwitchUserId, x.ViewerTwitchUserId });
         modelBuilder.Entity<CommunityDailyState>().HasKey(x => new { x.StreamerTwitchUserId, x.Revision, x.MethodVersion, x.Date, x.ViewerTwitchUserId });

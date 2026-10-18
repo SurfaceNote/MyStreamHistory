@@ -1,8 +1,11 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using MyStreamHistory.Shared.Application.Transport;
 using MyStreamHistory.Shared.Base.Contracts.Community;
 using MyStreamHistory.Shared.Base.Contracts.TwitchEventSub;
@@ -13,6 +16,7 @@ using MyStreamHistory.ViewerService.Application.Interfaces;
 using MyStreamHistory.ViewerService.Domain.Entities;
 using MyStreamHistory.ViewerService.Infrastructure.Persistence;
 using MyStreamHistory.ViewerService.Infrastructure.Services;
+using MyStreamHistory.ViewerService.Infrastructure.Options;
 using Npgsql;
 using Xunit;
 
@@ -91,6 +95,127 @@ public class CommunityPostgresTests
     }
 
     [PostgresFact]
+    public async Task ExpiredReceiptsAreRemovedWithoutChangingCountsOrRecentDeduplication()
+    {
+        await using var fixture = await Database.Create();
+        await using var db = fixture.Viewers();
+        var session = Guid.NewGuid();
+        db.CommunityMessageReceipts.Add(new()
+        {
+            StreamerTwitchUserId = "10", MessageId = "expired", ReceivedAt = DateTime.UtcNow.AddDays(-8)
+        });
+        db.CommunityMessageAggregates.Add(new()
+        {
+            StreamerTwitchUserId = "10", StreamSessionId = session, ViewerTwitchUserId = "1", Count = 5
+        });
+        await db.SaveChangesAsync();
+        var service = Service(db);
+        await service.RecordMessageAsync(Message(), session, default);
+
+        Assert.Equal(1, await service.DeleteExpiredMessageReceiptsAsync(default));
+        var receipt = Assert.Single(await db.CommunityMessageReceipts.AsNoTracking().ToListAsync());
+        Assert.Equal("twitch-message-1", receipt.MessageId);
+        Assert.Equal(6, (await db.CommunityMessageAggregates.AsNoTracking().SingleAsync()).Count);
+
+        await service.RecordMessageAsync(Message(), session, default);
+        Assert.Equal(6, (await db.CommunityMessageAggregates.AsNoTracking().SingleAsync()).Count);
+        Assert.Equal(0, await service.DeleteExpiredMessageReceiptsAsync(default));
+    }
+
+    [PostgresFact]
+    public async Task ReplayOutsideRetentionWindowDoesNotRecountAfterReceiptWasDeleted()
+    {
+        await using var fixture = await Database.Create();
+        await using var db = fixture.Viewers();
+        var session = Guid.NewGuid();
+        var message = Message();
+        message.MessageTimestamp = DateTime.UtcNow.AddDays(-8);
+        db.CommunityMessageReceipts.Add(new()
+        {
+            StreamerTwitchUserId = "10", MessageId = message.TwitchMessageId!, ReceivedAt = message.MessageTimestamp
+        });
+        db.CommunityMessageAggregates.Add(new()
+        {
+            StreamerTwitchUserId = "10", StreamSessionId = session, ViewerTwitchUserId = "1", Count = 1
+        });
+        await db.SaveChangesAsync();
+        var service = Service(db);
+
+        Assert.Equal(1, await service.DeleteExpiredMessageReceiptsAsync(default));
+        await service.RecordMessageAsync(message, session, default);
+
+        Assert.Empty(await db.CommunityMessageReceipts.AsNoTracking().ToListAsync());
+        Assert.Equal(1, (await db.CommunityMessageAggregates.AsNoTracking().SingleAsync()).Count);
+    }
+
+    [PostgresFact]
+    public async Task CustomRetentionCleansMultipleBatchesEvenWhenAnalyticsIsDisabled()
+    {
+        await using var fixture = await Database.Create();
+        await using var db = fixture.Viewers();
+        db.CommunityMessageReceipts.AddRange(Enumerable.Range(0, 1001).Select(i => new CommunityMessageReceipt
+        {
+            StreamerTwitchUserId = "10", MessageId = "old-" + i, ReceivedAt = DateTime.UtcNow.AddDays(-2)
+        }));
+        db.CommunityMessageReceipts.Add(new()
+        {
+            StreamerTwitchUserId = "10", MessageId = "recent", ReceivedAt = DateTime.UtcNow.AddHours(-12)
+        });
+        await db.SaveChangesAsync();
+
+        var deleted = await Service(db, retentionDays: 1, enabled: false).DeleteExpiredMessageReceiptsAsync(default);
+
+        Assert.Equal(1001, deleted);
+        Assert.Equal("recent", (await db.CommunityMessageReceipts.AsNoTracking().SingleAsync()).MessageId);
+    }
+
+    [PostgresFact]
+    public async Task CustomRetentionAlsoAppliesToIncomingMessages()
+    {
+        await using var fixture = await Database.Create();
+        await using var db = fixture.Viewers();
+        var service = Service(db, retentionDays: 1);
+        var message = Message();
+        message.MessageTimestamp = DateTime.UtcNow.AddDays(-2);
+
+        await service.RecordMessageAsync(message, Guid.NewGuid(), default);
+
+        Assert.Empty(await db.CommunityMessageReceipts.ToListAsync());
+        Assert.Empty(await db.CommunityMessageAggregates.ToListAsync());
+
+        message.MessageTimestamp = DateTime.UtcNow.AddHours(-12);
+        await service.RecordMessageAsync(message, Guid.NewGuid(), default);
+        Assert.Equal(1, (await db.CommunityMessageAggregates.SingleAsync()).Count);
+    }
+
+    [PostgresFact]
+    public async Task ReceiptCompactionMigrationPreservesExistingKeysAndAggregates()
+    {
+        await using var fixture = await Database.Create();
+        await using var db = fixture.Viewers();
+        await db.GetService<IMigrator>().MigrateAsync("20261017180125_AddCommunityAnalytics");
+        var session = Guid.NewGuid();
+        var received = DateTime.UtcNow.AddHours(-1);
+        await db.Database.ExecuteSqlInterpolatedAsync($"""
+            INSERT INTO "CommunityMessageReceipts"
+                ("StreamerTwitchUserId", "MessageId", "StreamSessionId", "ViewerTwitchUserId", "ReceivedAt", "Provisional")
+            VALUES ('10', 'twitch-message-1', {session}, '1', {received}, FALSE)
+            """);
+        db.CommunityMessageAggregates.Add(new()
+        {
+            StreamerTwitchUserId = "10", StreamSessionId = session, ViewerTwitchUserId = "1", Count = 7
+        });
+        await db.SaveChangesAsync();
+
+        await db.Database.MigrateAsync();
+
+        Assert.False(db.Database.HasPendingModelChanges());
+        Assert.Equal("twitch-message-1", (await db.CommunityMessageReceipts.SingleAsync()).MessageId);
+        await Service(db).RecordMessageAsync(Message(), session, default);
+        Assert.Equal(7, (await db.CommunityMessageAggregates.AsNoTracking().SingleAsync()).Count);
+    }
+
+    [PostgresFact]
     public async Task HistoricalImportIsRepeatableAndSettingsInvalidateCachedReport()
     {
         await using var fixture = await Database.Create();
@@ -150,9 +275,10 @@ public class CommunityPostgresTests
         BroadcasterUserId = "10", ChatterUserId = "1", ChatterUserLogin = "author", ChatterUserName = "Author",
         MessageId = "delivery-1", TwitchMessageId = "twitch-message-1", HasSourceMetadata = true, MessageTimestamp = DateTime.UtcNow
     };
-    internal static CommunityService Service(ViewerServiceDbContext db, FakeBus? bus = null) => new(db, bus ?? new FakeBus(),
-        new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> { ["Features:CommunityAnalytics:Enabled"] = "true" }).Build(),
-        new EnvironmentStub(), NullLogger<CommunityService>.Instance);
+    internal static CommunityService Service(ViewerServiceDbContext db, FakeBus? bus = null, int retentionDays = 7, bool enabled = true) => new(db, bus ?? new FakeBus(),
+        new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> { ["Features:CommunityAnalytics:Enabled"] = enabled.ToString() }).Build(),
+        new EnvironmentStub(), NullLogger<CommunityService>.Instance,
+        Options.Create(new CommunityAnalyticsOptions { MessageReceiptRetentionDays = retentionDays }));
 
     private sealed class EnvironmentStub : IHostEnvironment
     {

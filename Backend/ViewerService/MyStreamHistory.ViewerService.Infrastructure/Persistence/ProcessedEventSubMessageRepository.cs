@@ -27,12 +27,9 @@ public class ProcessedEventSubMessageRepository : IProcessedEventSubMessageRepos
 
     public async Task DeleteOlderThanAsync(DateTime threshold, CancellationToken cancellationToken = default)
     {
-        var oldMessages = await _context.ProcessedEventSubMessages
+        await _context.ProcessedEventSubMessages
             .Where(m => m.ProcessedAt < threshold)
-            .ToListAsync(cancellationToken);
-
-        _context.ProcessedEventSubMessages.RemoveRange(oldMessages);
-        await _context.SaveChangesAsync(cancellationToken);
+            .ExecuteDeleteAsync(cancellationToken);
     }
 }
 

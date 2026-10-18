@@ -35,10 +35,7 @@ public class CommunityMessageReceipt
 {
     public string StreamerTwitchUserId { get; set; } = "";
     public string MessageId { get; set; } = "";
-    public Guid StreamSessionId { get; set; }
-    public string ViewerTwitchUserId { get; set; } = "";
     public DateTime ReceivedAt { get; set; }
-    public bool Provisional { get; set; }
 }
 
 public class CommunityMessageAggregate
