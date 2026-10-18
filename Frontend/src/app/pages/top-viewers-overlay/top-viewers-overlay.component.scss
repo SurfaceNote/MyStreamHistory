@@ -146,3 +146,12 @@ img, .avatar-placeholder {
   .leaderboard, .viewer-row { transition-duration: 1ms; }
   .viewer-row.entering { animation-duration: 1ms; }
 }
+
+
+:host { font-family: var(--font-ui); }
+.leaderboard { background: linear-gradient(135deg, #18233bf7, #0b0e14f7); border-color: #749bff40; border-radius: 12px; }
+.eyebrow, .rank { color: var(--accent); }
+.accent { background: var(--accent); }
+.score { color: #c3d3f1; }
+.avatar-placeholder { background: #263c63; }
+@media (max-width: 380px) { .overlay-stage { padding: 8px; } .leaderboard { padding: 14px; } .viewer-row { padding-inline: 8px; gap: 8px; } h1 { font-size: 23px; } }

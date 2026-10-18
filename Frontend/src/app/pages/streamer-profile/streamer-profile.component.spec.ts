@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
-import { of } from 'rxjs';
+import { ActivatedRoute, Router, provideRouter, convertToParamMap } from '@angular/router';
+import { BehaviorSubject, of, Subject, throwError } from 'rxjs';
 import { StreamerProfileComponent } from './streamer-profile.component';
 import { StreamerService } from '../../service/streamer.service';
 import { SeoService } from '../../service/seo.service';
@@ -14,6 +14,7 @@ describe('StreamerProfileComponent', () => {
   let analyticsWindow: TestAnalyticsWindow;
   let originalGtag: TestAnalyticsWindow['gtag'];
   let gtag: jasmine.Spy;
+  let routeParams: BehaviorSubject<ReturnType<typeof convertToParamMap>>;
   const statistics: any = {
     totalStreamsCount: 20,
     totalUniqueGamesCount: 8,
@@ -38,6 +39,7 @@ describe('StreamerProfileComponent', () => {
     categories: [],
   }));
   beforeEach(async () => {
+    routeParams = new BehaviorSubject(convertToParamMap({ twitchId: '1' }));
     analyticsWindow = window as TestAnalyticsWindow;
     originalGtag = analyticsWindow.gtag;
     gtag = jasmine.createSpy('gtag');
@@ -45,13 +47,10 @@ describe('StreamerProfileComponent', () => {
     await TestBed.configureTestingModule({
       imports: [StreamerProfileComponent],
       providers: [
+        provideRouter([]),
         {
           provide: ActivatedRoute,
-          useValue: { paramMap: of(convertToParamMap({ twitchId: '1' })) },
-        },
-        {
-          provide: Router,
-          useValue: { navigate: jasmine.createSpy('navigate') },
+          useValue: { paramMap: routeParams.asObservable() },
         },
         { provide: SeoService, useValue: { update: () => {} } },
         { provide: AuthService, useValue: { getTwitchIdFromToken: () => null, isAdmin: () => false } },
@@ -128,6 +127,82 @@ describe('StreamerProfileComponent', () => {
     component.recentStreams = [];
     expect(component.featuredStream).toBeUndefined();
   });
+
+  it('clears the previous featured stream on a channel change and shows the new one before viewer details finish', () => {
+    const service = TestBed.inject(StreamerService);
+    const ownStreams = new Subject<any[]>();
+    const ownDetails = new Subject<any>();
+    spyOn(service, 'getRecentStreams').and.returnValue(ownStreams);
+    spyOn(service, 'getStreamDetails').and.returnValue(ownDetails);
+    expect(component.featuredStream?.id).toBe('1');
+
+    routeParams.next(convertToParamMap({ twitchId: '2' }));
+    fixture.detectChanges();
+    expect(service.getRecentStreams).toHaveBeenCalledWith(2, 10);
+    expect(component.featuredStream).toBeUndefined();
+    expect(component.isLoadingStreams).toBeTrue();
+    expect(fixture.nativeElement.querySelector('.featured-stream').textContent).toContain('Loading recent activity');
+
+    ownStreams.next([{ ...streams[0], id: 'own', twitchUserId: 2 }]);
+    ownStreams.complete();
+    fixture.detectChanges();
+    expect(component.featuredStream?.id).toBe('own');
+    expect(component.isLoadingStreams).toBeFalse();
+    expect(fixture.nativeElement.querySelectorAll('.stream-card').length).toBe(1);
+
+    ownDetails.next({ viewers: [{}, {}] });
+    ownDetails.complete();
+    expect(component.featuredStream?.id).toBe('own');
+    expect(component.featuredStream?.uniqueViewersCount).toBe(2);
+  });
+
+  it('cancels old list and viewer requests so they cannot overwrite the current channel', () => {
+    const service = TestBed.inject(StreamerService);
+    const oldList = new Subject<any[]>();
+    const oldDetails = new Subject<any>();
+    const ownList = new Subject<any[]>();
+    spyOn(service, 'getRecentStreams').and.callFake((id) => id === 2 ? ownList : oldList);
+    spyOn(service, 'getStreamDetails').and.returnValue(oldDetails);
+    component.loadRecentStreams();
+    oldList.next([{ ...streams[0], id: 'old-pending' }]);
+    expect(component.featuredStream?.id).toBe('old-pending');
+    expect(oldDetails.observed).toBeTrue();
+
+    routeParams.next(convertToParamMap({ twitchId: '2' }));
+    expect(oldList.observed).toBeFalse();
+    expect(oldDetails.observed).toBeFalse();
+    expect(component.isLoadingStreams).toBeTrue();
+    (service.getStreamDetails as jasmine.Spy).and.returnValue(of({ viewers: [] }));
+    ownList.next([{ ...streams[0], id: 'own', twitchUserId: 2 }]);
+    ownList.complete();
+    oldList.next(streams);
+    oldDetails.next({ viewers: [] });
+    oldDetails.complete();
+    expect(component.featuredStream?.id).toBe('own');
+    expect(component.recentStreams.length).toBe(1);
+    expect(component.isLoadingStreams).toBeFalse();
+  });
+
+  for (const outcome of ['empty', 'error']) {
+    it(`does not retain another channel's featured stream when the new list is ${outcome}`, () => {
+      spyOn(console, 'error');
+      spyOn(TestBed.inject(StreamerService), 'getRecentStreams').and.returnValue(
+        outcome === 'empty' ? of([]) : throwError(() => new Error('Request failed')),
+      );
+      routeParams.next(convertToParamMap({ twitchId: '2' }));
+      expect(component.featuredStream).toBeUndefined();
+      expect(component.recentStreams).toEqual([]);
+      expect(component.isLoadingStreams).toBeFalse();
+    });
+  }
+
+  it('cancels pending stream loading when the profile is destroyed', () => {
+    const pending = new Subject<any[]>();
+    spyOn(TestBed.inject(StreamerService), 'getRecentStreams').and.returnValue(pending);
+    component.loadRecentStreams();
+    fixture.destroy();
+    expect(pending.observed).toBeFalse();
+  });
   it('limits the overview and expands the selected section', () => {
     expect(fixture.nativeElement.querySelectorAll('.stream-card').length).toBe(
       3,
@@ -156,6 +231,36 @@ describe('StreamerProfileComponent', () => {
     ]);
     expect(statistics.categories[0].name).toBe('Game 0');
   });
+  it('derives summary metrics from the selected period and distinguishes missing history from zero', () => {
+    component.statistics = { ...statistics, dashboard: {
+      totalStreamedHours: 15, totalStreamsCount: 3, totalUniqueGamesCount: 2,
+      streamedHoursByDay: [{ date: '2026-10-01', value: 0 }, { date: '2026-10-02', value: 15 }],
+      chatPointsByDay: [{ date: '2026-10-01', value: 12 }, { date: '2026-10-02', value: 3.5 }],
+      topCategories: [],
+    } };
+    const values = () => Object.fromEntries(component.dashboardSummaryCards.map(card => [card.label, card.value]));
+    expect(values()['Average stream']).toBe('5 h');
+    expect(values()['Active days']).toBe('1');
+    expect(values()['Chat points']).toBe('15.5');
+    component.statistics!.dashboard.totalStreamsCount = 0;
+    component.statistics!.dashboard.streamedHoursByDay = [];
+    component.statistics!.dashboard.chatPointsByDay = [];
+    expect(values()['Average stream']).toBe('—');
+    expect(values()['Active days']).toBe('—');
+    expect(values()['Chat points']).toBe('—');
+  });
+
+  it('limits broadcast activity to the latest 35 recorded days without mutating the source', () => {
+    const series = Array.from({ length: 40 }, (_, i) => ({
+      date: new Date(Date.UTC(2026, 8, i + 1)).toISOString().slice(0, 10), value: i,
+    }));
+    component.statistics = { ...statistics, dashboard: { streamedHoursByDay: series } };
+    expect(component.activityDays.length).toBe(35);
+    expect(component.activityDays[0]).toEqual({ date: '2026-09-06', label: '6', hours: 5 });
+    expect(series.length).toBe(40);
+    component.statistics = null;
+    expect(component.activityDays).toEqual([]);
+  });
   it('keeps empty playthrough sections out of the page', () => {
     component.selectSection('Games');
     fixture.detectChanges();
@@ -164,7 +269,7 @@ describe('StreamerProfileComponent', () => {
       'No playthroughs found',
     );
   });
-  it('keeps many-game streams compact and omits stream titles', () => {
+  it('keeps every game cover in the scrollable strip without visible game names', () => {
     component.recentStreams = [
       {
         ...streams[0],
@@ -178,16 +283,39 @@ describe('StreamerProfileComponent', () => {
     ];
     fixture.detectChanges();
     const card = fixture.nativeElement.querySelector('.stream-card');
-    expect(card.querySelectorAll('.stream-game-item').length).toBe(4);
-    expect(card.querySelector('.more-games').textContent).toContain('+21');
-    expect(card.querySelector('.stream-game-item').textContent).toContain('Category 0');
-    expect(card.textContent).toContain('25 games played');
+    expect(card.querySelectorAll('.stream-game-item').length).toBe(25);
+    expect(card.querySelector('.stream-game-list').getAttribute('tabindex')).toBe('0');
+    expect(card.querySelector('.stream-game-item').getAttribute('aria-label')).toBe('Category 0');
+    expect(card.textContent).not.toContain('Category 0');
+    expect(card.querySelector('.more-games')).toBeNull();
     expect(fixture.nativeElement.textContent).not.toContain(
       'Hidden stream title',
     );
     expect(
       fixture.nativeElement.querySelector('a[aria-label="Twitch"] i.fa-twitch'),
     ).not.toBeNull();
+  });
+  it('opens the stream once from the card background, cover, footer or date link', () => {
+    const navigate = spyOn(TestBed.inject(Router), 'navigateByUrl').and.resolveTo(true);
+    const card: HTMLElement = fixture.nativeElement.querySelector('.stream-card');
+    for (const target of [card, card.querySelector('.stream-game-item')!, card.querySelector('.stream-footer')!, card.querySelector('a')!]) {
+      navigate.calls.reset();
+      target.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+      expect(navigate).toHaveBeenCalledTimes(1);
+      expect(navigate.calls.mostRecent().args[0].toString()).toBe('/stream/0');
+    }
+  });
+
+  it('does not navigate after dragging covers, but allows the next normal click', () => {
+    const navigate = spyOn(TestBed.inject(Router), 'navigateByUrl').and.resolveTo(true);
+    const cover: HTMLElement = fixture.nativeElement.querySelector('.stream-card .stream-game-item');
+    cover.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 1, clientX: 100, clientY: 100 }));
+    cover.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, pointerId: 1, clientX: 50, clientY: 100 }));
+    cover.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    expect(navigate).not.toHaveBeenCalled();
+    cover.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 1, clientX: 100, clientY: 100 }));
+    cover.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    expect(navigate).toHaveBeenCalledTimes(1);
   });
   it('shows current and completed playthroughs on the overview and filters game status', () => {
     component.statistics = { ...statistics, playthroughs: ['Playing', 'Completed', 'Planned', 'Dropped'].map((status, i) => ({ playthroughId: String(i), gameName: status + ' game', title: '', status, twitchCategoryId: String(i), twitchCategoryTwitchId: String(i), boxArtUrl: '', uniqueViewersCount: 0, totalHours: 3 })) };

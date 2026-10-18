@@ -21,6 +21,7 @@ import {
   of,
   Subscription,
   switchMap,
+  tap,
 } from 'rxjs';
 import { StreamSession } from '../../models/stream-session.model';
 import { ViewerStats } from '../../models/viewer-stats.model';
@@ -45,6 +46,7 @@ interface PlaythroughStatusSection {
 }
 
 interface DashboardSummaryCard {
+  icon: string;
   label: string;
   value: string;
   hint: string;
@@ -138,6 +140,7 @@ export class StreamerProfileComponent
   isLoadingSocialLinks: boolean = false;
   isLoadingStatistics: boolean = false;
   private routeSub: Subscription | null = null;
+  private recentStreamsSub: Subscription | null = null;
   private charts: Chart[] = [];
 
   private streamerService = inject(StreamerService);
@@ -218,21 +221,55 @@ export class StreamerProfileComponent
 
     return [
       {
+        icon: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18 M12 7v5l4 2',
         label: 'Hours Live',
         value: `${this.formatNumber(dashboard?.totalStreamedHours ?? 0)} h`,
         hint: this.selectedPeriodLabel,
       },
       {
+        icon: 'M4 20V10h3v10H4Zm7 0V6h3v14h-3Zm7 0V2h3v18h-3Z',
         label: 'Streams',
         value: `${dashboard?.totalStreamsCount ?? 0}`,
-        hint: `${streamedDays} live days`,
+        hint: dashboard?.streamedHoursByDay?.length ? `${streamedDays} live days` : 'Daily history unavailable',
       },
       {
+        icon: 'M7 7h10c3 0 4 4 5 10 .5 3-2 4-4 1l-2-2H8l-2 2c-2 3-4 2-4-1 1-6 2-10 5-10Z M7 10v5m-2.5-2.5h5m6-1h.1m3 3h.1',
         label: 'Games played',
         value: `${dashboard?.totalUniqueGamesCount ?? 0}`,
         hint: topCategory ? `Lead: ${topCategory.name}` : 'No categories yet',
       },
+      {
+        icon: 'M5 5h14v16H5V5Zm3-3v6m8-6v6M5 10h14M8 14h1m3 0h1m3 0h1m-9 4h1m3 0h1',
+        label: 'Active days',
+        value: dashboard?.streamedHoursByDay?.length ? `${streamedDays}` : '—',
+        hint: 'Days with a broadcast',
+      },
+      {
+        icon: 'M6 3h12M6 21h12M7 3v5l10 8v5M17 3v5L7 16v5M7 7h10',
+        label: 'Average stream',
+        value: dashboard?.totalStreamsCount ? `${this.formatNumber(dashboard.totalStreamedHours / dashboard.totalStreamsCount)} h` : '—',
+        hint: 'Hours per broadcast',
+      },
+      {
+        icon: 'M4 4h16v12H9l-5 4V4Zm4 5h8m-8 3h5',
+        label: 'Chat points',
+        value: dashboard?.chatPointsByDay?.length ? this.formatNumber(dashboard.chatPointsByDay.reduce((sum, point) => sum + point.value, 0)) : '—',
+        hint: 'Recorded chat activity',
+      },
     ];
+  }
+
+  get activityDays(): Array<{ date: string; label: string; hours: number }> {
+    return (this.statistics?.dashboard?.streamedHoursByDay ?? []).slice(-35).map(point => ({
+      date: point.date,
+      label: point.date.slice(8, 10).replace(/^0/, ''),
+      hours: point.value,
+    }));
+  }
+
+  get activityRange(): string {
+    const days = this.activityDays;
+    return days.length ? `${this.formatSeriesDate(days[0].date)} – ${this.formatSeriesDate(days[days.length - 1].date)}` : this.selectedPeriodLabel;
   }
 
   get selectedPeriodLabel(): string {
@@ -267,6 +304,8 @@ export class StreamerProfileComponent
       this.routeSub.unsubscribe();
     }
 
+    this.recentStreamsSub?.unsubscribe();
+
     this.destroyDashboardCharts();
   }
 
@@ -290,10 +329,19 @@ export class StreamerProfileComponent
   }
 
   loadRecentStreams(): void {
+    // Cancel the previous channel's list and any in-flight viewer requests
+    // before resetting loading state (unsubscribe also runs finalize).
+    this.recentStreamsSub?.unsubscribe();
+    this.recentStreams = [];
     this.isLoadingStreams = true;
-    this.streamerService
+    this.recentStreamsSub = this.streamerService
       .getRecentStreams(this.twitchId, 10)
       .pipe(
+        tap((streams) => {
+          // The featured broadcast must not wait for every viewer request.
+          this.recentStreams = streams;
+          this.isLoadingStreams = false;
+        }),
         switchMap((streams: StreamSession[]) => {
           if (streams.length === 0) {
             return of([] as StreamSession[]);
@@ -388,6 +436,50 @@ export class StreamerProfileComponent
 
   navigateToStreamDetail(streamId: string): void {
     this.router.navigate(['/stream', streamId]);
+  }
+
+  private streamCardPointer?: {
+    card: EventTarget | null;
+    pointerId: number;
+    x: number;
+    y: number;
+    moved: boolean;
+  };
+
+  startStreamCardPointer(event: PointerEvent): void {
+    this.streamCardPointer = {
+      card: event.currentTarget, pointerId: event.pointerId,
+      x: event.clientX, y: event.clientY, moved: false,
+    };
+  }
+
+  moveStreamCardPointer(event: PointerEvent): void {
+    const pointer = this.streamCardPointer;
+    if (pointer?.pointerId === event.pointerId &&
+        Math.hypot(event.clientX - pointer.x, event.clientY - pointer.y) > 8) {
+      pointer.moved = true;
+    }
+  }
+
+  cancelStreamCardPointer(): void {
+    if (this.streamCardPointer) this.streamCardPointer.moved = true;
+  }
+
+  openStreamCard(event: MouseEvent): void {
+    const pointer = this.streamCardPointer;
+    this.streamCardPointer = undefined;
+    if (pointer?.card === event.currentTarget && pointer.moved) {
+      event.preventDefault();
+      return;
+    }
+    // Keep the actual link responsible for routing and modifier-key behavior.
+    if (event.defaultPrevented || (event.target as Element).closest('a')) return;
+    const link = (event.currentTarget as HTMLElement).querySelector<HTMLAnchorElement>('.stream-top');
+    link?.dispatchEvent(new MouseEvent('click', {
+      bubbles: true, cancelable: true, button: event.button,
+      ctrlKey: event.ctrlKey, metaKey: event.metaKey,
+      shiftKey: event.shiftKey, altKey: event.altKey,
+    }));
   }
 
   navigateToViewerStats(viewer: ViewerStats): void {

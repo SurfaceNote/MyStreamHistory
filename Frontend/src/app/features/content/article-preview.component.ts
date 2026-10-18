@@ -13,7 +13,7 @@ import { SeoService } from '../../service/seo.service';
   template: `<div class="preview-banner">Draft preview · Only you can see this <a [routerLink]="['/admin/publications', article?.id]">Back to editor</a></div>
     <main *ngIf="article as item" class="preview-page"><p class="category">{{ item.type === 'news' ? 'NEWS' : 'REVIEW' }}</p><h1>{{ item.title || 'Untitled draft' }}</h1><img *ngIf="cover" [src]="cover" [alt]="item.title" /><div class="body"><app-content-renderer [node]="body" /></div></main>
     <p *ngIf="error">Preview could not be loaded.</p>`,
-  styles: [`.preview-banner { background:#513272; color:#fff; padding:12px 24px; display:flex; justify-content:space-between; } .preview-banner a { color:#fff; text-decoration:underline; } .preview-page { max-width:900px; margin:50px auto; padding:24px; } .category { color:#b98cff; font-size:.75rem; letter-spacing:.14em; font-weight:800; } h1 { font-size:clamp(2.4rem,5vw,4rem); } img { width:100%; border-radius:16px; margin:25px 0; } .body { max-width:760px; margin:auto; }`]
+  styles: [`.preview-banner { background:var(--accent-soft); color:#fff; padding:12px 24px; display:flex; flex-wrap:wrap; gap:12px; justify-content:space-between; } .preview-banner a { color:#fff; text-decoration:underline; } .preview-page { max-width:900px; margin:50px auto; padding:24px; } .category { color:var(--accent); font-size:.75rem; letter-spacing:.14em; font-weight:800; } h1 { font-size:clamp(2.2rem,5vw,4rem); font-weight:550; letter-spacing:-.04em; line-height:1.1; overflow-wrap:anywhere; } img { width:100%; border-radius:16px; margin:25px 0; } .body { max-width:760px; margin:auto; }`]
 })
 export class ArticlePreviewComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);

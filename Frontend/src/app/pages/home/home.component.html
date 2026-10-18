@@ -1,16 +1,16 @@
 <main class="directory-page">
   <section class="intro" aria-labelledby="page-title">
     <div>
-      <p class="eyebrow">TWITCH STREAM HISTORY & ANALYTICS</p>
-      <h1 id="page-title">Find a streamer.<br>Explore their history.</h1>
+      <p class="eyebrow">TWITCH HISTORY & ANALYTICS</p>
+      <h1 id="page-title">Your streaming world.<br><span>All in one place.</span></h1>
     </div>
-    <p class="intro-copy">Find past broadcasts, follow game playthroughs and see how a channel's community grows. Start with a streamer.</p>
+    <p class="intro-copy">Explore channels, revisit broadcasts and discover the games and communities behind every stream.</p>
   </section>
 
   <div class="page-layout">
     <section class="directory" aria-labelledby="directory-title">
       <div class="section-heading">
-        <h2 id="directory-title">Streamers <span *ngIf="!isLoadingStreamers && !streamersLoadFailed" class="count">{{ streamers.length }}</span></h2>
+        <h2 id="directory-title">Explore channels <span *ngIf="!isLoadingStreamers && !streamersLoadFailed" class="count">{{ streamers.length }}</span></h2>
         <span class="directory-note">{{ showingRecentStreamers ? 'Recently joined' : 'On MyStreamHistory' }}</span>
       </div>
 
@@ -48,14 +48,14 @@
           <p class="result-summary" role="status">{{ visibleStreamers.length }} {{ visibleStreamers.length === 1 ? 'streamer' : 'streamers' }}{{ searchQuery.trim() ? ' matching your search' : (liveOnly ? ' live now' : ' · Live channels first') }}</p>
           <div class="streamer-list">
             @for (streamer of visibleStreamers; track streamer.twitchId) {
-              <a [routerLink]="['/profile', streamer.twitchId]" class="streamer-row" [attr.aria-label]="streamer.displayName + ' — view stream history'">
+              <a [routerLink]="['/profile', streamer.twitchId]" class="streamer-row" [class.is-live]="liveStreamerIds.has(streamer.twitchId)" [attr.aria-label]="streamer.displayName + ' — view stream history'">
                 <span class="avatar-wrap">
                   <span class="avatar-initial" aria-hidden="true">{{ streamer.displayName.charAt(0).toUpperCase() }}</span>
                   @if (streamer.avatar) { <img [src]="streamer.avatar" alt="" loading="lazy" (error)="$any($event.target).hidden = true"> }
                 </span>
                 <span class="streamer-copy">
                   <strong>{{ streamer.displayName }}</strong>
-                  <span>Stream history & games</span>
+                  <span>{{ liveStreamerIds.has(streamer.twitchId) ? 'On air · Join the stream' : 'Broadcasts, games & community' }}</span>
                 </span>
                 @if (liveStreamerIds.has(streamer.twitchId)) { <span class="live-label"><span class="live-dot" aria-hidden="true"></span>Live</span> }
                 <svg class="row-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M5 12h14m-5-5 5 5-5 5"/></svg>
@@ -75,7 +75,7 @@
     <aside class="sidebar" aria-label="About MyStreamHistory">
       <section class="start-panel">
         <span class="panel-kicker">{{ isLoggedIn ? 'YOUR CHANNEL' : 'FOR STREAMERS' }}</span>
-        <h2>{{ isLoggedIn ? 'Welcome back, ' + username : 'Keep your streams together.' }}</h2>
+        <h2>{{ isLoggedIn ? 'Welcome back, ' + username : 'Your channel. A bigger picture.' }}</h2>
         <p>{{ isLoggedIn ? 'Pick up where you left off. Your broadcasts, games and audience are in your profile.' : 'Connect your Twitch account to start building your channel history.' }}</p>
         <div class="auth-slot" [attr.aria-busy]="!authReady">
           <span *ngIf="!authReady" class="auth-placeholder" aria-hidden="true"></span>

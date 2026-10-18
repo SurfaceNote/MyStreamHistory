@@ -17,7 +17,7 @@
 
   p {
     margin: 0;
-    color: #adadb8;
+    color: #97a3b8;
     max-width: 680px;
     line-height: 1.5;
   }
@@ -34,7 +34,7 @@
 .state-card,
 .empty-card {
   background: var(--surface);
-  border: 1px solid #2f2f39;
+  border: 1px solid #293241;
   border-radius: 6px;
 }
 
@@ -47,7 +47,7 @@
 .form-card h3,
 .list-card h3 {
   margin: 0 0 20px;
-  font-size: 20px;
+  font-size: 21px;
 }
 
 .field,
@@ -61,7 +61,7 @@
 .field span,
 .checkbox-field span {
   color: #d7d7dc;
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .field input,
@@ -69,7 +69,7 @@
   width: 100%;
   padding: 12px 14px;
   border-radius: 10px;
-  border: 1px solid #3b3b46;
+  border: 1px solid #3c4960;
   background: var(--surface);
   color: #efeff1;
 }
@@ -82,9 +82,9 @@
 .segment-picker {
   margin-top: 12px;
   padding: 16px;
-  border: 1px solid #343440;
+  border: 1px solid #293241;
   border-radius: 6px;
-  background: #121216;
+  background: #10151e;
 }
 
 .segment-picker-header,
@@ -139,7 +139,7 @@
 .segment-option span,
 .segment-summary-item span {
   color: #9a9aa7;
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .actions {
@@ -175,7 +175,7 @@
 
 .playthrough-title p {
   margin: 0;
-  color: #adadb8;
+  color: #97a3b8;
 }
 
 .playthrough-actions {
@@ -196,7 +196,7 @@
   border-radius: 999px;
   background: #22222a;
   color: #d7d7dc;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .badge.active {
@@ -220,7 +220,7 @@
 .message {
   padding: 12px 14px;
   border-radius: 12px;
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .message.error {
@@ -235,7 +235,7 @@
 
 .empty-card,
 .state-card {
-  color: #adadb8;
+  color: #97a3b8;
 }
 
 .empty-card {
@@ -269,7 +269,7 @@
 
 .small {
   padding: 8px 12px;
-  font-size: 13px;
+  font-size: 14px;
 }
 
 @media (max-width: 1024px) {
@@ -291,20 +291,28 @@
 
 .playthrough-title { min-width: 0; --game-art-width: 48px; }
 .playthrough-title > div { min-width: 0; }
-.playthrough-title h4 { font-size: 15px; line-height: 1.45; overflow-wrap: anywhere; }
-.playthrough-title p { font-size: 12px; overflow-wrap: anywhere; }
+.playthrough-title h4 { font-size: 16px; line-height: 1.45; overflow-wrap: anywhere; }
+.playthrough-title p { font-size: 13px; overflow-wrap: anywhere; }
 .playthrough-title .game-status { margin-top: 8px; }
 .playthrough-actions { flex-shrink: 0; flex-wrap: wrap; }
 .segment-picker-header { --game-art-width: 42px; }
 .segment-picker-header > div, .segment-option > div { min-width: 0; overflow-wrap: anywhere; }
-.segment-option strong, .segment-summary-item strong { font-size: 13px; font-weight: 500; overflow-wrap: anywhere; }
+.segment-option strong, .segment-summary-item strong { font-size: 14px; font-weight: 500; overflow-wrap: anywhere; }
 .segment-disclosure { border-top: 1px solid var(--border); }
-.segment-disclosure summary { padding: 14px 0; font-size: 12px; color: var(--muted); cursor: pointer; }
+.segment-disclosure summary { padding: 14px 0; font-size: 13px; color: var(--muted); cursor: pointer; }
 .segment-summary-item { padding: 10px 12px; border-radius: 4px; }
 .playthrough-item .badges { margin: 12px 0; }
-.playthrough-item .badge { border-radius: 4px; padding: 4px 8px; font-size: 11px; }
+.playthrough-item .badge { border-radius: 4px; padding: 4px 8px; font-size: 13px; }
 @media (max-width: 600px) {
   .playthrough-top { flex-direction: column; gap: 16px; }
   .playthrough-actions { align-self: flex-end; }
   .playthrough-item { padding: 14px; }
 }
+
+
+.section-header h2 { font-size: 32px; font-weight: 550; letter-spacing: -.8px; }
+.form-card, .list-card, .state-card, .empty-card { border-radius: 8px; border-color: var(--border); background: #10151e; min-width: 0; }
+.settings-grid { grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); }
+@media (max-width: 1150px) { .settings-grid { grid-template-columns: 1fr; } }
+
+.section-header h2 { font-size: 26px; font-weight: 600; } .form-card, .list-card { padding: 20px; }

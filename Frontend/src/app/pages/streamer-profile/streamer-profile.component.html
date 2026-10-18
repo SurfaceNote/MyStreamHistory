@@ -1,15 +1,15 @@
-<main class="profile-page">
+<main class="profile-page" [class.overview-layout]="activeSection === 'Overview'">
   @if (streamerShortDTO; as streamer) {
     <section class="profile-hero">
       <div class="identity">
         <img
           class="avatar"
-          [src]="streamer.avatar"
+          [src]="streamer.avatar || '/logo.png'"
           [alt]="streamer.displayName"
         />
         <div>
           <span class="eyebrow">STREAMER PROFILE</span>
-          @if (canViewCommunity) { <a routerLink="/analytics/community" [queryParams]="isOwnProfile ? {} : { channelId: twitchId }">Community analytics →</a> }
+
           <h1>
             {{ streamer.displayName }}
             @if (featuredStream?.isLive) {
@@ -63,6 +63,7 @@
           <p>Loading statistics…</p>
         }
       </div>
+      @if (canViewCommunity) { <a class="community-link" routerLink="/analytics/community" [queryParams]="isOwnProfile ? {} : { channelId: twitchId }"><i class="fa-solid fa-users" aria-hidden="true"></i> Community analytics ↗</a> }
       @if (featuredStream; as stream) {
         <article class="featured-stream">
           <div class="featured-heading">
@@ -75,9 +76,11 @@
                 : (stream.startedAt | date: "mediumDate")
             }}</span>
           </div>
-          <ng-container
-            *ngTemplateOutlet="streamGames; context: { $implicit: stream }"
-          ></ng-container>
+          <ng-container *ngTemplateOutlet="streamGames; context: { $implicit: stream }"></ng-container>
+          <div class="featured-meta">
+            <span>{{ formatDuration(stream.startedAt, stream.endedAt) }}</span>
+            <span>{{ stream.uniqueViewersCount ?? '—' }} chat accounts</span>
+          </div>
           @if (stream.isLive) {
             <a
               class="primary-button"
@@ -126,11 +129,11 @@
       </button>
     }
   </nav>
-  <section [hidden]="activeSection !== 'Overview'">
+  <section class="dashboard-section" [hidden]="activeSection !== 'Overview'">
     <div class="section-heading">
       <div>
-        <span class="eyebrow">THE BIG PICTURE</span>
-        <h2>Streaming overview</h2>
+        <span class="eyebrow">CHANNEL ANALYTICS</span>
+        <h2>Channel overview</h2>
       </div>
       <div class="period-control" role="group" aria-label="Dashboard period">
         @for (period of dashboardPeriods; track period.value) {
@@ -151,7 +154,7 @@
     @if (!isLoadingStatistics && statistics?.dashboard; as dashboard) {
       <div class="dashboard-cards">
         @for (card of dashboardSummaryCards; track card.label) {
-          <article class="dashboard-card">
+          <article class="dashboard-card"><svg class="metric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path [attr.d]="card.icon" /></svg>
             <span>{{ card.label }}</span
             ><strong>{{ card.value }}</strong
             ><small>{{ card.hint }}</small>
@@ -161,7 +164,7 @@
       <div class="dashboard-grid">
         <article class="chart-panel">
           <div class="panel-head">
-            <h3>Hours live</h3>
+            <h3>Streaming activity</h3>
             <span>Daily activity · {{ selectedPeriodLabel }}</span>
           </div>
           @if (hasSeriesPoints(dashboard.streamedHoursByDay)) {
@@ -178,12 +181,12 @@
         </article>
         <article class="chart-panel">
           <div class="panel-head">
-            <h3>Most played</h3>
+            <h3>Most played games</h3>
             <span>By hours streamed</span>
           </div>
           <div class="game-mix-list">
             @for (
-              game of dashboard.topCategories;
+              game of dashboard.topCategories.slice(0, 5);
               track game.twitchCategoryId
             ) {
               <div class="game-mix-row">
@@ -204,34 +207,22 @@
             }
           </div>
         </article>
+        <article class="chart-panel activity-panel">
+  <div class="panel-head"><h3>Broadcast activity</h3><span>{{ activityRange }} · hours per day</span></div>
+  @if (activityDays.length) {
+    <div class="activity-grid" aria-label="Daily broadcast hours">
+      @for (day of activityDays; track day.date) {
+        <span class="activity-day" [class.active]="day.hours > 0" [class.high]="day.hours >= 4" [title]="day.date + ': ' + formatNumber(day.hours) + ' hours'" [attr.aria-label]="day.date + ': ' + formatNumber(day.hours) + ' hours'">{{ day.label }}</span>
+      }
+    </div>
+    <div class="activity-legend"><span>No stream</span><i></i><i class="active"></i><i class="high"></i><span>4+ hours</span></div>
+    <p class="activity-note">Daily totals · latest {{ activityDays.length }} recorded days.</p>
+  } @else { <p class="state">Broadcast days will appear here when activity is recorded.</p> }
+</article>
       </div>
     }
   </section>
-  @if (activeSection === "Overview" && !isLoadingStatistics) {
-    @for (section of overviewPlaythroughSections; track section.status) {
-      <section class="overview-playthroughs">
-        <div class="section-heading">
-          <h2>
-            {{ section.title }}
-            <span class="count">{{ section.items.length }}</span>
-          </h2>
-          <button
-            class="text-button"
-            (click)="gameStatus = section.status; selectSection('Games')"
-          >
-            View section →
-          </button>
-        </div>
-        <ng-container
-          *ngTemplateOutlet="
-            playthroughCards;
-            context: { $implicit: section.items }
-          "
-        ></ng-container>
-      </section>
-    }
-  }
-  <section
+  <section class="recent-panel"
     [hidden]="activeSection !== 'Overview' && activeSection !== 'Streams'"
   >
     <div class="section-heading">
@@ -259,18 +250,18 @@
             : recentStreams;
           track stream.id
         ) {
-          <button
-            type="button"
-            class="stream-card"
-            (click)="navigateToStreamDetail(stream.id)"
-          >
-            <div class="stream-top">
+          <article class="stream-card"
+            (pointerdown)="startStreamCardPointer($event)"
+            (pointermove)="moveStreamCardPointer($event)"
+            (pointercancel)="cancelStreamCardPointer()"
+            (click)="openStreamCard($event)">
+            <a class="stream-top" [routerLink]="['/stream', stream.id]" [attr.aria-label]="'View stream from ' + (stream.startedAt | date: 'mediumDate')">
               <span>{{ stream.startedAt | date: "mediumDate" }}</span>
               @if (stream.isLive) {
                 <span class="live-badge">LIVE</span>
               }
               <span class="arrow">↗</span>
-            </div>
+            </a>
             <ng-container
               *ngTemplateOutlet="streamGames; context: { $implicit: stream }"
             ></ng-container>
@@ -278,14 +269,14 @@
               <span>{{ formatDuration(stream.startedAt, stream.endedAt) }}</span
               ><span>{{ stream.uniqueViewersCount ?? '—' }} unique chat accounts</span>
             </div>
-          </button>
+          </article>
         } @empty {
           <p class="state">No recent streams found</p>
         }
       </div>
     }
   </section>
-  <section [hidden]="activeSection !== 'Overview' && activeSection !== 'Games'">
+  <section class="collection-panel" [hidden]="activeSection !== 'Overview' && activeSection !== 'Games'">
     <div class="section-heading">
       <div>
         <span class="eyebrow">THE COLLECTION · ALL TIME</span>
@@ -375,7 +366,7 @@
       }
     }
   </section>
-  <section
+  <section class="community-panel"
     [hidden]="activeSection !== 'Overview' && activeSection !== 'Viewers'"
   >
     <div class="section-heading">
@@ -425,24 +416,46 @@
       </div>
     }
   </section>
+  @if (activeSection === "Overview" && !isLoadingStatistics) {
+    @for (section of overviewPlaythroughSections; track section.status) {
+      <section class="overview-playthroughs">
+        <div class="section-heading">
+          <h2>
+            {{ section.title }}
+            <span class="count">{{ section.items.length }}</span>
+          </h2>
+          <button
+            class="text-button"
+            (click)="gameStatus = section.status; selectSection('Games')"
+          >
+            View section →
+          </button>
+        </div>
+        <ng-container
+          *ngTemplateOutlet="
+            playthroughCards;
+            context: { $implicit: section.items }
+          "
+        ></ng-container>
+      </section>
+    }
+  }
 </main>
 
 <ng-template #streamGames let-stream>
   <div class="stream-games">
     @if (stream.categories?.length) {
-      <div class="stream-game-list">
-        @for (game of stream.categories.slice(0, 4); track game.twitchId) {
-          <span class="stream-game-item">
-            <app-game-art [src]="game.boxArtUrl" />
-            <span>{{ game.name }}</span>
+      <div class="stream-game-list" tabindex="0" role="region" aria-label="Games in this stream. Scroll horizontally to see all covers.">
+        @for (game of stream.categories; track game.twitchId) {
+          <span class="stream-game-item" role="img" [attr.aria-label]="game.name">
+            <app-game-art [src]="game.boxArtUrl" fit="contain" />
           </span>
         }
       </div>
-      @if (stream.categories.length > 4) {
-        <span class="more-games">+{{ stream.categories.length - 4 }} more · {{ stream.categories.length }} games played</span>
-      }
     } @else {
-      <p class="stream-games-label">{{ stream.gameName || "No category" }}</p>
+      <div class="stream-game-list">
+        <span class="stream-game-item" role="img" [attr.aria-label]="stream.gameName || 'No category'"><app-game-art /></span>
+      </div>
     }
   </div>
 </ng-template>

@@ -6,7 +6,7 @@ import { Component, Input, OnChanges } from '@angular/core';
   host: { 'aria-hidden': 'true' },
   template: `
     @if (src && !failed) {
-      <img [src]="imageUrl" alt="" loading="lazy" (error)="failed = true">
+      <img [src]="imageUrl" [style.object-fit]="fit" alt="" loading="lazy" (error)="failed = true">
     } @else {
       <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5">
         <path d="M11 10h10c3 0 5 4 6 11 .5 3-2 4-4 2l-4-4h-6l-4 4c-2 2-4.5 1-4-2 1-7 3-11 6-11Z"/>
@@ -24,6 +24,7 @@ import { Component, Input, OnChanges } from '@angular/core';
 })
 export class GameArtComponent implements OnChanges {
   @Input() src: string | null | undefined = '';
+  @Input() fit: 'cover' | 'contain' = 'cover';
   failed = false;
 
   get imageUrl(): string {

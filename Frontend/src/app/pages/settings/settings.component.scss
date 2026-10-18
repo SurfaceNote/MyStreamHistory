@@ -29,8 +29,8 @@
   }
   
   p {
-    color: #adadb8;
-    font-size: 16px;
+    color: #97a3b8;
+    font-size: 17px;
   }
 }
 
@@ -42,3 +42,10 @@
 
 
 @media (max-width: 600px) { .settings-container { padding: 16px; } .settings-content { padding: 20px; } }
+
+
+.settings-container { max-width: var(--page-width); padding-top: 40px; align-items: flex-start; gap: 32px; }
+.settings-content { border-radius: 8px; padding: clamp(20px, 3vw, 44px); }
+@media (max-width: 768px) { app-settings-sidebar { width: 100%; } .settings-content { width: 100%; } .settings-container { gap: 24px; padding: 24px 20px; } }
+
+.settings-content { background: var(--panel-fill); border-color: var(--border); border-radius: var(--radius); box-shadow: var(--panel-shadow); }

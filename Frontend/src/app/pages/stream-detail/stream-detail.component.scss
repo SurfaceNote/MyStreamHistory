@@ -77,7 +77,7 @@
   white-space: nowrap;
   
   &:hover {
-    background: lighten($purple-color, 5%);
+    background: var(--accent-soft);
 
   }
 
@@ -162,7 +162,7 @@
     border-radius: 3px;
     
     &:hover {
-      background: lighten($bg-4-color, 10%);
+      background: #42565e;
     }
   }
 }
@@ -185,7 +185,7 @@
   cursor: pointer;
   
   &:hover {
-    background: lighten($bg-2-color, 3%);
+    background: var(--surface-hover);
   }
 
   &:focus-visible {
@@ -290,7 +290,7 @@
   transition: background 0.2s ease;
   
   &:hover {
-    background: darken($purple-color, 5%);
+    background: #5480ff;
   }
 }
 
@@ -353,3 +353,25 @@
   }
 }
 
+
+
+.stream-detail-container { max-width: var(--page-width); background: transparent; padding-top: 40px; }
+.stream-header { padding: 32px; gap: 28px; border: 1px solid var(--border); border-radius: 10px; background: linear-gradient(110deg, #18233b, var(--surface)); align-items: center; }
+.streamer-profile-section, .streamer-info-wrapper { min-width: 0; }
+.streamer-name { overflow-wrap: anywhere; font-size: clamp(24px, 3vw, 40px); font-weight: 550; }
+.streamer-avatar { border-radius: 12px; border: 3px solid #749bff26; }
+.btn-view-profile { background: transparent; padding: 0; text-align: left; color: var(--accent); font-size: 13px; white-space: normal; &:hover { background: transparent; text-decoration: underline; } }
+.stream-meta { gap: 32px; flex-wrap: wrap; }
+.meta-label { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
+.meta-value { font-size: 23px; font-weight: 500; }
+.audience-section { padding: 28px; border-radius: 10px; background: var(--surface); border-color: var(--border); }
+.content-wrapper { gap: 28px; }
+.viewers-section { padding: 24px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+.viewer-card { padding-inline: 0; }
+.viewer-stats { flex-wrap: wrap; gap: 4px 12px; }
+.btn-retry { background: var(--accent); color: var(--accent-ink); }
+@media (max-width: 768px) { .stream-header { padding: 24px; align-items: stretch; } .stream-meta { border-top: 1px solid var(--border); padding-top: 20px; } .audience-section, .viewers-section { padding: 20px; } .stream-detail-container { padding: 24px 20px; } }
+
+.stream-header { padding: 28px; border-radius: 22px; box-shadow: var(--panel-shadow); background: linear-gradient(90deg,#111d36e8,#162b5055),url('/images/profile-landscape.png') center / cover; } .streamer-avatar { border-radius: 50%; } .streamer-name { font-size: clamp(26px,3vw,36px); font-weight: 650; } .audience-section, .viewers-section { padding: 20px; border-radius: 8px; }
+
+.audience-section, .viewers-section { background: var(--panel-fill); border-color: var(--border); border-radius: var(--radius); box-shadow: var(--panel-shadow); }

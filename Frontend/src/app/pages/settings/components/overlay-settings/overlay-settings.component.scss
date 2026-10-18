@@ -3,11 +3,11 @@
   color: #efeff1;
 
   h2 { margin: 0 0 12px; font-size: 28px; }
-  p { color: #adadb8; line-height: 1.5; }
+  p { color: #97a3b8; line-height: 1.5; }
   label { display: block; margin: 28px 0 8px; font-weight: 600; }
   a { display: inline-block; margin-top: 16px; color: #b98bff; }
-  .hint { margin-top: 24px; font-size: 14px; }
-  .copy-status { color: #70e2aa; font-size: 14px; }
+  .hint { margin-top: 24px; font-size: 15px; }
+  .copy-status { color: #70e2aa; font-size: 15px; }
   .error { color: #ff9292; }
 }
 
@@ -20,11 +20,11 @@
     min-width: 0;
     padding: 12px;
     color: #efeff1;
-    background: #0e0e10;
-    border: 1px solid #3a3a44;
+    background: #0b0e14;
+    border: 1px solid #3c4960;
     border-radius: 6px;
     font: inherit;
-    font-size: 14px;
+    font-size: 15px;
   }
 
   button {
@@ -42,3 +42,12 @@
   .link-row { flex-direction: column; }
   .link-row button { padding: 12px; }
 }
+
+
+.overlay-settings h2 { font-size: 32px; font-weight: 550; letter-spacing: -.8px; }
+.link-row { padding: 20px; background: #10151e; border: 1px solid var(--border); border-radius: 14px; }
+.link-row input { background: var(--surface); border-color: var(--border); }
+.link-row button { background: var(--accent); color: var(--accent-ink); border-radius: 10px; }
+.overlay-settings a { color: var(--accent); }
+
+.overlay-settings h2 { font-size: 26px; font-weight: 600; } .link-row button { background: var(--primary); color: white; }

@@ -16,7 +16,7 @@
   font-weight: 600;
   margin-bottom: 20px;
   padding-bottom: 15px;
-  border-bottom: 1px solid #2c2c34;
+  border-bottom: 1px solid #293241;
 }
 
 .sidebar-nav {
@@ -33,15 +33,15 @@
   background: transparent;
   border: none;
   border-radius: 6px;
-  color: #adadb8;
-  font-size: 16px;
+  color: #97a3b8;
+  font-size: 17px;
   cursor: pointer;
   transition: all 0.2s ease;
   text-align: left;
   
   i {
     width: 20px;
-    font-size: 18px;
+    font-size: 19px;
   }
   
   span {
@@ -49,7 +49,7 @@
   }
   
   .badge {
-    font-size: 11px;
+    font-size: 13px;
     padding: 2px 8px;
     background: #484050;
     border-radius: 12px;
@@ -57,12 +57,12 @@
   }
   
   &:hover:not(.disabled) {
-    background: #2c2c34;
+    background: #293241;
     color: #efeff1;
   }
   
   &.active {
-    background: #343438;
+    background: #293241;
     color: #fff;
     
     &:hover {
@@ -76,8 +76,16 @@
     
     &:hover {
       background: transparent;
-      color: #adadb8;
+      color: #97a3b8;
     }
   }
 }
 
+
+
+.sidebar { width: 228px; padding: 0; background: transparent; border: 0; }
+.sidebar-title { margin: 0 0 24px; font-size: 34px; font-weight: 550; letter-spacing: -1px; border: 0; }
+.sidebar-item { border: 1px solid transparent; font-size: 14px; min-height: 48px; border-radius: 12px; &.active { background: var(--accent-soft); border-color: #354d77; color: var(--accent); } &.active:hover { background: #273c63; } }
+@media (max-width: 768px) { .sidebar { width: 100%; } .sidebar-nav { flex-direction: row; overflow-x: auto; padding-bottom: 6px; } .sidebar-item { flex-shrink: 0; white-space: nowrap; } .sidebar-title { margin-bottom: 12px; } }
+
+.sidebar-title { font-size: 28px; font-weight: 650; letter-spacing: -.7px; } .sidebar-item { border-radius: 12px; min-height: 44px; }

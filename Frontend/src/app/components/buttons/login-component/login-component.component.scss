@@ -1,10 +1,2 @@
-:host { display: inline-flex; }
-button {
-  display: inline-flex; align-items: center; justify-content: center; gap: 9px;
-  min-height: 40px; padding: 10px 16px; border: 1px solid #8460bb;
-  border-radius: 5px; background: #6441a5; color: white;
-  font-size: 13px; font-weight: 600; cursor: pointer;
-  &:hover { background: #7650b8; }
-  &:active { background: #593994; }
-  svg { flex-shrink: 0; }
-}
+:host { display: inline-flex; max-width: 100%; }
+button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 36px; padding: 8px 14px; border: 1px solid #577bff; border-radius: 5px; background: linear-gradient(110deg, #3567ed, #5261ee); color: white; font-size: 13px; font-weight: 600; cursor: pointer; &:hover { filter: brightness(1.15); } svg { flex-shrink: 0; } }

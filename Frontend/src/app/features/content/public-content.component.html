@@ -1,7 +1,7 @@
 <main class="content-page">
   <div class="page-heading">
     <p class="eyebrow">MyStreamHistory / Editorial</p>
-    <h1>{{ heading }}</h1>
+    <h1>{{ heading }}</h1><p class="heading-copy">{{ type === 'news' ? 'From the first announcement to the next big moment. Stay connected to streaming.' : 'A closer look at the games and experiences that make a stream worth watching.' }}</p>
   </div>
   <p *ngIf="loading" class="state">Loading articles…</p>
   <p *ngIf="error" class="state">Articles could not be loaded. <button type="button" (click)="load(page)">Try again</button></p>
@@ -9,7 +9,7 @@
   <div class="card-grid" *ngIf="!loading && !error">
     <a *ngFor="let article of articles" class="article-card" [routerLink]="['/', type === 'news' ? 'news' : 'reviews', article.slug]">
       <img *ngIf="article.coverId" [src]="article.coverUrl || content.mediaUrl(article.coverId)" [alt]="article.title" loading="lazy" />
-      <div class="card-copy">
+      <div *ngIf="!article.coverId" class="cover-placeholder" aria-hidden="true">{{ type === 'news' ? 'ON THE RADAR' : 'A CLOSER LOOK' }}</div><div class="card-copy">
         <span class="card-meta">{{ type === 'news' ? 'NEWS' : 'REVIEW' }} · {{ article.publishedAt | date:'mediumDate' }}</span>
         <h2>{{ article.title }}</h2>
         <p *ngIf="type === 'review' && article.summary">{{ article.summary }}</p>

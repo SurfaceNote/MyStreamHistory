@@ -3,30 +3,49 @@
 
 :root {
   color-scheme: dark;
-  --page-gutter: clamp(16px, 2.5vw, 64px);
-  --surface: #1b1b1e;
-  --surface-hover: #222225;
-  --border: #343438;
-  --muted: #a1a1aa;
-  --accent: #b8a2ed;
-  --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --page-gutter: clamp(16px, 3vw, 52px);
+  --page-width: 1840px;
+  --surface: #121b2e;
+  --surface-hover: #1b2a45;
+  --border: #ffffff12;
+  --muted: #a5b3ce;
+  --accent: #a3baff;
+  --primary: #5865f5;
+  --violet: #8b72ff;
+  --cyan: #32b7ef;
+  --accent-ink: #ffffff;
+  --accent-soft: #1c2d53;
+  --radius: 18px;
+  --panel-fill: linear-gradient(145deg, #19243a, #101829 80%);
+  --panel-shadow: 0 10px 30px #00000024, inset 0 1px 0 #ffffff06;
+  --action-fill: linear-gradient(110deg, #456df5, #8655ed);
+  --font-ui: "Segoe UI Variable", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
 }
 * { box-sizing: border-box; }
 html, body { padding: 0; margin: 0; }
-html { scroll-behavior: auto; scrollbar-color: #505057 $bg-1-color; }
+html { font-size: 17px; scroll-behavior: auto; scrollbar-color: #505057 $bg-1-color; }
 body {
   background: $bg-1-color; color: $text-1-color; font-family: var(--font-ui);
-  font-size: 15px; line-height: 1.5; width: 100%; min-height: 100vh;
+  font-size: 16px; line-height: 1.5; width: 100%; min-height: 100vh;
   -webkit-font-smoothing: antialiased;
+  background-image: radial-gradient(ellipse at 10% 0, #243b7326, transparent 42%), radial-gradient(ellipse at 100% 35%, #56329912, transparent 40%);
 }
 a { color: inherit; text-decoration: none; }
+img { max-width: 100%; }
+h1, h2, h3 { text-wrap: balance; }
+button, a { -webkit-tap-highlight-color: transparent; }
+button { touch-action: manipulation; }
+button:not(:disabled), a { transition: background-color .18s ease, border-color .18s ease, color .18s ease; }
+button:disabled { opacity: .5; }
+input, textarea, select { max-width: 100%; }
+[hidden] { display: none !important; }
 button, input, select, textarea { font: inherit; }
 button, a, input, select, textarea, summary {
   &:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
 }
 button:disabled { cursor: not-allowed; }
 input::placeholder, textarea::placeholder { color: $text-4-color; opacity: 1; }
-::selection { background: #59457a; color: white; }
+::selection { background: #749bff; color: #ffffff; }
 .sr-only {
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
   overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0;

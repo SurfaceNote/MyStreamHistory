@@ -1,0 +1,6 @@
+.callback-page { width: min(520px, calc(100% - 40px)); margin: 12vh auto; padding: 56px 24px; text-align: center; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+h1 { font-size: 32px; font-weight: 550; letter-spacing: -1px; }
+p { color: var(--muted); font-size: 15px; }
+.eyebrow { color: var(--accent); font-size: 12px; letter-spacing: 2px; margin-top: 28px; }
+.loading-ring { display: inline-block; width: 40px; height: 40px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
