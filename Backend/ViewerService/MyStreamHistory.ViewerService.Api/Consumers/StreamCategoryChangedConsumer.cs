@@ -12,17 +12,23 @@ public class StreamCategoryChangedConsumer : IConsumer<StreamCategoryChangedEven
     private readonly IChatMessageBufferService _bufferService;
     private readonly IProcessedEventSubMessageRepository _processedMessageRepository;
     private readonly ILogger<StreamCategoryChangedConsumer> _logger;
+    private readonly IStreamCategoryService _categoryService;
+    private readonly IViewerTrackingService _trackingService;
 
     public StreamCategoryChangedConsumer(
         TwitchDataCollectionFeature dataCollection,
         IChatMessageBufferService bufferService,
         IProcessedEventSubMessageRepository processedMessageRepository,
-        ILogger<StreamCategoryChangedConsumer> logger)
+        ILogger<StreamCategoryChangedConsumer> logger,
+        IStreamCategoryService categoryService,
+        IViewerTrackingService trackingService)
     {
         _dataCollection = dataCollection;
         _bufferService = bufferService;
         _processedMessageRepository = processedMessageRepository;
         _logger = logger;
+        _categoryService = categoryService;
+        _trackingService = trackingService;
     }
 
     public async Task Consume(ConsumeContext<StreamCategoryChangedEventContract> context)
@@ -51,10 +57,27 @@ public class StreamCategoryChangedConsumer : IConsumer<StreamCategoryChangedEven
 
             if (!updated)
             {
-                _logger.LogWarning(
-                    "Ignored stale category event for TwitchUserId {TwitchUserId}, StreamSessionId {StreamSessionId}",
-                    message.BroadcasterUserId,
-                    message.StreamSessionId);
+                // Category and stream-created events use separate queues and can arrive in either order.
+                // Verify the session before initializing so an old event cannot replace a newer stream.
+                var twitchUserId = message.BroadcasterUserId.ToString();
+                var activeStream = await _categoryService.GetActiveStreamCategoryAsync(twitchUserId, context.CancellationToken);
+                if (activeStream?.StreamSessionId == message.StreamSessionId && activeStream.IsLiveConfirmed)
+                {
+                    await _trackingService.HandleStreamOnlineAsync(
+                        twitchUserId,
+                        message.StreamSessionId,
+                        activeStream.StreamCategoryId ?? message.NewCategoryId,
+                        context.CancellationToken);
+                    _logger.LogInformation(
+                        "Recovered stream buffer from category event for TwitchUserId {TwitchUserId}, StreamSessionId {StreamSessionId}",
+                        twitchUserId, message.StreamSessionId);
+                }
+                else
+                {
+                    _logger.LogWarning(
+                        "Ignored category event without a matching confirmed active stream for TwitchUserId {TwitchUserId}, StreamSessionId {StreamSessionId}",
+                        twitchUserId, message.StreamSessionId);
+                }
             }
 
             // Save processed message

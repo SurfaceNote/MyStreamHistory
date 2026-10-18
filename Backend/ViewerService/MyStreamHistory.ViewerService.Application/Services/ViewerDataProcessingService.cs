@@ -15,6 +15,8 @@ public class ViewerDataProcessingService : IViewerDataProcessingService
     private readonly IViewerStatsRepository _viewerStatsRepository;
     private readonly ILogger<ViewerDataProcessingService> _logger;
     private readonly ICommunityService? _community;
+    private readonly IStreamCategoryService _categoryService;
+    private readonly IChatMessageBufferService _bufferService;
     
     // Sync viewer data if not synced for 7 days
     private static readonly TimeSpan DataSyncInterval = TimeSpan.FromDays(7);
@@ -27,6 +29,8 @@ public class ViewerDataProcessingService : IViewerDataProcessingService
         IViewerCategoryWatchRepository categoryWatchRepository,
         IViewerStatsRepository viewerStatsRepository,
         ILogger<ViewerDataProcessingService> logger,
+        IStreamCategoryService categoryService,
+        IChatMessageBufferService bufferService,
         ICommunityService? community = null)
     {
         _chatApiClient = chatApiClient;
@@ -37,6 +41,8 @@ public class ViewerDataProcessingService : IViewerDataProcessingService
         _viewerStatsRepository = viewerStatsRepository;
         _logger = logger;
         _community = community;
+        _categoryService = categoryService;
+        _bufferService = bufferService;
     }
 
     public async Task ProcessSnapshotAsync(DataCollectionSnapshot snapshot, CancellationToken cancellationToken = default)
@@ -115,7 +121,10 @@ public class ViewerDataProcessingService : IViewerDataProcessingService
         var viewerData = chatters.Select(c => (c.UserId, c.UserLogin, c.UserName)).ToList();
         var viewers = await _viewerRepository.GetOrCreateViewersAsync(viewerData, cancellationToken);
         await RecordCommunityPollAsync(twitchUserId, streamSnapshot.StreamSessionId, chatters, cancellationToken, observedAt);
-        if (!streamSnapshot.CurrentCategoryId.HasValue) return;
+        if (!streamSnapshot.CurrentCategoryId.HasValue)
+        {
+            await RecoverCategoryAsync(twitchUserId, streamSnapshot, cancellationToken);
+        }
 
         // Check if we need to sync viewer data (for viewers that haven't been synced or synced long ago)
         await SyncViewerDataIfNeededAsync(viewers, accessToken, cancellationToken);
@@ -133,17 +142,19 @@ public class ViewerDataProcessingService : IViewerDataProcessingService
                 chatPointsToAdd = (decimal)characterCount / 140;
             }
 
-            var watch = new ViewerCategoryWatch
+            if (streamSnapshot.CurrentCategoryId is { } categoryId)
             {
-                Id = Guid.NewGuid(),
-                ViewerId = viewer.Id,
-                StreamCategoryId = streamSnapshot.CurrentCategoryId.Value,
-                MinutesWatched = 1,
-                ChatPoints = chatPointsToAdd,
-                Experience = Math.Round(chatPointsToAdd / 4 + 1m / 30, 2),
-                LastUpdatedAt = now
-            };
-            categoryUpdates.Add(watch);
+                categoryUpdates.Add(new ViewerCategoryWatch
+                {
+                    Id = Guid.NewGuid(),
+                    ViewerId = viewer.Id,
+                    StreamCategoryId = categoryId,
+                    MinutesWatched = 1,
+                    ChatPoints = chatPointsToAdd,
+                    Experience = Math.Round(chatPointsToAdd / 4 + 1m / 30, 2),
+                    LastUpdatedAt = now
+                });
+            }
 
             var stats = new ViewerStats
             {
@@ -171,6 +182,32 @@ public class ViewerDataProcessingService : IViewerDataProcessingService
             await _viewerStatsRepository.BulkIncrementAsync(statsUpdates, cancellationToken);
             _logger.LogInformation("Updated {Count} viewer stats records for TwitchUserId: {TwitchUserId}", statsUpdates.Count, twitchUserId);
         }
+    }
+
+    private async Task RecoverCategoryAsync(string twitchUserId, StreamDataSnapshot snapshot, CancellationToken ct)
+    {
+        try
+        {
+            var activeStream = await _categoryService.GetActiveStreamCategoryAsync(twitchUserId, ct);
+            if (activeStream?.StreamSessionId == snapshot.StreamSessionId
+                && activeStream.StreamCategoryId is { } categoryId)
+            {
+                snapshot.CurrentCategoryId = categoryId;
+                _bufferService.UpdateStreamCategory(twitchUserId, snapshot.StreamSessionId, categoryId);
+                _logger.LogInformation(
+                    "Recovered missing category {CategoryId} for TwitchUserId {TwitchUserId}, StreamSessionId {StreamSessionId}",
+                    categoryId, twitchUserId, snapshot.StreamSessionId);
+                return;
+            }
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogError(ex, "Failed to recover missing category for TwitchUserId {TwitchUserId}", twitchUserId);
+        }
+
+        _logger.LogWarning(
+            "Category unavailable for TwitchUserId {TwitchUserId}, StreamSessionId {StreamSessionId}; saving overall viewer stats only",
+            twitchUserId, snapshot.StreamSessionId);
     }
 
     private async Task RecordCommunityPollAsync(string channel, Guid session, IReadOnlyCollection<TwitchChatterDto>? chatters,

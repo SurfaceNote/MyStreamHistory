@@ -47,18 +47,108 @@ public class ViewerDataProcessingServiceTests
         Assert.Equal(1, usersApiClient.CallCount);
     }
 
+    [Fact]
+    public async Task MissingCategory_RecoversSameSessionAndPersistsMessagePointsInCurrentAndFutureSnapshots()
+    {
+        var viewer = CreateViewer(DateTime.UtcNow);
+        var buffer = new ChatMessageBufferService();
+        var session = Guid.NewGuid();
+        var category = Guid.NewGuid();
+        buffer.InitializeStream("streamer-1", session, null);
+        buffer.AddChatMessage("streamer-1", viewer.TwitchUserId, 280);
+        var categories = new FakeStreamCategoryService
+        {
+            Result = new() { StreamSessionId = session, StreamCategoryId = category, IsLiveConfirmed = true }
+        };
+        var watches = new FakeViewerCategoryWatchRepository();
+        var stats = new FakeViewerStatsRepository();
+        var service = CreateService(new(viewer), new(CreateTwitchUserFrom(viewer)), categories, buffer, watches, stats);
+
+        await service.ProcessSnapshotAsync(buffer.CreateSnapshot());
+
+        Assert.Equal(category, Assert.Single(watches.Deltas).StreamCategoryId);
+        Assert.Equal(2m, Assert.Single(watches.Deltas).ChatPoints);
+        Assert.Equal(2m, Assert.Single(stats.Deltas).EarnedMsgPoints);
+        Assert.Equal(1, Assert.Single(stats.Deltas).MinutesWatched);
+
+        buffer.AddChatMessage("streamer-1", viewer.TwitchUserId, 140);
+        await service.ProcessSnapshotAsync(buffer.CreateSnapshot());
+
+        Assert.Equal(1, categories.CallCount);
+        Assert.Equal(3m, stats.Deltas.Sum(x => x.EarnedMsgPoints));
+        Assert.All(watches.Deltas, x => Assert.Equal(category, x.StreamCategoryId));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task MissingCategory_UnavailableOrFailedLookup_StillSavesOverallStatsAndRetriesNextSnapshot(bool failLookup)
+    {
+        var viewer = CreateViewer(DateTime.UtcNow);
+        var buffer = new ChatMessageBufferService();
+        var session = Guid.NewGuid();
+        buffer.InitializeStream("streamer-1", session, null);
+        buffer.AddChatMessage("streamer-1", viewer.TwitchUserId, 140);
+        var categories = new FakeStreamCategoryService { FailLookup = failLookup };
+        var watches = new FakeViewerCategoryWatchRepository();
+        var stats = new FakeViewerStatsRepository();
+        var service = CreateService(new(viewer), new(CreateTwitchUserFrom(viewer)), categories, buffer, watches, stats);
+
+        await service.ProcessSnapshotAsync(buffer.CreateSnapshot());
+
+        Assert.Empty(watches.Deltas);
+        Assert.Equal(1m, Assert.Single(stats.Deltas).EarnedMsgPoints);
+        Assert.Equal(1, Assert.Single(stats.Deltas).MinutesWatched);
+
+        categories.FailLookup = false;
+        var category = Guid.NewGuid();
+        categories.Result = new() { StreamSessionId = session, StreamCategoryId = category, IsLiveConfirmed = true };
+        await service.ProcessSnapshotAsync(buffer.CreateSnapshot());
+
+        Assert.Equal(2, categories.CallCount);
+        Assert.Equal(category, Assert.Single(watches.Deltas).StreamCategoryId);
+        Assert.Equal(2, stats.Deltas.Count);
+    }
+
+    [Fact]
+    public async Task MissingCategory_LookupReturnsDifferentSession_DoesNotAssignItsCategory()
+    {
+        var viewer = CreateViewer(DateTime.UtcNow);
+        var buffer = new ChatMessageBufferService();
+        buffer.InitializeStream("streamer-1", Guid.NewGuid(), null);
+        var categories = new FakeStreamCategoryService
+        {
+            Result = new() { StreamSessionId = Guid.NewGuid(), StreamCategoryId = Guid.NewGuid(), IsLiveConfirmed = true }
+        };
+        var watches = new FakeViewerCategoryWatchRepository();
+        var stats = new FakeViewerStatsRepository();
+        var service = CreateService(new(viewer), new(CreateTwitchUserFrom(viewer)), categories, buffer, watches, stats);
+
+        await service.ProcessSnapshotAsync(buffer.CreateSnapshot());
+
+        Assert.Empty(watches.Deltas);
+        Assert.Single(stats.Deltas);
+        Assert.Null(buffer.CreateSnapshot().StreamSnapshots["streamer-1"].CurrentCategoryId);
+    }
+
     private static ViewerDataProcessingService CreateService(
         FakeViewerRepository viewerRepository,
-        FakeTwitchUsersApiClient usersApiClient)
+        FakeTwitchUsersApiClient usersApiClient,
+        FakeStreamCategoryService? categoryService = null,
+        ChatMessageBufferService? bufferService = null,
+        FakeViewerCategoryWatchRepository? watches = null,
+        FakeViewerStatsRepository? stats = null)
     {
         return new ViewerDataProcessingService(
             new FakeTwitchChatApiClient(),
             usersApiClient,
             new FakeAuthTokenService(),
             viewerRepository,
-            new FakeViewerCategoryWatchRepository(),
-            new FakeViewerStatsRepository(),
-            NullLogger<ViewerDataProcessingService>.Instance);
+            watches ?? new FakeViewerCategoryWatchRepository(),
+            stats ?? new FakeViewerStatsRepository(),
+            NullLogger<ViewerDataProcessingService>.Instance,
+            categoryService ?? new FakeStreamCategoryService(),
+            bufferService ?? new ChatMessageBufferService());
     }
 
     private static DataCollectionSnapshot CreateSnapshot()
@@ -101,6 +191,20 @@ public class ViewerDataProcessingServiceTests
             DisplayName = viewer.DisplayName,
             ProfileImageUrl = viewer.ProfileImageUrl ?? string.Empty
         };
+    }
+
+    private sealed class FakeStreamCategoryService : IStreamCategoryService
+    {
+        public ActiveStreamCategoryDto? Result { get; set; }
+        public bool FailLookup { get; set; }
+        public int CallCount { get; private set; }
+
+        public Task<ActiveStreamCategoryDto?> GetActiveStreamCategoryAsync(string twitchUserId, CancellationToken cancellationToken = default)
+        {
+            CallCount++;
+            if (FailLookup) throw new HttpRequestException("Tracking service unavailable");
+            return Task.FromResult(Result);
+        }
     }
 
     private sealed class FakeAuthTokenService : IAuthTokenService
@@ -190,6 +294,8 @@ public class ViewerDataProcessingServiceTests
 
     private sealed class FakeViewerCategoryWatchRepository : IViewerCategoryWatchRepository
     {
+        public List<ViewerCategoryWatch> Deltas { get; } = [];
+
         public Task<ViewerCategoryWatch?> GetByViewerAndCategoryAsync(
             Guid viewerId,
             Guid streamCategoryId,
@@ -239,12 +345,15 @@ public class ViewerDataProcessingServiceTests
 
         public Task BulkIncrementAsync(List<ViewerCategoryWatch> watchDeltas, CancellationToken cancellationToken = default)
         {
+            Deltas.AddRange(watchDeltas);
             return Task.CompletedTask;
         }
     }
 
     private sealed class FakeViewerStatsRepository : IViewerStatsRepository
     {
+        public List<ViewerStats> Deltas { get; } = [];
+
         public Task<ViewerStats?> GetByViewerAndStreamerAsync(
             Guid viewerId,
             string streamerTwitchUserId,
@@ -289,6 +398,7 @@ public class ViewerDataProcessingServiceTests
 
         public Task BulkIncrementAsync(List<ViewerStats> statDeltas, CancellationToken cancellationToken = default)
         {
+            Deltas.AddRange(statDeltas);
             return Task.CompletedTask;
         }
     }
