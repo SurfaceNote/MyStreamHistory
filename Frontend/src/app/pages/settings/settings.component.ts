@@ -1,4 +1,6 @@
-import { Component } from '@angular/core';
+import { TranslatePipe } from '../../i18n/translate.pipe';
+import { LocaleService } from '../../i18n/locale.service';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { SettingsSidebarComponent } from './components/settings-sidebar/settings-sidebar.component';
 import { ProfileSettingsComponent } from './components/profile-settings/profile-settings.component';
@@ -8,11 +10,12 @@ import { OverlaySettingsComponent } from './components/overlay-settings/overlay-
 @Component({
   selector: 'app-settings',
   standalone: true,
-  imports: [CommonModule, SettingsSidebarComponent, ProfileSettingsComponent, PlaythroughSettingsComponent, OverlaySettingsComponent],
+  imports: [TranslatePipe, CommonModule, SettingsSidebarComponent, ProfileSettingsComponent, PlaythroughSettingsComponent, OverlaySettingsComponent],
   templateUrl: './settings.component.html',
   styleUrls: ['./settings.component.scss']
 })
 export class SettingsComponent {
+  readonly locale = inject(LocaleService);
   activeSection: string = 'profile';
 
   onSectionChange(section: string): void {

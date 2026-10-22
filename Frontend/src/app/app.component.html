@@ -1,6 +1,7 @@
 @if (!isOverlayRoute) {
-  <a class="skip-link" [href]="mainContentLink">Skip to content</a>
+  <a class="skip-link" [href]="mainContentLink">{{ 'ui.skipToContent' | t }}</a>
   <app-header></app-header>
+  <app-language-suggestion />
 }
 
 <div id="main-content" tabindex="-1">

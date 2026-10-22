@@ -9,7 +9,11 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "test:content": "ng test --watch=false --browsers=ChromeHeadless --ts-config=tsconfig.content-test.json --include=src/app/features/content/**/*.spec.ts",
-    "serve:ssr:MyStreamHistory.Web": "node dist/my-stream-history.web/server/server.mjs"
+    "serve:ssr:MyStreamHistory.Web": "node dist/my-stream-history.web/server/server.mjs",
+    "test:localization": "ng test --watch=false --browsers=ChromeHeadless --ts-config=tsconfig.localization-test.json --include=src/app/i18n/**/*.spec.ts --include=src/app/service/seo.service.spec.ts --include=src/app/pages/streamer-profile/**/*.spec.ts --include=src/app/pages/stream-detail/**/*.spec.ts --include=src/app/pages/viewer-stats/**/*.spec.ts --include=src/app/features/content/**/*.spec.ts --include=src/app/pages/home/**/*.spec.ts --include=src/app/features/community/**/*.spec.ts --include=src/app/components/header/**/*.spec.ts",
+    "smoke:localization": "node scripts/smoke-localization.mjs",
+    "smoke:localization:browser": "node scripts/smoke-localization-browser.mjs",
+    "smoke:localization:nginx": "node scripts/smoke-localization-nginx.mjs"
   },
   "private": true,
   "dependencies": {

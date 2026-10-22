@@ -1,5 +1,8 @@
+import { TranslationKey } from '../../../../i18n/translations';
+import { TranslatePipe } from '../../../../i18n/translate.pipe';
+import { LocaleService, LocalizedMessage } from '../../../../i18n/locale.service';
 import { GameArtComponent } from '../../../../components/game-art/game-art.component';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SettingsService } from '../../../../service/settings.service';
@@ -13,7 +16,7 @@ import {
 
 interface PlaythroughStatusOption {
   value: PlaythroughStatus;
-  label: string;
+  label: TranslationKey;
 }
 
 interface PlaythroughFormState {
@@ -28,29 +31,30 @@ interface PlaythroughFormState {
 @Component({
   selector: 'app-playthrough-settings',
   standalone: true,
-  imports: [GameArtComponent, CommonModule, FormsModule],
+  imports: [TranslatePipe, GameArtComponent, CommonModule, FormsModule],
   templateUrl: './playthrough-settings.component.html',
   styleUrls: ['./playthrough-settings.component.scss']
 })
 export class PlaythroughSettingsComponent implements OnInit {
-  private readonly streamCategoryDateFormatter = new Intl.DateTimeFormat(undefined, {
-    dateStyle: 'medium',
-    timeStyle: 'short'
-  });
+  readonly locale = inject(LocaleService);
 
   readonly statusOptions: PlaythroughStatusOption[] = [
-    { value: 'Playing', label: 'Playing' },
-    { value: 'Planned', label: 'Will Play' },
-    { value: 'Dropped', label: 'Dropped' },
-    { value: 'Completed', label: 'Completed' }
+    { value: 'Playing', label: 'ui.playing' },
+    { value: 'Planned', label: 'ui.willPlay' },
+    { value: 'Dropped', label: 'ui.dropped' },
+    { value: 'Completed', label: 'ui.completed' }
   ];
 
   settings: PlaythroughSettings = { playthroughs: [], availableGames: [] };
   form: PlaythroughFormState = this.createDefaultForm();
   isLoading = false;
   isSaving = false;
-  errorMessage = '';
-  successMessage = '';
+  private _errorMessage: LocalizedMessage = '';
+  get errorMessage(): string { return this.locale.message(this._errorMessage); }
+  set errorMessage(value: LocalizedMessage) { this._errorMessage = value; }
+  private _successMessage: LocalizedMessage = '';
+  get successMessage(): string { return this.locale.message(this._successMessage); }
+  set successMessage(value: LocalizedMessage) { this._successMessage = value; }
 
   constructor(private readonly settingsService: SettingsService) {}
 
@@ -152,7 +156,7 @@ export class PlaythroughSettingsComponent implements OnInit {
       },
       error: (error) => {
         console.error('Failed to load playthrough settings', error);
-        this.errorMessage = 'Failed to load playthrough settings.';
+        this.errorMessage = 'settings.loadPlaythroughsFailed';
         this.isLoading = false;
       }
     });
@@ -181,7 +185,7 @@ export class PlaythroughSettingsComponent implements OnInit {
 
   save(): void {
     if (!this.form.twitchCategoryId) {
-      this.errorMessage = 'Select a game.';
+      this.errorMessage = 'settings.selectGameError';
       return;
     }
 
@@ -201,20 +205,20 @@ export class PlaythroughSettingsComponent implements OnInit {
     this.settingsService.savePlaythrough(request).subscribe({
       next: () => {
         this.isSaving = false;
-        this.successMessage = this.form.id ? 'Playthrough updated.' : 'Playthrough created.';
+        this.successMessage = this.form.id ? 'settings.playthroughUpdated' : 'settings.playthroughCreated';
         this.form = this.createDefaultForm();
         this.loadSettings();
       },
       error: (error) => {
         console.error('Failed to save playthrough', error);
-        this.errorMessage = this.extractError(error, 'Failed to save playthrough.');
+        this.errorMessage = 'settings.savePlaythroughFailed';
         this.isSaving = false;
       }
     });
   }
 
   delete(playthrough: Playthrough): void {
-    if (!confirm(`Delete "${playthrough.title}"?`)) {
+    if (!confirm(this.locale.t('settings.deletePlaythroughConfirm', { name: playthrough.title || playthrough.gameName }))) {
       return;
     }
 
@@ -227,12 +231,12 @@ export class PlaythroughSettingsComponent implements OnInit {
           this.form = this.createDefaultForm();
         }
 
-        this.successMessage = 'Playthrough deleted.';
+        this.successMessage = 'settings.playthroughDeleted';
         this.loadSettings();
       },
       error: (error) => {
         console.error('Failed to delete playthrough', error);
-        this.errorMessage = this.extractError(error, 'Failed to delete playthrough.');
+        this.errorMessage = 'settings.deletePlaythroughFailed';
       }
     });
   }
@@ -260,8 +264,12 @@ export class PlaythroughSettingsComponent implements OnInit {
     return game.twitchCategoryId;
   }
 
+  statusLabel(status: PlaythroughStatus): string {
+    return this.locale.t(this.statusOptions.find(option => option.value === status)?.label || 'ui.unknown');
+  }
+
   formatStreamCategoryDate(value: string): string {
-    return this.streamCategoryDateFormatter.format(new Date(value));
+    return new Intl.DateTimeFormat(this.locale.locale(), { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
   }
 
   private formatBoxArtUrl(boxArtUrl: string | undefined): string {
@@ -285,20 +293,4 @@ export class PlaythroughSettingsComponent implements OnInit {
     };
   }
 
-  private extractError(error: unknown, fallback: string): string {
-    const httpError = error as { error?: { errors?: unknown; data?: { error?: string } } | string };
-
-    if (typeof httpError?.error === 'string') {
-      return httpError.error;
-    }
-
-    if (httpError?.error && typeof httpError.error === 'object') {
-      const apiError = httpError.error as { data?: { error?: string } };
-      if (apiError.data?.error) {
-        return apiError.data.error;
-      }
-    }
-
-    return fallback;
-  }
 }

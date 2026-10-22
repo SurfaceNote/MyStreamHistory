@@ -1,29 +1,29 @@
 <main class="directory-page">
   <section class="intro" aria-labelledby="page-title">
     <div>
-      <p class="eyebrow">TWITCH HISTORY & ANALYTICS</p>
-      <h1 id="page-title">Your streaming world.<br><span>All in one place.</span></h1>
+      <p class="eyebrow">{{ 'ui.twitchHistoryAnalytics' | t }}</p>
+      <h1 id="page-title">{{ 'ui.yourStreamingWorld' | t }}<br><span>{{ 'ui.allInOnePlace' | t }}</span></h1>
     </div>
-    <p class="intro-copy">Explore channels, revisit broadcasts and discover the games and communities behind every stream.</p>
+    <p class="intro-copy">{{ 'ui.exploreChannelsRevisitBroadcastsAndDiscoverTheGamesAndCommunitiesBehindEveryStream' | t }}</p>
   </section>
 
   <div class="page-layout">
     <section class="directory" aria-labelledby="directory-title">
       <div class="section-heading">
-        <h2 id="directory-title">Explore channels <span *ngIf="!isLoadingStreamers && !streamersLoadFailed" class="count">{{ streamers.length }}</span></h2>
-        <span class="directory-note">{{ showingRecentStreamers ? 'Recently joined' : 'On MyStreamHistory' }}</span>
+        <h2 id="directory-title">{{ 'ui.exploreChannels' | t }} <span *ngIf="!isLoadingStreamers && !streamersLoadFailed" class="count">{{ streamers.length }}</span></h2>
+        <span class="directory-note">{{ showingRecentStreamers ? ('ui.recentlyJoined' | t) : ('ui.onMystreamhistory' | t) }}</span>
       </div>
 
       <div class="directory-tools">
         <div class="search-field">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg>
-          <label for="streamer-search" class="sr-only">Search streamers</label>
-          <input id="streamer-search" type="search" placeholder="Search by streamer name" [(ngModel)]="searchQuery" autocomplete="off" [disabled]="isLoadingStreamers || streamersLoadFailed">
+          <label for="streamer-search" class="sr-only">{{ 'ui.searchStreamers' | t }}</label>
+          <input id="streamer-search" type="search" [placeholder]="'ui.searchByStreamerName' | t" [(ngModel)]="searchQuery" autocomplete="off" [disabled]="isLoadingStreamers || streamersLoadFailed">
         </div>
-        <div class="directory-filters" role="group" aria-label="Streamer status">
-          <button type="button" [class.active]="!liveOnly" [attr.aria-pressed]="!liveOnly" (click)="liveOnly = false">All</button>
+        <div class="directory-filters" role="group" [attr.aria-label]="'ui.streamerStatus' | t">
+          <button type="button" [class.active]="!liveOnly" [attr.aria-pressed]="!liveOnly" (click)="liveOnly = false">{{ 'ui.all' | t }}</button>
           <button type="button" [class.active]="liveOnly" [attr.aria-pressed]="liveOnly" (click)="liveOnly = true">
-            <span class="live-dot" aria-hidden="true"></span>Live now
+            <span class="live-dot" aria-hidden="true"></span>{{ 'ui.liveNow' | t }}
             <span *ngIf="!isLoadingStreamers && !streamersLoadFailed" class="filter-count">{{ liveStreamerIds.size }}</span>
           </button>
         </div>
@@ -31,7 +31,7 @@
 
       <div class="directory-results" [attr.aria-busy]="isLoadingStreamers">
         @if (isLoadingStreamers) {
-          <p class="sr-only" role="status">Loading streamers…</p>
+          <p class="sr-only" role="status">{{ 'ui.loadingStreamers' | t }}</p>
           <div class="streamer-list" aria-hidden="true">
             @for (row of [1,2,3,4,5,6]; track row) {
               <div class="skeleton-row"><span class="skeleton-avatar"></span><span class="skeleton-copy"></span></div>
@@ -39,32 +39,32 @@
           </div>
         } @else if (streamersLoadFailed) {
           <div class="empty-state" role="status">
-            <h3>We couldn't load the streamers</h3>
-            <p>Please try again in a moment.</p>
-            <button class="secondary-button" type="button" (click)="retryStreamers()">Try again</button>
+            <h3>{{ 'ui.weCouldnTLoadTheStreamers' | t }}</h3>
+            <p>{{ 'ui.pleaseTryAgainInAMoment' | t }}</p>
+            <button class="secondary-button" type="button" (click)="retryStreamers()">{{ 'ui.tryAgain' | t }}</button>
           </div>
         } @else {
           @let visibleStreamers = filteredStreamers;
-          <p class="result-summary" role="status">{{ visibleStreamers.length }} {{ visibleStreamers.length === 1 ? 'streamer' : 'streamers' }}{{ searchQuery.trim() ? ' matching your search' : (liveOnly ? ' live now' : ' · Live channels first') }}</p>
+          <p class="result-summary" role="status">{{ locale.plural('streamerCount', visibleStreamers.length) }} · {{ (searchQuery.trim() ? 'search.matching' : (liveOnly ? 'ui.liveNow' : 'search.liveFirst')) | t }}</p>
           <div class="streamer-list">
             @for (streamer of visibleStreamers; track streamer.twitchId) {
-              <a [routerLink]="['/profile', streamer.twitchId]" class="streamer-row" [class.is-live]="liveStreamerIds.has(streamer.twitchId)" [attr.aria-label]="streamer.displayName + ' — view stream history'">
+              <a [routerLink]="(['/profile', streamer.twitchId]) | localPath" class="streamer-row" [class.is-live]="liveStreamerIds.has(streamer.twitchId)" [attr.aria-label]="'profile.link' | t: { name: streamer.displayName }">
                 <span class="avatar-wrap">
                   <span class="avatar-initial" aria-hidden="true">{{ streamer.displayName.charAt(0).toUpperCase() }}</span>
                   @if (streamer.avatar) { <img [src]="streamer.avatar" alt="" loading="lazy" (error)="$any($event.target).hidden = true"> }
                 </span>
                 <span class="streamer-copy">
                   <strong>{{ streamer.displayName }}</strong>
-                  <span>{{ liveStreamerIds.has(streamer.twitchId) ? 'On air · Join the stream' : 'Broadcasts, games & community' }}</span>
+                  <span>{{ liveStreamerIds.has(streamer.twitchId) ? ('ui.onAirJoinTheStream' | t) : ('ui.broadcastsGamesCommunity' | t) }}</span>
                 </span>
-                @if (liveStreamerIds.has(streamer.twitchId)) { <span class="live-label"><span class="live-dot" aria-hidden="true"></span>Live</span> }
+                @if (liveStreamerIds.has(streamer.twitchId)) { <span class="live-label"><span class="live-dot" aria-hidden="true"></span>{{ 'ui.live' | t }}</span> }
                 <svg class="row-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M5 12h14m-5-5 5 5-5 5"/></svg>
               </a>
             } @empty {
               <div class="empty-state">
-                <h3>{{ searchQuery.trim() ? 'No matching streamers' : (liveOnly ? 'No one is live right now' : 'No streamers here yet') }}</h3>
-                <p>{{ searchQuery.trim() ? 'Try a different name or clear the filters.' : (liveOnly ? 'You can still explore past broadcasts.' : 'Sign in with Twitch to get started.') }}</p>
-                @if (searchQuery || liveOnly) { <button class="secondary-button" type="button" (click)="resetFilters()">Show all streamers</button> }
+                <h3>{{ searchQuery.trim() ? ('ui.noMatchingStreamers' | t) : (liveOnly ? ('ui.noOneIsLiveRightNow' | t) : ('ui.noStreamersHereYet' | t)) }}</h3>
+                <p>{{ searchQuery.trim() ? ('ui.tryADifferentNameOrClearTheFilters' | t) : (liveOnly ? ('ui.youCanStillExplorePastBroadcasts' | t) : ('ui.signInWithTwitchToGetStarted' | t)) }}</p>
+                @if (searchQuery || liveOnly) { <button class="secondary-button" type="button" (click)="resetFilters()">{{ 'ui.showAllStreamers' | t }}</button> }
               </div>
             }
           </div>
@@ -72,33 +72,33 @@
       </div>
     </section>
 
-    <aside class="sidebar" aria-label="About MyStreamHistory">
+    <aside class="sidebar" [attr.aria-label]="'ui.aboutMystreamhistory' | t">
       <section class="start-panel">
-        <span class="panel-kicker">{{ isLoggedIn ? 'YOUR CHANNEL' : 'FOR STREAMERS' }}</span>
-        <h2>{{ isLoggedIn ? 'Welcome back, ' + username : 'Your channel. A bigger picture.' }}</h2>
-        <p>{{ isLoggedIn ? 'Pick up where you left off. Your broadcasts, games and audience are in your profile.' : 'Connect your Twitch account to start building your channel history.' }}</p>
+        <span class="panel-kicker">{{ isLoggedIn ? ('ui.yourChannel' | t) : ('ui.forStreamers' | t) }}</span>
+        <h2>{{ isLoggedIn ? ('welcome' | t: { name: username }) : ('ui.yourChannelABiggerPicture' | t) }}</h2>
+        <p>{{ isLoggedIn ? ('ui.pickUpWhereYouLeftOffYourBroadcastsGamesAndAudienceAreInYourProfile' | t) : ('ui.connectYourTwitchAccountToStartBuildingYourChannelHistory' | t) }}</p>
         <div class="auth-slot" [attr.aria-busy]="!authReady">
           <span *ngIf="!authReady" class="auth-placeholder" aria-hidden="true"></span>
           <app-login-component *ngIf="authReady && !isLoggedIn" />
-          <a *ngIf="authReady && isLoggedIn" [routerLink]="['/profile', twitchId]" class="primary-button">Open my profile <span aria-hidden="true">→</span></a>
+          <a *ngIf="authReady && isLoggedIn" [routerLink]="(['/profile', twitchId]) | localPath" class="primary-button">{{ 'ui.openMyProfile' | t }} <span aria-hidden="true">→</span></a>
         </div>
-        <span class="panel-note">Free during alpha</span>
+        <span class="panel-note">{{ 'ui.freeDuringAlpha' | t }}</span>
       </section>
 
       <section class="guide-panel">
-        <h2>Inside each profile</h2>
+        <h2>{{ 'ui.insideEachProfile' | t }}</h2>
         <dl>
-          <div><dt>Broadcast history</dt><dd>Past streams, games played and time on air.</dd></div>
-          <div><dt>Game playthroughs</dt><dd>Follow a game across multiple streams.</dd></div>
-          <div><dt>Audience activity</dt><dd>Viewership and community statistics.</dd></div>
+          <div><dt>{{ 'ui.broadcastHistory' | t }}</dt><dd>{{ 'ui.pastStreamsGamesPlayedAndTimeOnAir' | t }}</dd></div>
+          <div><dt>{{ 'ui.gamePlaythroughs' | t }}</dt><dd>{{ 'ui.followAGameAcrossMultipleStreams' | t }}</dd></div>
+          <div><dt>{{ 'ui.audienceActivity' | t }}</dt><dd>{{ 'ui.viewershipAndCommunityStatistics' | t }}</dd></div>
         </dl>
       </section>
-      <a class="feedback-link" href="https://discord.gg/Cm77XVeUsd" target="_blank" rel="noopener noreferrer">Feedback & support on Discord <span aria-hidden="true">↗</span></a>
+      <a class="feedback-link" href="https://discord.gg/Cm77XVeUsd" target="_blank" rel="noopener noreferrer">{{ 'ui.feedbackSupportOnDiscord' | t }} <span aria-hidden="true">↗</span></a>
     </aside>
   </div>
 
   <footer class="site-footer">
-    <span>MyStreamHistory <span class="footer-divider">/</span> Built around your broadcasts.</span>
-    <span>Independent project. Not affiliated with Twitch.</span>
+    <span>MyStreamHistory <span class="footer-divider">/</span> {{ 'ui.builtAroundYourBroadcasts' | t }}</span>
+    <span>{{ 'ui.independentProjectNotAffiliatedWithTwitch' | t }}</span>
   </footer>
 </main>

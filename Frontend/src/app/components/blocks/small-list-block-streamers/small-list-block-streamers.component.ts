@@ -1,3 +1,6 @@
+import { TranslatePipe, LocalPathPipe } from '../../../i18n/translate.pipe';
+import { TranslationKey } from '../../../i18n/translations';
+import { LocaleService, LocalizedMessage } from '../../../i18n/locale.service';
 import { Component, inject, Input } from '@angular/core';
 import { StreamerShortDTO } from '../../../models/streamer-short.dto';
 import { StreamerListType } from '../../../enums/streamer-list-type.enum';
@@ -6,16 +9,17 @@ import { RouterModule } from '@angular/router';
 
 @Component({
   selector: 'app-small-list-block-streamers',
-  imports: [RouterModule],
+  imports: [TranslatePipe, LocalPathPipe, RouterModule],
   templateUrl: './small-list-block-streamers.component.html',
   styleUrl: './small-list-block-streamers.component.scss'
 })
 export class SmallListBlockStreamersComponent {
+  readonly locale = inject(LocaleService);
   @Input() streamersListType: StreamerListType = StreamerListType.NewStreamers;
   streamers: StreamerShortDTO[] = [];
   isLoadingStreamers = true;
   fontIcon: string = '';
-  title: string = 'Title';
+  title: TranslationKey = 'ui.streamers';
   streamerService = inject(StreamerService)
 
   ngOnInit(): void {
@@ -27,19 +31,19 @@ export class SmallListBlockStreamersComponent {
     switch (this.streamersListType) {
       case StreamerListType.NewStreamers:
         this.fontIcon = 'fa-solid fa-headset';
-        this.title = 'New Streamers';
+        this.title = 'directory.newStreamers';
         break;
       case StreamerListType.PopularStreamers:
         this.fontIcon = 'fa-solid fa-headset';
-        this.title = 'Popular Streamers';
+        this.title = 'directory.popularStreamers';
         break;
       case StreamerListType.LiveStreamers:
         this.fontIcon = 'fa-solid fa-video';
-        this.title = 'Live Streamers';
+        this.title = 'directory.liveStreamers';
         break;
       default:
         this.fontIcon = '';
-        this.title = 'Title';
+        this.title = 'ui.streamers';
     }
   }
 

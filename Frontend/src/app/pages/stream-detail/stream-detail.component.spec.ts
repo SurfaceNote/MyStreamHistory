@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { PLATFORM_ID } from '@angular/core';
-import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
+import { ActivatedRoute, Router, provideRouter, convertToParamMap } from '@angular/router';
 import { of } from 'rxjs';
 import { Chart } from 'chart.js';
 import { StreamDetailComponent } from './stream-detail.component';
@@ -19,9 +19,9 @@ describe('Stream audience chart', () => {
   };
   function create(details: any, platform = 'browser') {
     TestBed.configureTestingModule({ imports: [StreamDetailComponent], providers: [
+      provideRouter([]),
       { provide: PLATFORM_ID, useValue: platform },
       { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({ streamId: 'stream' })) } },
-      { provide: Router, useValue: { navigate: () => {} } },
       { provide: StreamerService, useValue: { getStreamDetails: () => of(details) } },
       { provide: SeoService, useValue: { update: () => {} } }
     ] });

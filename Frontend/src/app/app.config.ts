@@ -11,7 +11,7 @@ import { createErrorHandler, TraceService } from '@sentry/angular';
 import { routes } from './app.routes';
 import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
 import { authIntercerptor } from './auth/auth.interceptor';
-import { provideClientHydration, withEventReplay } from '@angular/platform-browser';
+import { provideClientHydration, withEventReplay, withHttpTransferCacheOptions } from '@angular/platform-browser';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -33,6 +33,9 @@ export const appConfig: ApplicationConfig = {
     },
     provideAppInitializer(() => {
       inject(TraceService);
-    }), provideClientHydration(withEventReplay())
+    }), provideClientHydration(withEventReplay(), withHttpTransferCacheOptions({
+      filter: request => request.method === 'GET' && !request.headers.has('Authorization') &&
+        !/\/(auth|settings|admin|community)(?:\/|$)/.test(request.url) && !/\/viewers\//.test(request.url)
+    }))
   ]
 };

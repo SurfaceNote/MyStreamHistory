@@ -8,12 +8,12 @@
           [alt]="streamer.displayName"
         />
         <div>
-          <span class="eyebrow">STREAMER PROFILE</span>
+          <span class="eyebrow">{{ 'ui.streamerProfile' | t }}</span>
 
           <h1>
             {{ streamer.displayName }}
             @if (featuredStream?.isLive) {
-              <span class="live-badge">LIVE</span>
+              <span class="live-badge">{{ 'ui.liveLabel' | t }}</span>
             }
           </h1>
           <div class="socials">
@@ -47,39 +47,38 @@
         </div>
       </div>
       <div class="lifetime">
-        <span class="eyebrow">ALL TIME</span>
+        <span class="eyebrow">{{ 'ui.allTime' | t }}</span>
         @if (statistics; as stats) {
           <div>
             <span
-              ><b>{{ stats.totalStreamsCount | number }}</b> streams</span
+              ><b>{{ stats.totalStreamsCount | number: '1.0-3' : locale.locale() }}</b> {{ locale.countLabel('streams', stats.totalStreamsCount) }}</span
             ><span
-              ><b>{{ stats.totalUniqueGamesCount }}</b> games</span
+              ><b>{{ stats.totalUniqueGamesCount }}</b> {{ locale.countLabel('games', stats.totalUniqueGamesCount) }}</span
             ><span
-              ><b>{{ stats.totalStreamedHours | number: "1.0-0" }}</b> hours
-              live</span
+              ><b>{{ stats.totalStreamedHours | number: '1.0-0' : locale.locale() }}</b> {{ locale.countLabel('hours', Math.round(stats.totalStreamedHours)) }}</span
             >
           </div>
         } @else {
-          <p>Loading statistics…</p>
+          <p>{{ 'ui.loadingStatistics' | t }}</p>
         }
       </div>
-      @if (canViewCommunity) { <a class="community-link" routerLink="/analytics/community" [queryParams]="isOwnProfile ? {} : { channelId: twitchId }"><i class="fa-solid fa-users" aria-hidden="true"></i> Community analytics ↗</a> }
+      @if (canViewCommunity) { <a class="community-link" [routerLink]="'/analytics/community' | localPath" [queryParams]="isOwnProfile ? {} : { channelId: twitchId }"><i class="fa-solid fa-users" aria-hidden="true"></i> {{ 'ui.communityAnalytics' | t }}</a> }
       @if (featuredStream; as stream) {
         <article class="featured-stream">
           <div class="featured-heading">
             <span class="eyebrow" [class.live-text]="stream.isLive">{{
-              stream.isLive ? "● LIVE NOW" : "LATEST STREAM"
+              stream.isLive ? ('ui.liveNowLabel' | t) : ('ui.latestStream' | t)
             }}</span
             ><span>{{
               stream.isLive
                 ? formatDuration(stream.startedAt)
-                : (stream.startedAt | date: "mediumDate")
+                : (stream.startedAt | date: 'mediumDate' : 'UTC' : locale.locale())
             }}</span>
           </div>
           <ng-container *ngTemplateOutlet="streamGames; context: { $implicit: stream }"></ng-container>
           <div class="featured-meta">
             <span>{{ formatDuration(stream.startedAt, stream.endedAt) }}</span>
-            <span>{{ stream.uniqueViewersCount ?? '—' }} chat accounts</span>
+            <span>{{ stream.uniqueViewersCount ?? '—' }} {{ locale.countLabel('chatAccounts', stream.uniqueViewersCount || 0) }}</span>
           </div>
           @if (stream.isLive) {
             <a
@@ -87,14 +86,14 @@
               [href]="'https://www.twitch.tv/' + stream.streamerLogin"
               target="_blank"
               rel="noopener noreferrer"
-              >Watch on Twitch ↗</a
+              >{{ 'ui.watchOnTwitch' | t }}</a
             >
           } @else {
             <button
               class="primary-button"
               (click)="navigateToStreamDetail(stream.id)"
             >
-              View stream →
+              {{ 'ui.viewStream' | t }}
             </button>
           }
         </article>
@@ -102,8 +101,8 @@
         <div class="featured-stream state">
           {{
             isLoadingStreams
-              ? "Loading recent activity…"
-              : "No streams recorded yet"
+              ? ('ui.loadingRecentActivity' | t)
+              : ('ui.noStreamsRecordedYet' | t)
           }}
         </div>
       }
@@ -112,12 +111,12 @@
     <p class="state" role="status">
       {{
         profileLoadFailed
-          ? "Could not load this profile. Please try again later."
-          : "Loading streamer profile…"
+          ? ('ui.couldNotLoadThisProfilePleaseTryAgainLater' | t)
+          : ('ui.loadingStreamerProfile' | t)
       }}
     </p>
   }
-  <nav class="section-nav" aria-label="Profile sections">
+  <nav class="section-nav" [attr.aria-label]="'ui.profileSections' | t">
     @for (section of sections; track section) {
       <button
         type="button"
@@ -125,17 +124,17 @@
         [attr.aria-current]="activeSection === section ? 'page' : null"
         (click)="selectSection(section)"
       >
-        {{ section }}
+        {{ sectionLabels[section] | t }}
       </button>
     }
   </nav>
   <section class="dashboard-section" [hidden]="activeSection !== 'Overview'">
     <div class="section-heading">
       <div>
-        <span class="eyebrow">CHANNEL ANALYTICS</span>
-        <h2>Channel overview</h2>
+        <span class="eyebrow">{{ 'ui.channelAnalytics' | t }}</span>
+        <h2>{{ 'ui.channelOverview' | t }}</h2>
       </div>
-      <div class="period-control" role="group" aria-label="Dashboard period">
+      <div class="period-control" role="group" [attr.aria-label]="'ui.dashboardPeriod' | t">
         @for (period of dashboardPeriods; track period.value) {
           <button
             type="button"
@@ -149,7 +148,7 @@
       </div>
     </div>
     @if (isLoadingStatistics) {
-      <p class="state" role="status">Loading statistics…</p>
+      <p class="state" role="status">{{ 'ui.loadingStatistics' | t }}</p>
     }
     @if (!isLoadingStatistics && statistics?.dashboard; as dashboard) {
       <div class="dashboard-cards">
@@ -164,25 +163,25 @@
       <div class="dashboard-grid">
         <article class="chart-panel">
           <div class="panel-head">
-            <h3>Streaming activity</h3>
-            <span>Daily activity · {{ selectedPeriodLabel }}</span>
+            <h3>{{ 'ui.streamingActivity' | t }}</h3>
+            <span>{{ 'ui.dailyActivity' | t }} · {{ selectedPeriodLabel }}</span>
           </div>
           @if (hasSeriesPoints(dashboard.streamedHoursByDay)) {
             <div class="chart-wrap">
               <canvas
                 #streamedHoursChart
                 role="img"
-                aria-label="Hours streamed each day"
+                [attr.aria-label]="'ui.hoursStreamedEachDay' | t"
               ></canvas>
             </div>
           } @else {
-            <p class="state">No streamed hours in this period</p>
+            <p class="state">{{ 'ui.noStreamedHoursInThisPeriod' | t }}</p>
           }
         </article>
         <article class="chart-panel">
           <div class="panel-head">
-            <h3>Most played games</h3>
-            <span>By hours streamed</span>
+            <h3>{{ 'ui.mostPlayedGames' | t }}</h3>
+            <span>{{ 'ui.byHoursStreamed' | t }}</span>
           </div>
           <div class="game-mix-list">
             @for (
@@ -195,7 +194,7 @@
                 <div>
                   <div class="game-label">
                     <strong>{{ game.name }}</strong
-                    ><span>{{ formatNumber(game.totalHours) }} h</span>
+                    ><span>{{ formatNumber(game.totalHours) }} {{ 'unit.hours' | t }}</span>
                   </div>
                   <div class="bar-track">
                     <div [style.width.%]="gameShare(game.totalHours)"></div>
@@ -203,21 +202,21 @@
                 </div>
               </div>
             } @empty {
-              <p class="state">No games in this period</p>
+              <p class="state">{{ 'ui.noGamesInThisPeriod' | t }}</p>
             }
           </div>
         </article>
         <article class="chart-panel activity-panel">
-  <div class="panel-head"><h3>Broadcast activity</h3><span>{{ activityRange }} · hours per day</span></div>
+  <div class="panel-head"><h3>{{ 'ui.broadcastActivity' | t }}</h3><span>{{ activityRange }} · {{ 'ui.hoursPerDay' | t }}</span></div>
   @if (activityDays.length) {
-    <div class="activity-grid" aria-label="Daily broadcast hours">
+    <div class="activity-grid" [attr.aria-label]="'ui.dailyBroadcastHours' | t">
       @for (day of activityDays; track day.date) {
-        <span class="activity-day" [class.active]="day.hours > 0" [class.high]="day.hours >= 4" [title]="day.date + ': ' + formatNumber(day.hours) + ' hours'" [attr.aria-label]="day.date + ': ' + formatNumber(day.hours) + ' hours'">{{ day.label }}</span>
+        <span class="activity-day" [class.active]="day.hours > 0" [class.high]="day.hours >= 4" [title]="day.date + ': ' + formatNumber(day.hours) + ' ' + locale.t('unit.hours')" [attr.aria-label]="day.date + ': ' + formatNumber(day.hours) + ' ' + locale.t('unit.hours')">{{ day.label }}</span>
       }
     </div>
-    <div class="activity-legend"><span>No stream</span><i></i><i class="active"></i><i class="high"></i><span>4+ hours</span></div>
-    <p class="activity-note">Daily totals · latest {{ activityDays.length }} recorded days.</p>
-  } @else { <p class="state">Broadcast days will appear here when activity is recorded.</p> }
+    <div class="activity-legend"><span>{{ 'ui.noStream' | t }}</span><i></i><i class="active"></i><i class="high"></i><span>{{ 'ui.4Hours' | t }}</span></div>
+    <p class="activity-note">{{ 'activity.note' | t: { count: activityDays.length } }}</p>
+  } @else { <p class="state">{{ 'ui.broadcastDaysWillAppearHereWhenActivityIsRecorded' | t }}</p> }
 </article>
       </div>
     }
@@ -227,21 +226,21 @@
   >
     <div class="section-heading">
       <div>
-        <span class="eyebrow">RECENT ACTIVITY</span>
+        <span class="eyebrow">{{ 'ui.recentActivity' | t }}</span>
         <h2>
           {{
-            activeSection === "Overview" ? "Latest streams" : "Last 10 streams"
+            activeSection === "Overview" ? ('ui.latestStreams' | t) : ('ui.last10Streams' | t)
           }}
         </h2>
       </div>
       @if (activeSection === "Overview" && recentStreams.length > 3) {
         <button class="text-button" (click)="selectSection('Streams')">
-          View all streams →
+          {{ 'ui.viewAllStreams' | t }}
         </button>
       }
     </div>
     @if (isLoadingStreams) {
-      <p class="state">Loading streams…</p>
+      <p class="state">{{ 'ui.loadingStreams' | t }}</p>
     } @else {
       <div class="stream-grid">
         @for (
@@ -255,10 +254,10 @@
             (pointermove)="moveStreamCardPointer($event)"
             (pointercancel)="cancelStreamCardPointer()"
             (click)="openStreamCard($event)">
-            <a class="stream-top" [routerLink]="['/stream', stream.id]" [attr.aria-label]="'View stream from ' + (stream.startedAt | date: 'mediumDate')">
-              <span>{{ stream.startedAt | date: "mediumDate" }}</span>
+            <a class="stream-top" [routerLink]="(['/stream', stream.id]) | localPath" [attr.aria-label]="'stream.link' | t: { date: (stream.startedAt | date: 'mediumDate' : 'UTC' : locale.locale())! }">
+              <span>{{ stream.startedAt | date: 'mediumDate' : 'UTC' : locale.locale() }}</span>
               @if (stream.isLive) {
-                <span class="live-badge">LIVE</span>
+                <span class="live-badge">{{ 'ui.liveLabel' | t }}</span>
               }
               <span class="arrow">↗</span>
             </a>
@@ -267,11 +266,11 @@
             ></ng-container>
             <div class="stream-footer">
               <span>{{ formatDuration(stream.startedAt, stream.endedAt) }}</span
-              ><span>{{ stream.uniqueViewersCount ?? '—' }} unique chat accounts</span>
+              ><span>{{ stream.uniqueViewersCount ?? '—' }} {{ locale.countLabel('uniqueChatAccounts', stream.uniqueViewersCount || 0) }}</span>
             </div>
           </article>
         } @empty {
-          <p class="state">No recent streams found</p>
+          <p class="state">{{ 'ui.noRecentStreamsFound' | t }}</p>
         }
       </div>
     }
@@ -279,9 +278,9 @@
   <section class="collection-panel" [hidden]="activeSection !== 'Overview' && activeSection !== 'Games'">
     <div class="section-heading">
       <div>
-        <span class="eyebrow">THE COLLECTION · ALL TIME</span>
+        <span class="eyebrow">{{ 'ui.theCollectionAllTime' | t }}</span>
         <h2>
-          Games
+          {{ 'ui.gamesLabel' | t }}
           <span class="count">{{ statistics?.categories?.length || 0 }}</span>
         </h2>
       </div>
@@ -290,12 +289,12 @@
         (statistics?.categories?.length || 0) > 6
       ) {
         <button class="text-button" (click)="selectSection('Games')">
-          View all games →
+          {{ 'ui.viewAllGames' | t }}
         </button>
       }
     </div>
     @if (activeSection === "Games") {
-      <nav class="game-status-nav" aria-label="Game progress">
+      <nav class="game-status-nav" [attr.aria-label]="'ui.gameProgress' | t">
         @for (status of gameStatuses; track status.value) {
           <button
             type="button"
@@ -312,22 +311,22 @@
       <div class="game-controls">
         <input
           type="search"
-          placeholder="Search games…"
-          aria-label="Search games"
+          [placeholder]="'ui.searchGames' | t"
+          [attr.aria-label]="'ui.searchGamesLabel' | t"
           [value]="gameQuery"
           (input)="gameQuery = $any($event.target).value"
         /><select
-          aria-label="Sort games"
+          [attr.aria-label]="'ui.sortGames' | t"
           [value]="gameSort"
           (change)="gameSort = $any($event.target).value"
         >
-          <option value="hours">Most played</option>
-          <option value="name">Name A–Z</option>
+          <option value="hours">{{ 'ui.mostPlayed' | t }}</option>
+          <option value="name">{{ 'ui.nameAZ' | t }}</option>
         </select>
       </div>
     }
     @if (isLoadingStatistics) {
-      <p class="state">Loading games…</p>
+      <p class="state">{{ 'ui.loadingGames' | t }}</p>
     } @else {
       @if (activeSection === "Games" && gameStatus !== "All") {
         <ng-container
@@ -337,7 +336,7 @@
           "
         ></ng-container>
       } @else {
-        <div class="game-library" role="list" aria-label="Games played">
+        <div class="game-library" role="list" [attr.aria-label]="'ui.gamesPlayed' | t">
           @for (
             game of activeSection === "Overview"
               ? (statistics?.categories || []).slice(0, 6)
@@ -349,7 +348,7 @@
               <div class="game-copy">
                 <h3 class="game-name">{{ game.name }}</h3>
                 <dl class="game-facts">
-                  <div><dt>Time streamed</dt><dd>{{ formatNumber(game.totalHours) }} h</dd></div>
+                  <div><dt>{{ 'ui.timeStreamed' | t }}</dt><dd>{{ formatNumber(game.totalHours) }} {{ 'unit.hours' | t }}</dd></div>
                 </dl>
               </div>
             </article>
@@ -357,8 +356,8 @@
             <p class="state">
               {{
                 gameQuery
-                  ? "No games match your search"
-                  : "No games recorded yet"
+                  ? ('ui.noGamesMatchYourSearch' | t)
+                  : ('ui.noGamesRecordedYet' | t)
               }}
             </p>
           }
@@ -371,17 +370,17 @@
   >
     <div class="section-heading">
       <div>
-        <span class="eyebrow">THE COMMUNITY · ALL TIME</span>
-        <h2>Top viewers</h2>
+        <span class="eyebrow">{{ 'ui.theCommunityAllTime' | t }}</span>
+        <h2>{{ 'ui.topViewers' | t }}</h2>
       </div>
       @if (activeSection === "Overview" && topViewers.length > 10) {
         <button class="text-button" (click)="selectSection('Viewers')">
-          View full ranking →
+          {{ 'ui.viewFullRanking' | t }}
         </button>
       }
     </div>
     @if (isLoadingViewers) {
-      <p class="state">Loading viewers…</p>
+      <p class="state">{{ 'ui.loadingViewers' | t }}</p>
     } @else {
       <div class="viewer-list">
         @for (
@@ -396,7 +395,7 @@
             class="viewer-row"
             (click)="navigateToViewerStats(viewer)"
             [attr.aria-label]="
-              'View ' + (viewer.viewer?.displayName || 'viewer') + ' statistics'
+              'viewer.link' | t: { name: viewer.viewer?.displayName || locale.t('ui.viewer') }
             "
           >
             <span class="rank">{{ i + 1 }}</span
@@ -404,14 +403,14 @@
               loading="lazy"
               [src]="viewer.viewer?.profileImageUrl || getDefaultAvatar()"
               alt=""
-            /><strong>{{ viewer.viewer?.displayName || "Unknown" }}</strong
-            ><span>{{ formatHours(viewer.minutesWatched) }} watched</span
+            /><strong>{{ viewer.viewer?.displayName || ('ui.unknown' | t) }}</strong
+            ><span>{{ formatHours(viewer.minutesWatched) }} {{ 'ui.watched' | t }}</span
             ><span
-              >{{ formatMessagePoints(viewer.earnedMsgPoints) }} msg pts</span
+              >{{ formatMessagePoints(viewer.earnedMsgPoints) }} {{ 'ui.msgPts' | t }}</span
             ><span class="arrow">↗</span>
           </button>
         } @empty {
-          <p class="state">No viewer data yet</p>
+          <p class="state">{{ 'ui.noViewerDataYet' | t }}</p>
         }
       </div>
     }
@@ -428,7 +427,7 @@
             class="text-button"
             (click)="gameStatus = section.status; selectSection('Games')"
           >
-            View section →
+            {{ 'ui.viewSection' | t }}
           </button>
         </div>
         <ng-container
@@ -445,7 +444,7 @@
 <ng-template #streamGames let-stream>
   <div class="stream-games">
     @if (stream.categories?.length) {
-      <div class="stream-game-list" tabindex="0" role="region" aria-label="Games in this stream. Scroll horizontally to see all covers.">
+      <div class="stream-game-list" tabindex="0" role="region" [attr.aria-label]="'ui.gamesInThisStreamScrollHorizontallyToSeeAllCovers' | t">
         @for (game of stream.categories; track game.twitchId) {
           <span class="stream-game-item" role="img" [attr.aria-label]="game.name">
             <app-game-art [src]="game.boxArtUrl" fit="contain" />
@@ -454,51 +453,51 @@
       </div>
     } @else {
       <div class="stream-game-list">
-        <span class="stream-game-item" role="img" [attr.aria-label]="stream.gameName || 'No category'"><app-game-art /></span>
+        <span class="stream-game-item" role="img" [attr.aria-label]="stream.gameName || ('ui.noCategory' | t)"><app-game-art /></span>
       </div>
     }
   </div>
 </ng-template>
 
 <ng-template #playthroughCards let-games>
-  <div class="game-library game-library--playthroughs" role="list" aria-label="Game playthroughs">
+  <div class="game-library game-library--playthroughs" role="list" [attr.aria-label]="'ui.gamePlaythroughs' | t">
     @for (game of games; track game.playthroughId) {
       <article class="playthrough-card game-entry" role="listitem">
         <app-game-art [src]="game.boxArtUrl" />
         <div class="game-copy">
           <div class="game-title-line">
             <h3 class="game-name">{{ game.gameName }}</h3>
-            <span class="game-status" [attr.data-status]="game.status">{{ game.status === 'Planned' ? 'Planned' : game.status }}</span>
+            <span class="game-status" [attr.data-status]="game.status">{{ statusLabels[game.status] | t }}</span>
           </div>
           @if (game.title && game.title !== game.gameName) { <p class="game-subtitle">{{ game.title }}</p> }
         <dl class="game-facts">
           <div>
-            <dt>First stream</dt>
+            <dt>{{ 'ui.firstStream' | t }}</dt>
             <dd>
               {{
                 game.firstStreamStartedAt
-                  ? (game.firstStreamStartedAt | date: "mediumDate")
-                  : "No data"
+                  ? (game.firstStreamStartedAt | date: 'mediumDate' : 'UTC' : locale.locale())
+                  : ('ui.noData' | t)
               }}
             </dd>
           </div>
           <div>
-            <dt>Last stream</dt>
+            <dt>{{ 'ui.lastStream' | t }}</dt>
             <dd>
               {{
                 game.lastStreamStartedAt
-                  ? (game.lastStreamStartedAt | date: "mediumDate")
-                  : "No data"
+                  ? (game.lastStreamStartedAt | date: 'mediumDate' : 'UTC' : locale.locale())
+                  : ('ui.noData' | t)
               }}
             </dd>
           </div>
           <div>
-            <dt>Unique viewers</dt>
+            <dt>{{ 'ui.uniqueViewers' | t }}</dt>
             <dd>{{ game.uniqueViewersCount }}</dd>
           </div>
           <div>
-            <dt>Duration</dt>
-            <dd>{{ formatNumber(game.totalHours) }} h</dd>
+            <dt>{{ 'ui.duration' | t }}</dt>
+            <dd>{{ formatNumber(game.totalHours) }} {{ 'unit.hours' | t }}</dd>
           </div>
         </dl>
         </div>
@@ -507,8 +506,8 @@
       <p class="state">
         {{
           gameQuery
-            ? "No games match your search"
-            : "No games in this section yet"
+            ? ('ui.noGamesMatchYourSearch' | t)
+            : ('ui.noGamesInThisSectionYet' | t)
         }}
       </p>
     }

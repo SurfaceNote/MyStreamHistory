@@ -1,4 +1,7 @@
-import { Component, OnDestroy, OnInit, inject } from '@angular/core';
+import { TranslatePipe } from '../../i18n/translate.pipe';
+import { DOCUMENT } from '@angular/common';
+import { LocaleService } from '../../i18n/locale.service';
+import { afterNextRender, Component, OnDestroy, inject } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { ViewerStats } from '../../models/viewer-stats.model';
@@ -15,12 +18,15 @@ interface OverlayRow {
 }
 
 @Component({
+  imports: [TranslatePipe],
   selector: 'app-top-viewers-overlay',
   standalone: true,
   templateUrl: './top-viewers-overlay.component.html',
   styleUrl: './top-viewers-overlay.component.scss'
 })
-export class TopViewersOverlayComponent implements OnInit, OnDestroy {
+export class TopViewersOverlayComponent implements OnDestroy {
+  readonly locale = inject(LocaleService);
+  private readonly document = inject(DOCUMENT);
   private readonly route = inject(ActivatedRoute);
   private readonly streamerService = inject(StreamerService);
   private readonly cycleMs = 10 * 60 * 1000;
@@ -36,9 +42,10 @@ export class TopViewersOverlayComponent implements OnInit, OnDestroy {
   rows: OverlayRow[] = [];
   visible = false;
 
-  ngOnInit(): void {
-    document.documentElement.classList.add('obs-overlay');
-    document.body.classList.add('obs-overlay');
+  constructor() { afterNextRender(() => this.initialize()); }
+  private initialize(): void {
+    this.document.documentElement.classList.add('obs-overlay');
+    this.document.body.classList.add('obs-overlay');
 
     const id = this.route.snapshot.paramMap.get('twitchId');
     if (!id || !/^\d+$/.test(id)) return;
@@ -50,8 +57,8 @@ export class TopViewersOverlayComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    document.documentElement.classList.remove('obs-overlay');
-    document.body.classList.remove('obs-overlay');
+    this.document.documentElement.classList.remove('obs-overlay');
+    this.document.body.classList.remove('obs-overlay');
     if (this.refreshInterval) clearInterval(this.refreshInterval);
     for (const timer of this.timers) clearTimeout(timer);
     this.request?.unsubscribe();
@@ -130,11 +137,11 @@ export class TopViewersOverlayComponent implements OnInit, OnDestroy {
   }
 
   formatExperience(experience: number): string {
-    return Math.round(experience).toLocaleString('en-US');
+    return this.locale.number(Math.round(experience), 0);
   }
 
   formatGain(gain: number): string {
     const rounded = Math.round(gain * 100) / 100;
-    return `${rounded >= 0 ? '+' : ''}${rounded.toLocaleString('en-US', { maximumFractionDigits: 2 })} XP`;
+    return this.locale.t('overlay.xp', { value: `${rounded >= 0 ? '+' : ''}${this.locale.number(rounded, 2)}` });
   }
 }

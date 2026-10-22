@@ -1,10 +1,10 @@
 <main class="article-page">
-  <p *ngIf="loading">Loading article…</p>
-  <div *ngIf="missing" class="missing"><h1>Article unavailable</h1><a [routerLink]="type === 'news' ? '/news' : '/reviews'">Browse articles →</a></div>
+  <p *ngIf="loading">{{ 'ui.loadingArticle' | t }}</p>
+  <div *ngIf="missing" class="missing"><h1>{{ 'ui.articleUnavailable' | t }}</h1><a [routerLink]="(type === 'news' ? '/news' : '/reviews') | localPath">{{ 'ui.browseArticles' | t }}</a></div>
   <article *ngIf="article as item">
-    <a class="back" [routerLink]="type === 'news' ? '/news' : '/reviews'">← {{ type === 'news' ? 'News' : 'Reviews' }}</a>
+    <a class="back" [routerLink]="(type === 'news' ? '/news' : '/reviews') | localPath">← {{ type === 'news' ? ('ui.news' | t) : ('ui.reviews' | t) }}</a>
     <header>
-      <p class="category">{{ type === 'news' ? 'NEWS' : 'REVIEW' }} · {{ item.publishedAt | date:'longDate' }}</p>
+      <p class="category">{{ type === 'news' ? ('ui.newsLabel' | t) : ('ui.review' | t) }} · {{ item.publishedAt | date: 'longDate' : 'UTC' : locale.locale() }}</p>
       <h1>{{ item.title }}</h1>
     </header>
     <img class="cover" *ngIf="item.coverId" [src]="item.coverUrl || content.mediaUrl(item.coverId)" [alt]="item.title" />

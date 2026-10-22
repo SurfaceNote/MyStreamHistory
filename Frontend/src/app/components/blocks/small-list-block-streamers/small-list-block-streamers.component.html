@@ -2,20 +2,20 @@
     <div class="small-list-block-header">
         <div class="title">
             <i class="{{fontIcon}}" aria-hidden="true"></i>
-            <span>{{ title }}</span>
+            <span>{{ title | t }}</span>
         </div>
     </div>
     <div class="small-list-block-content">
 
         @if (isLoadingStreamers){
-            <p>Loading...</p>
+            <p>{{ 'common.loading' | t }}</p>
         }
         @else {
             @for (streamer of streamers; track streamer.twitchId) {
-                <a [routerLink]="['/profile', streamer.twitchId]">
+                <a [routerLink]="['/profile', streamer.twitchId] | localPath">
                     <div class="row">
                         <div class="avatar-nickname">
-                            <img src="{{ streamer.avatar }}" alt="{{ streamer.displayName }} logo">
+                            <img [src]="streamer.avatar" alt="">
                             <span>{{ streamer.displayName }}</span>
                         </div>
                         <div class="show-btn">

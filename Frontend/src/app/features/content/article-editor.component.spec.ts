@@ -15,7 +15,7 @@ describe('Article editor writing and persistence', () => {
 
   beforeEach(() => {
     draft = {
-      id: 'draft-id', type: 'news', slug: 'untitled-123', title: '', summary: '',
+      id: 'draft-id', language: 'en', translationGroupId: 'group-id', translations: [], type: 'news', slug: 'untitled-123', title: '', summary: '',
       seoTitle: '', seoDescription: '', coverId: null, revision: 1,
       slugLocked: false, publishedAt: null, updatedAt: '',
       body: { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Existing draft text' }] }] }
@@ -42,6 +42,24 @@ describe('Article editor writing and persistence', () => {
     fixture.detectChanges();
     tick(0);
   }
+
+  it('creates a manual translation draft after saving pending source changes', fakeAsync(() => {
+    load();
+    const navigate = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
+    fixture.componentInstance.article!.title = 'Source title';
+    fixture.componentInstance.changed();
+    fixture.componentInstance.translationLanguage = 'ru';
+    void fixture.componentInstance.createTranslation();
+    const save = http.expectOne(endpoint);
+    save.flush({ ...draft, title: 'Source title', revision: 2 }); flushMicrotasks();
+    const translation = http.expectOne(endpoint + '/translations');
+    expect(translation.request.method).toBe('POST');
+    expect(translation.request.body).toEqual({ language: 'ru' });
+    translation.flush({ ...draft, id: 'translation-id', language: 'ru' }); flushMicrotasks();
+    expect(navigate).toHaveBeenCalledWith(['/admin/publications', 'translation-id']);
+    http.expectNone(request => request.url.endsWith('/publish'));
+    tick(1200); flushMicrotasks();
+  }));
 
   it('mounts the writing surface after the delayed draft response and restores its body', fakeAsync(() => {
     expect(fixture.componentInstance.editor).toBeNull();

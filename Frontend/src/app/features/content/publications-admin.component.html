@@ -1,24 +1,24 @@
 <main class="editor-shell">
-  <div class="admin-nav"><a routerLink="/admin/publications" class="active">Publications</a><a routerLink="/admin">Diagnostics</a></div>
+  <div class="admin-nav"><a routerLink="/admin/publications" class="active">{{ 'editor.publications' | t }}</a><a routerLink="/admin">{{ 'editor.diagnostics' | t }}</a></div>
   <div class="heading-row">
-    <div><p class="eyebrow">EDITORIAL WORKSPACE</p><h1>Publications</h1><p class="muted">Write, review and publish your stories.</p></div>
-    <div class="create-actions"><button (click)="create('news')" [disabled]="creating">+ News</button><button class="secondary" (click)="create('review')" [disabled]="creating">+ Review</button></div>
+    <div><p class="eyebrow">{{ 'editor.workspace' | t }}</p><h1>{{ 'editor.publications' | t }}</h1><p class="muted">{{ 'editor.description' | t }}</p></div>
+    <div class="create-actions"><label>{{ 'editor.newLanguage' | t }} <select [(ngModel)]="createLanguage"><option *ngFor="let lang of languages" [value]="lang.code">{{ lang.name }}</option></select></label><button (click)="create('news')" [disabled]="creating">{{ 'editor.addNews' | t }}</button><button class="secondary" (click)="create('review')" [disabled]="creating">{{ 'editor.addReview' | t }}</button></div>
   </div>
-  <div class="filters">
-    <label>Search<input [(ngModel)]="search" (keyup.enter)="load()" placeholder="Search titles" /></label>
-    <label>Type<select [(ngModel)]="type" (change)="load()"><option value="">All types</option><option value="news">News</option><option value="review">Reviews</option></select></label>
-    <label>Status<select [(ngModel)]="status" (change)="load()"><option value="">All statuses</option><option value="draft">Drafts</option><option value="published">Published</option></select></label>
-    <button class="secondary" (click)="load()">Search</button>
+  <div class="filters"><label>{{ 'ui.language' | t }}<select [(ngModel)]="language" (change)="load()"><option value="">{{ 'editor.allLanguages' | t }}</option><option *ngFor="let lang of languages" [value]="lang.code">{{ lang.name }}</option></select></label>
+    <label>{{ 'common.search' | t }}<input [(ngModel)]="search" (keyup.enter)="load()" [placeholder]="'editor.searchTitles' | t" /></label>
+    <label>{{ 'common.type' | t }}<select [(ngModel)]="type" (change)="load()"><option value="">{{ 'editor.allTypes' | t }}</option><option value="news">{{ 'ui.news' | t }}</option><option value="review">{{ 'ui.reviews' | t }}</option></select></label>
+    <label>{{ 'common.status' | t }}<select [(ngModel)]="status" (change)="load()"><option value="">{{ 'editor.allStatuses' | t }}</option><option value="draft">{{ 'editor.drafts' | t }}</option><option value="published">{{ 'editor.published' | t }}</option></select></label>
+    <button class="secondary" (click)="load()">{{ 'common.search' | t }}</button>
   </div>
   <p class="error" *ngIf="error">{{ error }}</p>
-  <p class="empty" *ngIf="loading">Loading publications…</p>
-  <p class="empty" *ngIf="!loading && !items.length">No publications match these filters.</p>
+  <p class="empty" *ngIf="loading">{{ 'editor.loadingPublications' | t }}</p>
+  <p class="empty" *ngIf="!loading && !items.length">{{ 'editor.noPublications' | t }}</p>
   <div class="rows" *ngIf="!loading">
     <a class="row" *ngFor="let item of items" [routerLink]="['/admin/publications', item.id]">
       <span class="thumbnail">{{ item.coverId ? '▣' : '✦' }}</span>
-      <span class="row-main"><strong>{{ item.title || 'Untitled draft' }}</strong><small>{{ item.type === 'news' ? 'News' : 'Review' }} · {{ item.updatedAt | date:'medium' }}</small></span>
-      <span class="badge" [class.live]="item.publishedAt">{{ item.publishedAt ? 'Published' : 'Draft' }}</span><span class="arrow">→</span>
+      <span class="row-main"><strong>{{ item.title || ('editor.untitled' | t) }}</strong><small>{{ (item.language || 'en').toUpperCase() }} · {{ item.type === 'news' ? ('ui.news' | t) : ('editor.review' | t) }} · {{ item.updatedAt | date:'medium':'UTC':locale.locale() }}</small></span>
+      <span class="badge" [class.live]="item.publishedAt">{{ item.publishedAt ? ('editor.published' | t) : ('editor.draft' | t) }}</span><span class="arrow">→</span>
     </a>
   </div>
-  <div class="pager" *ngIf="total > 20"><button [disabled]="page === 1" (click)="load(page - 1)">Previous</button><span>{{ page }}</span><button [disabled]="page * 20 >= total" (click)="load(page + 1)">Next</button></div>
+  <div class="pager" *ngIf="total > 20"><button [disabled]="page === 1" (click)="load(page - 1)">{{ 'editor.previous' | t }}</button><span>{{ page }}</span><button [disabled]="page * 20 >= total" (click)="load(page + 1)">{{ 'editor.next' | t }}</button></div>
 </main>

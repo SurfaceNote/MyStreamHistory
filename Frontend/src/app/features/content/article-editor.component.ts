@@ -1,5 +1,10 @@
+import { TranslationKey } from '../../i18n/translations';
+import { TranslatePipe } from '../../i18n/translate.pipe';
+import { LocaleService, LocalizedMessage } from '../../i18n/locale.service';
+import { articleSlug } from './article-slug';
+import { LANGUAGES, Language } from '../../i18n/languages';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
-import { Component, ElementRef, HostListener, OnDestroy, OnInit, PLATFORM_ID, ViewChild, inject } from '@angular/core';
+import { Component, effect, ElementRef, HostListener, OnDestroy, OnInit, PLATFORM_ID, ViewChild, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Editor } from '@tiptap/core';
@@ -16,11 +21,12 @@ import { youtubeVideoId } from './youtube';
 @Component({
   selector: 'app-article-editor',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, PrivateMediaThumbComponent],
+  imports: [TranslatePipe, CommonModule, FormsModule, RouterLink, PrivateMediaThumbComponent],
   templateUrl: './article-editor.component.html',
   styleUrl: './article-editor.component.scss'
 })
 export class ArticleEditorComponent implements OnInit, OnDestroy {
+  readonly locale = inject(LocaleService);
   private readonly content = inject(ContentService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -29,6 +35,8 @@ export class ArticleEditorComponent implements OnInit, OnDestroy {
   set editorHost(host: ElementRef<HTMLElement> | undefined) {
     if (host && this.browser && !this.editor) this.initializeEditor(host.nativeElement);
   }
+  readonly languages = LANGUAGES;
+  translationLanguage: Language = 'ru';
   editorReady = false;
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
   editor: Editor | null = null;
@@ -40,12 +48,20 @@ export class ArticleEditorComponent implements OnInit, OnDestroy {
   linkUrl = '';
   youtubeOpen = false;
   youtubeUrl = '';
-  youtubeError = '';
+  private _youtubeError: LocalizedMessage = '';
+  get youtubeError(): string { return this.locale.message(this._youtubeError); }
+  set youtubeError(value: LocalizedMessage) { this._youtubeError = value; }
   slugEdited = false;
   loading = true;
   busy = false;
   saveState = 'Saved';
-  error = '';
+  get saveStateLabel(): string {
+    const labels: Record<string, TranslationKey> = { 'Saved': 'editor.saved', 'Unsaved changes': 'editor.unsaved', 'Saving…': 'editor.saving', 'Save failed': 'editor.saveFailed', 'Published': 'editor.published', 'Unpublished': 'editor.unpublished' };
+    return this.locale.t(labels[this.saveState] || 'editor.saved');
+  }
+  private _error: LocalizedMessage = '';
+  get error(): string { return this.locale.message(this._error); }
+  set error(value: LocalizedMessage) { this._error = value; }
   private changes = new Subject<void>();
   private changeSeq = 0;
   private savedSeq = 0;
@@ -54,6 +70,13 @@ export class ArticleEditorComponent implements OnInit, OnDestroy {
   private idByBlob = new Map<string, string>();
   private destroyed = false;
   private readonly stop = new Subject<void>();
+
+  constructor() {
+    effect(() => {
+      this.locale.language();
+      this.editor?.view.dom.setAttribute('aria-label', this.locale.t('editor.body'));
+    });
+  }
 
   ngOnInit(): void {
     this.changes.pipe(debounceTime(1200), takeUntil(this.stop)).subscribe(() => void this.flush());
@@ -75,11 +98,11 @@ export class ArticleEditorComponent implements OnInit, OnDestroy {
         underline: false,
         horizontalRule: false,
         link: { openOnClick: false }
-      }), Image, YoutubeVideo],
+      }), Image, YoutubeVideo.configure({ labels: () => ({ invalid: this.locale.t('editor.invalidVideo'), player: this.locale.t('editor.youtubePlayer') }) })],
       content: { type: 'doc', content: [] },
       onUpdate: () => this.changed(),
       editorProps: {
-        attributes: { class: 'writing-surface', 'aria-label': 'Article body' },
+        attributes: { class: 'writing-surface', 'aria-label': this.locale.t('editor.body') },
         handleDrop: (_view, event) => {
           const file = event.dataTransfer?.files?.[0];
           if (!file) return false;
@@ -97,7 +120,7 @@ export class ArticleEditorComponent implements OnInit, OnDestroy {
       }
     });
     if (this.article) void this.setEditorBody(this.article.body).catch(() => {
-      this.error = 'Could not open the article body. Reload before editing.';
+      this.error = 'editor.openBodyFailed';
     });
   }
 
@@ -123,6 +146,8 @@ export class ArticleEditorComponent implements OnInit, OnDestroy {
     this.coverPreview = '';
     try {
       this.article = await firstValueFrom(this.content.article(id));
+      this.article.translations ??= [];
+      this.translationLanguage = this.languages.find(lang => !this.translationFor(lang.code))?.code || 'en';
       this.slugEdited = !this.article.slug.startsWith('untitled-');
       this.changeSeq = 0;
       this.savedSeq = 0;
@@ -130,7 +155,7 @@ export class ArticleEditorComponent implements OnInit, OnDestroy {
       await this.setEditorBody(this.article.body);
       if (this.article.coverId) this.coverPreview = await this.resolveMedia(this.article.coverId);
       this.loadMedia();
-    } catch { this.article = null; this.error = 'Could not load this draft. Return to Publications and try again.'; }
+    } catch { this.article = null; this.error = 'editor.loadDraftFailed'; }
     finally { this.loading = false; }
   }
 
@@ -148,6 +173,7 @@ export class ArticleEditorComponent implements OnInit, OnDestroy {
         return true;
       });
       this.editor.setEditable(true, false);
+      this.editor.view.dom.setAttribute('lang', this.article?.language || 'en');
       this.editorReady = true;
     }
   }
@@ -168,7 +194,7 @@ export class ArticleEditorComponent implements OnInit, OnDestroy {
   }
 
   loadMedia(): void {
-    this.content.media().subscribe({ next: items => this.media = items, error: () => this.error = 'Could not load media library.' });
+    this.content.media().subscribe({ next: items => this.media = items, error: () => this.error = 'editor.loadMediaFailed' });
   }
 
   changed(): void {
@@ -179,7 +205,7 @@ export class ArticleEditorComponent implements OnInit, OnDestroy {
 
   titleChanged(): void {
     if (this.article && !this.article.slugLocked && !this.slugEdited && this.article.title.trim())
-      this.article.slug = this.article.title.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').slice(0, 90).replace(/^-|-$/g, '') || this.article.slug;
+      this.article.slug = articleSlug(this.article.title) || this.article.slug;
     this.changed();
   }
 
@@ -188,7 +214,7 @@ export class ArticleEditorComponent implements OnInit, OnDestroy {
     if (!this.editorReady || !this.editor || this.busy) return;
     const videoId = youtubeVideoId(this.youtubeUrl);
     if (!videoId) {
-      this.youtubeError = 'Enter a valid YouTube video URL (youtube.com, youtu.be or Shorts).';
+      this.youtubeError = 'editor.invalidYoutube';
       return;
     }
     if (this.editor.chain().focus().command(({ tr, state, dispatch }) => {
@@ -206,7 +232,7 @@ export class ArticleEditorComponent implements OnInit, OnDestroy {
   }
 
   applyLink(): void {
-    if (!/^https?:\/\//i.test(this.linkUrl)) { this.error = 'Links must start with http:// or https://.'; return; }
+    if (!/^https?:\/\//i.test(this.linkUrl)) { this.error = 'editor.invalidLink'; return; }
     this.editor?.chain().focus().setLink({ href: this.linkUrl }).run();
     this.linkOpen = false;
     this.linkUrl = '';
@@ -224,7 +250,7 @@ export class ArticleEditorComponent implements OnInit, OnDestroy {
       node.content?.forEach(normalize);
     };
     normalize(body);
-    return { type: article.type, slug: article.slug, title: article.title, summary: article.summary,
+    return { language: article.language, type: article.type, slug: article.slug, title: article.title, summary: article.summary,
       seoTitle: article.seoTitle, seoDescription: article.seoDescription, coverId: article.coverId,
       body, revision: article.revision };
   }
@@ -232,7 +258,7 @@ export class ArticleEditorComponent implements OnInit, OnDestroy {
   async flush(): Promise<boolean> {
     if (!this.article || this.changeSeq === this.savedSeq) return true;
     if (!this.editorReady) {
-      this.error = 'Wait for the article body to finish loading before saving.';
+      this.error = 'editor.waitForBody';
       return false;
     }
     if (this.savePromise) { await this.savePromise; return this.error ? false : this.flush(); }
@@ -248,13 +274,24 @@ export class ArticleEditorComponent implements OnInit, OnDestroy {
         this.error = '';
       } catch (error: any) {
         this.saveState = 'Save failed';
-        this.error = this.requestError(error, 'Draft could not be saved. Retry before leaving.');
+        this.error = this.requestError(error, 'editor.saveDraftFailed');
       }
     })();
     await this.savePromise;
     this.savePromise = null;
     if (this.changeSeq > this.savedSeq && !this.error) return this.flush();
     return this.changeSeq === this.savedSeq;
+  }
+
+  translationFor(language: Language) { return this.article?.translations?.find(item => item.language === language); }
+  async createTranslation(): Promise<void> {
+    if (!await this.flush() || !this.article || this.busy) return;
+    this.busy = true; this.error = '';
+    try {
+      const translation = await firstValueFrom(this.content.createTranslation(this.article.id, this.translationLanguage));
+      await this.router.navigate(['/admin/publications', translation.id]);
+    } catch (error: any) { this.error = this.requestError(error, 'editor.createTranslationFailed'); }
+    finally { this.busy = false; }
   }
 
   async preview(): Promise<void> {
@@ -264,22 +301,33 @@ export class ArticleEditorComponent implements OnInit, OnDestroy {
   get publicationRequirements(): string[] {
     if (!this.article) return [];
     const missing: string[] = [];
-    if (!this.article.title.trim()) missing.push('headline');
-    if (!this.article.coverId) missing.push('cover image');
-    if (!this.editorReady || this.editor?.isEmpty) missing.push('article text');
+    if (!this.article.title.trim()) missing.push(this.locale.t('editor.headline'));
+    if (!this.article.coverId) missing.push(this.locale.t('editor.coverRequirement'));
+    if (!this.editorReady || this.editor?.isEmpty) missing.push(this.locale.t('editor.bodyRequirement'));
     return missing;
   }
 
-  private requestError(error: any, fallback: string): string {
-    if (typeof error?.error === 'string' && error.error.trim()) return error.error;
-    if (error?.status === 401 || error?.status === 403) return 'Your session expired or you do not have publishing access. Keep this tab open and sign in again.';
-    if (error?.status === 0) return 'The server could not be reached. Keep this tab open and retry saving when the connection returns.';
-    return error?.error?.detail || error?.error?.title || fallback;
+  private requestError(error: any, fallback: TranslationKey): LocalizedMessage {
+    const backendMessage = typeof error?.error === 'string' ? error.error : error?.error?.detail || error?.error?.title;
+    const knownErrors: Record<string, TranslationKey> = {
+      'Article URL is already in use.': 'editor.urlInUse',
+      'This image is used in an article.': 'editor.imageUsed',
+      'Image in use': 'editor.imageInUse',
+      'This image is used in a draft or published article. Remove it from all articles and update any published versions before deleting.': 'editor.imageUsedDetailed',
+      'This article was changed in another tab. Reload before saving.': 'editor.revisionConflict',
+      'This article was changed in another tab.': 'editor.revisionConflict',
+      'A translation in this language already exists.': 'editor.translationExists',
+      'Image exceeds the size limit.': 'editor.imageTooLarge'
+    };
+    if (knownErrors[backendMessage]) return knownErrors[backendMessage];
+    if (error?.status === 401 || error?.status === 403) return 'editor.sessionExpired';
+    if (error?.status === 0) return 'editor.connectionFailed';
+    return fallback;
   }
 
   async publish(): Promise<void> {
     if (this.publicationRequirements.length) {
-      this.error = `Before publishing, add: ${this.publicationRequirements.join(', ')}. You can save an incomplete draft.`;
+      this.error = { key: 'editor.requirementsError', params: () => ({ fields: this.publicationRequirements.join(', ') }) };
       return;
     }
     if (!await this.flush() || !this.article) return;
@@ -291,7 +339,7 @@ export class ArticleEditorComponent implements OnInit, OnDestroy {
       this.article.publishedAt = saved.publishedAt;
       this.article.slugLocked = true;
       this.saveState = 'Published';
-    } catch (error: any) { this.error = this.requestError(error, 'Could not publish. Check the title, cover and body.'); }
+    } catch (error: any) { this.error = this.requestError(error, 'editor.publishFailed'); }
     finally { this.busy = false; }
   }
 
@@ -303,7 +351,7 @@ export class ArticleEditorComponent implements OnInit, OnDestroy {
       this.article.revision = saved.revision;
       this.article.publishedAt = null;
       this.saveState = 'Unpublished';
-    } catch { this.error = 'Could not unpublish this article.'; }
+    } catch { this.error = 'editor.unpublishFailed'; }
     finally { this.busy = false; }
   }
 
@@ -322,7 +370,7 @@ export class ArticleEditorComponent implements OnInit, OnDestroy {
       this.media.unshift(asset);
       if (insert) await this.insertImage(asset);
       else await this.setCover(asset);
-    } catch (error: any) { this.error = typeof error?.error === 'string' ? error.error : 'Upload failed. Use JPEG, PNG, WebP or GIF within the size limit.'; }
+    } catch (error: any) { this.error = this.requestError(error, 'editor.uploadFailed'); }
     finally { this.busy = false; }
   }
 
@@ -331,12 +379,12 @@ export class ArticleEditorComponent implements OnInit, OnDestroy {
       const url = await this.resolveMedia(asset.id);
       this.editor?.chain().focus().setImage({ src: url, alt: asset.fileName }).run();
       this.mediaOpen = false;
-    } catch { this.error = 'Image uploaded, but could not be opened. Try selecting it again.'; }
+    } catch { this.error = 'editor.openImageFailed'; }
   }
 
   async deleteMedia(asset: MediaAsset): Promise<void> {
     if (this.busy || !this.editorReady) return;
-    if (!window.confirm(`Permanently delete "${asset.fileName}" from the media library and storage?`)) return;
+    if (!window.confirm(this.locale.t('editor.deleteMediaConfirm', { name: asset.fileName }))) return;
     this.busy = true;
     this.error = '';
     try {
@@ -346,7 +394,7 @@ export class ArticleEditorComponent implements OnInit, OnDestroy {
       this.media = this.media.filter(item => item.id !== asset.id);
       const url = this.blobById.get(asset.id);
       if (url) { URL.revokeObjectURL(url); this.idByBlob.delete(url); this.blobById.delete(asset.id); }
-    } catch (error: any) { this.error = this.requestError(error, 'Could not delete this image. Try again.'); }
+    } catch (error: any) { this.error = this.requestError(error, 'editor.deleteMediaFailed'); }
     finally { this.busy = false; }
   }
 
@@ -364,6 +412,6 @@ export class ArticleEditorComponent implements OnInit, OnDestroy {
       this.article.coverId = asset.id;
       this.changed();
       this.mediaOpen = false;
-    } catch { this.error = 'Could not open cover image.'; }
+    } catch { this.error = 'editor.openCoverFailed'; }
   }
 }

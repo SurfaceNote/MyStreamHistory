@@ -1,8 +1,8 @@
-<main class="overlay-stage" aria-label="Top viewers overlay">
+<main class="overlay-stage" [attr.aria-label]="'overlay.label' | t">
   <section class="leaderboard" [class.visible]="visible" [attr.aria-hidden]="!visible">
     <div class="heading">
-      <span class="eyebrow">COMMUNITY LEADERBOARD</span>
-      <h1>Top 10 viewers</h1>
+      <span class="eyebrow">{{ 'overlay.leaderboard' | t }}</span>
+      <h1>{{ 'overlay.top10' | t }}</h1>
       <span class="accent"></span>
     </div>
     <div class="viewer-list">
@@ -16,13 +16,13 @@
           } @else {
             <span class="avatar-placeholder"></span>
           }
-          <span class="name">{{ row.viewer.viewer?.displayName || row.viewer.viewer?.login || 'Viewer' }}</span>
+          <span class="name">{{ row.viewer.viewer?.displayName || row.viewer.viewer?.login || ('ui.viewer' | t) }}</span>
           <span class="score">
-            <span>{{ formatExperience(row.viewer.experience) }} XP</span>
+            <span>{{ 'overlay.xp' | t: { value: formatExperience(row.viewer.experience) } }}</span>
             @if (row.gainedExperience !== null) {
               <small class="gain" [class.negative]="row.gainedExperience < 0" [class.unchanged]="row.gainedExperience === 0">{{ formatGain(row.gainedExperience) }}</small>
             } @else if (row.newcomer) {
-              <small class="gain">NEW</small>
+              <small class="gain">{{ 'overlay.new' | t }}</small>
             }
           </span>
         </div>

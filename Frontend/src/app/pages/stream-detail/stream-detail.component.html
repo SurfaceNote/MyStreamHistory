@@ -10,67 +10,67 @@
       <div class="streamer-info-wrapper">
         <h1 class="streamer-name">{{ streamDetails.streamerDisplayName }}</h1>
         <button class="btn-view-profile" (click)="navigateToStreamerProfile()">
-          view streamer profile ›
+          {{ 'ui.viewStreamerProfile' | t }}
         </button>
       </div>
     </div>
     
     <div class="stream-meta">
       <div class="meta-item">
-        <span class="meta-label">Date</span>
+        <span class="meta-label">{{ 'ui.date' | t }}</span>
         <span class="meta-value">{{ formatDateShort(streamDetails.startedAt) }}</span>
       </div>
       <div class="meta-item">
-        <span class="meta-label">Duration</span>
+        <span class="meta-label">{{ 'ui.duration' | t }}</span>
         <span class="meta-value">{{ formatMinutes(formatTotalMinutes(streamDetails.startedAt, streamDetails.endedAt)) }}</span>
       </div>
     </div>
   </div>
 
   <section class="audience-section" aria-labelledby="audience-title">
-    <h2 id="audience-title" class="section-title">Viewers</h2>
+    <h2 id="audience-title" class="section-title">{{ 'ui.viewers' | t }}</h2>
     @if (audience.length) {
-      <div class="audience-chart"><canvas #audienceChart role="img" aria-label="Concurrent viewers over time, with category changes marked on the timeline."></canvas></div>
+      <div class="audience-chart"><canvas #audienceChart role="img" [attr.aria-label]="'ui.concurrentViewersOverTimeWithCategoryChangesMarkedOnTheTimeline' | t"></canvas></div>
       @if (categorySegments.length > 1) {
-        <ul class="category-legend" aria-label="Category timeline">
+        <ul class="category-legend" [attr.aria-label]="'ui.categoryTimeline' | t">
           @for (category of categorySegments; track category.id) {
             <li><span class="category-key" [style.background]="category.color" aria-hidden="true"></span><span>{{ category.name }}<small>{{ elapsedMinutes(category.start) }}–{{ elapsedMinutes(category.end) }}</small></span></li>
           }
         </ul>
       }
-    } @else { <p class="audience-empty">No audience history for this stream.</p> }
+    } @else { <p class="audience-empty">{{ 'ui.noAudienceHistoryForThisStream' | t }}</p> }
   </section>
 
   <div class="content-wrapper">
     <!-- Categories Section -->
     <div class="categories-section">
-      <h2 class="section-title">Games & categories <span class="viewers-count">({{ streamDetails.categories.length }})</span></h2>
-      <div class="game-library" role="list" aria-label="Games in this stream">
+      <h2 class="section-title">{{ 'ui.gamesCategories' | t }} <span class="viewers-count">({{ streamDetails.categories.length }})</span></h2>
+      <div class="game-library" role="list" [attr.aria-label]="'ui.gamesInThisStream' | t">
         @for (category of streamDetails.categories; track category.streamCategoryId) {
           <article class="game-entry" role="listitem">
             <app-game-art [src]="category.boxArtUrl" />
             <div class="game-copy">
               <h3 class="game-name">{{ category.name }}</h3>
               <dl class="game-facts">
-                <div><dt>Time streamed</dt><dd>{{ formatMinutes(category.durationMinutes) }}</dd></div>
-                <div><dt>Unique chat accounts</dt><dd>{{ category.uniqueViewers ?? '—' }}</dd></div>
+                <div><dt>{{ 'ui.timeStreamed' | t }}</dt><dd>{{ formatMinutes(category.durationMinutes) }}</dd></div>
+                <div><dt>{{ 'ui.uniqueChatAccountsLabel' | t }}</dt><dd>{{ category.uniqueViewers ?? '—' }}</dd></div>
               </dl>
             </div>
           </article>
         } @empty {
-          <p class="game-empty">No games recorded for this stream.</p>
+          <p class="game-empty">{{ 'ui.noGamesRecordedForThisStream' | t }}</p>
         }
       </div>
     </div>
 
     <!-- Viewers Sidebar -->
     <div class="viewers-section">
-      <h2 class="section-title">Chat accounts <span class="viewers-count">({{ streamDetails.viewerDataAvailable === false ? '—' : streamDetails.viewers.length }})</span></h2>
-      @if (streamDetails.viewerDataAvailable === false) { <p role="status">Chat accounts are temporarily unavailable.</p> }
+      <h2 class="section-title">{{ 'ui.chatAccountsLabel' | t }} <span class="viewers-count">({{ streamDetails.viewerDataAvailable === false ? '—' : streamDetails.viewers.length }})</span></h2>
+      @if (streamDetails.viewerDataAvailable === false) { <p role="status">{{ 'ui.chatAccountsAreTemporarilyUnavailable' | t }}</p> }
       <div class="viewers-list">
         <button type="button" class="viewer-card" *ngFor="let viewer of streamDetails.viewers; let i = index"
                 (click)="navigateToViewerStats(viewer)"
-                [attr.aria-label]="'View ' + viewer.displayName + ' statistics'">
+                [attr.aria-label]="'viewer.link' | t: { name: viewer.displayName }">
           <div class="viewer-rank">{{ i + 1 }}</div>
           <img 
             [src]="viewer.profileImageUrl || getTwitchProfileImage(viewer.twitchUserId)" 
@@ -80,8 +80,8 @@
           <div class="viewer-details">
             <div class="viewer-name">{{ viewer.displayName }}</div>
             <div class="viewer-stats">
-              <span class="viewer-stat-item">{{ formatHours(viewer.minutesWatched) }} hours</span>
-              <span class="viewer-stat-item">{{ formatPoints(viewer.chatPoints) }} msg pts</span>
+              <span class="viewer-stat-item">{{ formatHours(viewer.minutesWatched) }} {{ 'unit.hours' | t }}</span>
+              <span class="viewer-stat-item">{{ formatPoints(viewer.chatPoints) }} {{ 'ui.msgPts' | t }}</span>
             </div>
           </div>
         </button>
@@ -92,10 +92,10 @@
 
 <div class="loading-container" *ngIf="isLoading">
   <div class="spinner"></div>
-  <p>Loading stream details...</p>
+  <p>{{ 'ui.loadingStreamDetails' | t }}</p>
 </div>
 
 <div class="error-container" *ngIf="error && !isLoading">
   <p class="error-message">{{ error }}</p>
-  <button class="btn-retry" (click)="loadStreamDetails()">Retry</button>
+  <button class="btn-retry" (click)="loadStreamDetails()">{{ 'ui.retry' | t }}</button>
 </div>

@@ -16,20 +16,29 @@ export const routes: Routes = [
     { path: 'analytics/community', loadComponent: () => import('./features/community/community.component').then(m => m.CommunityComponent), canActivate: [authGuard], data: { seo: { title: 'Community — MyStreamHistory', description: 'Your channel community analytics.', noIndex: true } } },
     { path: 'callback', component: CallbackComponent, data: { seo: { title: 'Signing in — MyStreamHistory', description: 'Completing Twitch sign-in.', noIndex: true } } },
     { path: 'overlay/top-viewers/:twitchId', component: TopViewersOverlayComponent, data: { seo: { title: 'Top Viewers Overlay — MyStreamHistory', description: 'OBS top viewers overlay.', noIndex: true } } },
-    { path: 'profile/:twitchId/viewer/:viewerTwitchId', component: ViewerStatsComponent, data: { seo: { title: 'Viewer Statistics — MyStreamHistory', description: 'Detailed Twitch viewer activity and watch statistics.', noIndex: true } } },
-    { path: 'profile/:twitchId', component: StreamerProfileComponent, data: { seo: { title: 'Streamer Profile — MyStreamHistory', description: 'Twitch streamer history, games, audience and channel performance.', type: 'profile' } } },
-    { path: 'stream/:streamId', component: StreamDetailComponent, data: { seo: { title: 'Stream Details — MyStreamHistory', description: 'Stream timeline, categories and audience statistics.', type: 'article' } } },
     { path: 'settings', component: SettingsComponent, canActivate: [authGuard], data: { seo: { title: 'Settings — MyStreamHistory', description: 'Manage your MyStreamHistory profile and preferences.', noIndex: true } } },
     { path: 'admin', component: AdminComponent, canActivate: [adminGuard], data: { seo: { title: 'Diagnostics — MyStreamHistory', description: 'Administration tools.', noIndex: true } } },
     { path: 'admin/publications', loadComponent: () => import('./features/content/publications-admin.component').then(m => m.PublicationsAdminComponent), canActivate: [adminGuard], data: { seo: { title: 'Publications — MyStreamHistory', description: 'Editorial workspace.', noIndex: true } } },
     { path: 'admin/publications/:id/preview', loadComponent: () => import('./features/content/article-preview.component').then(m => m.ArticlePreviewComponent), canActivate: [adminGuard], data: { seo: { title: 'Draft preview — MyStreamHistory', description: 'Private article preview.', noIndex: true } } },
     { path: 'admin/publications/:id', loadComponent: () => import('./features/content/article-editor.component').then(m => m.ArticleEditorComponent), canActivate: [adminGuard], canDeactivate: [saveBeforeLeaving], data: { seo: { title: 'Article editor — MyStreamHistory', description: 'Editorial workspace.', noIndex: true } } },
+];
+const publicRoutes: Routes = [
+    { path: 'profile/:twitchId/viewer/:viewerTwitchId', component: ViewerStatsComponent, data: { seo: { title: 'Viewer Statistics — MyStreamHistory', description: 'Detailed Twitch viewer activity and watch statistics.', noIndex: true } } },
+    { path: 'profile/:twitchId', component: StreamerProfileComponent, data: { seo: { title: 'Streamer Profile — MyStreamHistory', description: 'Twitch streamer history, games, audience and channel performance.', type: 'profile' } } },
+    { path: 'stream/:streamId', component: StreamDetailComponent, data: { seo: { title: 'Stream Details — MyStreamHistory', description: 'Stream timeline, categories and audience statistics.', type: 'article' } } },
     { path: 'news', loadComponent: () => import('./features/content/public-content.component').then(m => m.PublicContentComponent), data: { type: 'news', seo: { title: 'News — MyStreamHistory', description: 'Streaming news and updates.' } } },
     { path: 'reviews', loadComponent: () => import('./features/content/public-content.component').then(m => m.PublicContentComponent), data: { type: 'review', seo: { title: 'Reviews — MyStreamHistory', description: 'Streaming reviews and impressions.' } } },
     { path: 'news/:slug', loadComponent: () => import('./features/content/article-page.component').then(m => m.ArticlePageComponent), data: { type: 'news' } },
     { path: 'reviews/:slug', loadComponent: () => import('./features/content/article-page.component').then(m => m.ArticlePageComponent), data: { type: 'review' } },
     {
-        path: '',
+        // UrlTree preserves the empty segment in '/ru/'; consume it before the lazy home route.
+        matcher: segments => segments.length === 0 || (segments.length === 1 && segments[0].path === '')
+          ? { consumed: segments } : null,
         loadChildren: () => import('./pages/home/home.module').then(m => m.HomeModule)
     }
 ];
+routes.push(
+  ...['ru', 'cs', 'de', 'es'].map(language => ({ path: language, children: publicRoutes })),
+  { path: '', children: publicRoutes },
+  { path: '**', loadComponent: () => import('./pages/not-found.component').then(module => module.NotFoundComponent) }
+);

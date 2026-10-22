@@ -35,6 +35,13 @@ namespace MyStreamHistory.ContentService.Api.Migrations
                     b.Property<Guid?>("CoverId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("Language")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)")
+                        .HasDefaultValue("en");
+
                     b.Property<DateTime?>("PublishedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -83,6 +90,9 @@ namespace MyStreamHistory.ContentService.Api.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<Guid>("TranslationGroupId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Type")
                         .IsRequired()
                         .HasColumnType("text");
@@ -94,7 +104,10 @@ namespace MyStreamHistory.ContentService.Api.Migrations
 
                     b.HasIndex("PublishedAt");
 
-                    b.HasIndex("Type", "Slug")
+                    b.HasIndex("TranslationGroupId", "Language")
+                        .IsUnique();
+
+                    b.HasIndex("Language", "Type", "Slug")
                         .IsUnique();
 
                     b.ToTable("Articles");

@@ -1,6 +1,9 @@
 import { fakeAsync, TestBed, tick } from '@angular/core/testing';
 import { BehaviorSubject, of, Subject, throwError } from 'rxjs';
-import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
+import { ActivatedRoute, NavigationStart, Router, convertToParamMap } from '@angular/router';
+import { LocaleService } from '../../i18n/locale.service';
+import { LANGUAGES } from '../../i18n/languages';
+import { Chart } from 'chart.js';
 import { CommunityComponent } from './community.component';
 import { CommunityService } from './community.service';
 import { CommunityMember, CommunityReport, CommunityResponse } from './community.models';
@@ -34,6 +37,8 @@ describe('Community analytics', () => {
   let query: BehaviorSubject<ReturnType<typeof convertToParamMap>>;
   const response = (r: CommunityReport = report): CommunityResponse => ({ report: structuredClone(r), members: [structuredClone(member)], nextCursor: null, exclusions: [] });
   beforeEach(() => {
+    localStorage.removeItem('preferred_language');
+    document.cookie = 'preferred_language=; Path=/; Max-Age=0';
     query = new BehaviorSubject(convertToParamMap({}));
     api = jasmine.createSpyObj('CommunityService', ['report', 'members', 'settings', 'exclusions', 'exclude', 'restore']);
     api.report.and.returnValue(of(response())); api.members.and.returnValue(of(response())); api.exclusions.and.returnValue(of(response()));
@@ -43,11 +48,42 @@ describe('Community analytics', () => {
       { provide: CommunityService, useValue: api }, { provide: AnalyticsService, useValue: analytics },
       { provide: AuthService, useValue: { getTwitchIdFromToken: () => '123' } },
       { provide: ActivatedRoute, useValue: { queryParamMap: query } },
-      { provide: Router, useValue: { navigate: jasmine.createSpy('navigate') } },
+      { provide: Router, useValue: { url: '/analytics/community', navigated: true, events: new Subject(), navigate: jasmine.createSpy('navigate') } },
       { provide: StreamerService, useValue: { getAllStreamers: () => of([{ twitchId: 999, displayName: 'Other channel', avatar: '' }]) } }
     ] });
   });
+  afterEach(() => {
+    localStorage.removeItem('preferred_language');
+    document.cookie = 'preferred_language=; Path=/; Max-Age=0';
+    document.documentElement.lang = 'en';
+  });
   function create() { const fixture = TestBed.createComponent(CommunityComponent); fixture.detectChanges(); return fixture; }
+
+  it('updates the report, chart, dates, numbers and errors in all five languages without reopening the channel', () => {
+    const data = response(); data.members[0].messagePoints = 12.5;
+    api.members.and.returnValue(of(data));
+    const f = create();
+    const locale = TestBed.inject(LocaleService);
+    (TestBed.inject(Router).events as Subject<NavigationStart>).next(new NavigationStart(1, '/analytics/community'));
+    const calls = api.report.calls.count();
+    for (const { code } of LANGUAGES) {
+      locale.rememberLanguage(code); f.detectChanges();
+      expect(f.nativeElement.querySelector('h1').textContent).toBe(locale.t('ui.community'));
+      expect(f.nativeElement.querySelector('main').lang).toBe(code);
+      expect(f.nativeElement.querySelector('.distribution button').textContent).toContain(locale.t('community.core'));
+      expect(f.nativeElement.querySelector('.messages').textContent).toContain(new Intl.NumberFormat(locale.locale(), { minimumFractionDigits: 2 }).format(12.5));
+      const chart = Chart.getChart(f.nativeElement.querySelector('canvas'));
+      expect(chart?.data.datasets[0].label).toBe(locale.t('community.coreMembers'));
+    }
+    expect(api.report.calls.count()).toBe(calls);
+    api.members.and.returnValue(throwError(() => new Error('Unavailable')));
+    f.componentInstance.loadMembers();
+    locale.rememberLanguage('ru'); f.detectChanges();
+    expect(f.componentInstance.error).toBe('Не удалось загрузить участников. Попробуйте ещё раз.');
+    locale.rememberLanguage('de'); f.detectChanges();
+    expect(f.componentInstance.error).toBe(locale.t('community.loadMembersFailed'));
+    f.destroy();
+  });
 
   it('labels provisional history and never calls chat connection video watching', () => {
     const f = create(); f.detectChanges();

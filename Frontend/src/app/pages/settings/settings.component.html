@@ -10,8 +10,8 @@
     <app-overlay-settings *ngIf="activeSection === 'overlay'"></app-overlay-settings>
     
     <div *ngIf="activeSection !== 'profile' && activeSection !== 'playthroughs' && activeSection !== 'overlay'" class="in-development">
-      <h2>In Development</h2>
-      <p>This section is currently under development and will be available soon.</p>
+      <h2>{{ 'common.inDevelopment' | t }}</h2>
+      <p>{{ 'common.comingSoon' | t }}</p>
     </div>
   </div>
 </div>

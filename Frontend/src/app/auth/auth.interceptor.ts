@@ -1,9 +1,15 @@
+import { ANONYMOUS_REQUEST } from '../core/api/api-base';
+import { isPlatformBrowser } from '@angular/common';
+import { PLATFORM_ID } from '@angular/core';
 import { HttpEvent, HttpHandlerFn, HttpRequest } from "@angular/common/http";
 import { inject } from "@angular/core";
 import { catchError, Observable, switchMap, throwError } from "rxjs";
 import { AuthService } from "./auth.service";
 
 export function authIntercerptor(req: HttpRequest<unknown>, next: HttpHandlerFn): Observable<HttpEvent<unknown>>{
+    if (!isPlatformBrowser(inject(PLATFORM_ID)) || req.context.get(ANONYMOUS_REQUEST)) {
+        return next(req.clone({ withCredentials: false, headers: req.headers.delete('Authorization').delete('Cookie') }));
+    }
     const authService = inject(AuthService);
     const isAuthRequest = req.url.includes('/auth/twitch/callback') ||
                           req.url.includes('/auth/refresh-token') ||

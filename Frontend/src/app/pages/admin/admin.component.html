@@ -1,19 +1,19 @@
 <main class="admin-page">
-  <nav class="admin-links"><a routerLink="/admin/publications">Publications</a><a routerLink="/admin" class="active">Diagnostics</a></nav>
+  <nav class="admin-links"><a routerLink="/admin/publications">{{ 'editor.publications' | t }}</a><a routerLink="/admin" class="active">{{ 'editor.diagnostics' | t }}</a></nav>
   <section class="admin-header">
     <div>
-      <p class="eyebrow">Admin</p>
-      <h1>Diagnostics</h1>
+      <p class="eyebrow">{{ 'admin.label' | t }}</p>
+      <h1>{{ 'editor.diagnostics' | t }}</h1>
     </div>
 
-    <button class="icon-button" type="button" (click)="refreshDiagnostics()" [disabled]="loading || !isAdmin" title="Refresh diagnostics">
+    <button class="icon-button" type="button" (click)="refreshDiagnostics()" [disabled]="loading || !isAdmin" [title]="'admin.refresh' | t">
       <i class="fa fa-refresh" [class.spinning]="isActionRunning('refresh')"></i>
     </button>
   </section>
 
   <section *ngIf="!isAdmin" class="access-state">
-    <h2>Access restricted</h2>
-    <p>This page requires an admin JWT role.</p>
+    <h2>{{ 'admin.restricted' | t }}</h2>
+    <p>{{ 'admin.roleRequired' | t }}</p>
   </section>
 
   <ng-container *ngIf="isAdmin">
@@ -22,25 +22,25 @@
 
     <section class="metrics-grid">
       <div class="metric">
-        <span>EventSub total</span>
-        <strong>{{ eventSubSubscriptions?.total ?? 0 }}</strong>
+        <span>{{ 'admin.eventSubTotal' | t }}</span>
+        <strong>{{ locale.number(eventSubSubscriptions?.total ?? 0, 0) }}</strong>
       </div>
       <div class="metric">
-        <span>EventSub cost</span>
-        <strong>{{ eventSubSubscriptions?.totalCost ?? 0 }} / {{ eventSubSubscriptions?.maxTotalCost ?? 0 }}</strong>
+        <span>{{ 'admin.eventSubCost' | t }}</span>
+        <strong>{{ locale.number(eventSubSubscriptions?.totalCost ?? 0, 0) }} / {{ locale.number(eventSubSubscriptions?.maxTotalCost ?? 0, 0) }}</strong>
       </div>
       <div class="metric">
-        <span>Chat subscriptions</span>
-        <strong>{{ chatSubscriptions?.count ?? 0 }}</strong>
+        <span>{{ 'admin.chatSubscriptions' | t }}</span>
+        <strong>{{ locale.number(chatSubscriptions?.count ?? 0, 0) }}</strong>
       </div>
     </section>
 
     <section class="admin-section">
       <div class="section-title">
-        <h2>EventSub Subscriptions</h2>
+        <h2>{{ 'admin.eventSubSubscriptions' | t }}</h2>
         <button type="button" (click)="subscribeToAllUsers()" [disabled]="!!actionInProgress">
           <i class="fa fa-plus"></i>
-          Subscribe all users
+          {{ 'admin.subscribeAll' | t }}
         </button>
       </div>
 
@@ -48,12 +48,12 @@
         <table>
           <thead>
             <tr>
-              <th>Type</th>
-              <th>Status</th>
-              <th>Broadcaster</th>
-              <th>Transport</th>
-              <th>Cost</th>
-              <th>Created</th>
+              <th>{{ 'common.type' | t }}</th>
+              <th>{{ 'common.status' | t }}</th>
+              <th>{{ 'admin.broadcaster' | t }}</th>
+              <th>{{ 'admin.transport' | t }}</th>
+              <th>{{ 'admin.cost' | t }}</th>
+              <th>{{ 'common.created' | t }}</th>
             </tr>
           </thead>
           <tbody>
@@ -65,11 +65,11 @@
               <td><span class="status">{{ subscription.status }}</span></td>
               <td>{{ subscription.condition.broadcasterUserId || '-' }}</td>
               <td>{{ subscription.transport.method }}</td>
-              <td>{{ subscription.cost }}</td>
-              <td>{{ subscription.createdAt | date:'short' }}</td>
+              <td>{{ locale.number(subscription.cost, 0) }}</td>
+              <td>{{ subscription.createdAt | date:'short':'UTC':locale.locale() }}</td>
             </tr>
             <tr *ngIf="!eventSubSubscriptions?.data?.length">
-              <td colspan="6" class="empty">No EventSub subscriptions returned.</td>
+              <td colspan="6" class="empty">{{ 'admin.noEventSub' | t }}</td>
             </tr>
           </tbody>
         </table>
@@ -77,30 +77,30 @@
 
       <div class="danger-zone">
         <div>
-          <h3>Delete all EventSub subscriptions</h3>
-          <p>Requires exact confirmation and sends backend audit data with a correlation id.</p>
+          <h3>{{ 'admin.deleteEventSub' | t }}</h3>
+          <p>{{ 'admin.confirmationHint' | t }}</p>
         </div>
         <input type="text" [(ngModel)]="deleteEventSubInput" [placeholder]="deleteEventSubConfirmation">
         <button class="danger" type="button" (click)="deleteAllEventSubSubscriptions()" [disabled]="!!actionInProgress || deleteEventSubInput !== deleteEventSubConfirmation">
           <i class="fa fa-trash"></i>
-          Delete all
+          {{ 'admin.deleteAll' | t }}
         </button>
       </div>
     </section>
 
     <section class="admin-section">
       <div class="section-title">
-        <h2>Chat Subscriptions</h2>
+        <h2>{{ 'admin.chatSubscriptions' | t }}</h2>
       </div>
 
       <div class="table-wrap">
         <table>
           <thead>
             <tr>
-              <th>Status</th>
-              <th>Broadcaster</th>
-              <th>Subscription id</th>
-              <th>Created</th>
+              <th>{{ 'common.status' | t }}</th>
+              <th>{{ 'admin.broadcaster' | t }}</th>
+              <th>{{ 'admin.subscriptionId' | t }}</th>
+              <th>{{ 'common.created' | t }}</th>
             </tr>
           </thead>
           <tbody>
@@ -108,10 +108,10 @@
               <td><span class="status">{{ subscription.status }}</span></td>
               <td>{{ subscription.broadcasterUserId || '-' }}</td>
               <td><code>{{ subscription.id }}</code></td>
-              <td>{{ subscription.createdAt | date:'short' }}</td>
+              <td>{{ subscription.createdAt | date:'short':'UTC':locale.locale() }}</td>
             </tr>
             <tr *ngIf="!chatSubscriptions?.subscriptions?.length">
-              <td colspan="4" class="empty">No chat subscriptions returned.</td>
+              <td colspan="4" class="empty">{{ 'admin.noChatSubscriptions' | t }}</td>
             </tr>
           </tbody>
         </table>
@@ -119,13 +119,13 @@
 
       <div class="danger-zone">
         <div>
-          <h3>Cleanup all chat subscriptions</h3>
-          <p>Removes every channel.chat.message subscription through the diagnostics endpoint.</p>
+          <h3>{{ 'admin.cleanupChat' | t }}</h3>
+          <p>{{ 'admin.cleanupHint' | t }}</p>
         </div>
         <input type="text" [(ngModel)]="cleanupChatInput" [placeholder]="cleanupChatConfirmation">
         <button class="danger" type="button" (click)="cleanupChatSubscriptions()" [disabled]="!!actionInProgress || cleanupChatInput !== cleanupChatConfirmation">
           <i class="fa fa-trash"></i>
-          Cleanup
+          {{ 'admin.cleanup' | t }}
         </button>
       </div>
     </section>
