@@ -48,16 +48,17 @@
           <p class="result-summary" role="status">{{ locale.plural('streamerCount', visibleStreamers.length) }} · {{ (searchQuery.trim() ? 'search.matching' : (liveOnly ? 'ui.liveNow' : 'search.liveFirst')) | t }}</p>
           <div class="streamer-list">
             @for (streamer of visibleStreamers; track streamer.twitchId) {
-              <a [routerLink]="(['/profile', streamer.twitchId]) | localPath" class="streamer-row" [class.is-live]="liveStreamerIds.has(streamer.twitchId)" [attr.aria-label]="'profile.link' | t: { name: streamer.displayName }">
+              <a [routerLink]="(['/profile', streamer.twitchId]) | localPath" class="streamer-row" [class.is-live]="liveStreamerIds.has(streamer.twitchId)" [attr.aria-label]="('profile.link' | t: { name: streamer.displayName }) + (liveStreamerIds.has(streamer.twitchId) ? ' · ' + ('ui.live' | t) : '')">
                 <span class="avatar-wrap">
                   <span class="avatar-initial" aria-hidden="true">{{ streamer.displayName.charAt(0).toUpperCase() }}</span>
                   @if (streamer.avatar) { <img [src]="streamer.avatar" alt="" loading="lazy" (error)="$any($event.target).hidden = true"> }
                 </span>
                 <span class="streamer-copy">
                   <strong>{{ streamer.displayName }}</strong>
-                  <span>{{ liveStreamerIds.has(streamer.twitchId) ? ('ui.onAirJoinTheStream' | t) : ('ui.broadcastsGamesCommunity' | t) }}</span>
+                  @if (liveStreamerIds.has(streamer.twitchId)) {
+                    <span class="live-label"><span class="live-dot" aria-hidden="true"></span>{{ 'ui.live' | t }}</span>
+                  }
                 </span>
-                @if (liveStreamerIds.has(streamer.twitchId)) { <span class="live-label"><span class="live-dot" aria-hidden="true"></span>{{ 'ui.live' | t }}</span> }
                 <svg class="row-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M5 12h14m-5-5 5 5-5 5"/></svg>
               </a>
             } @empty {

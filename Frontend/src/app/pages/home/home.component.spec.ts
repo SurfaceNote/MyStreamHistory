@@ -26,6 +26,8 @@ describe('Home streamer directory', () => {
     const element: HTMLElement = fixture.nativeElement;
     const names = () => Array.from(element.querySelectorAll('.streamer-copy strong')).map(node => node.textContent?.trim());
     expect(names()).toEqual(['ALINA', 'Bob', 'Alice']);
+    expect(element.querySelectorAll('.live-label').length).toBe(2);
+    expect(element.querySelector('.streamer-row[href="/profile/1"] .live-label')).toBeNull();
     const search = element.querySelector<HTMLInputElement>('input[type="search"]')!;
     search.value = '  ali  ';
     search.dispatchEvent(new Event('input'));
