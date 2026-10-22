@@ -2,6 +2,9 @@ import { Node } from '@tiptap/core';
 import { youtubeEmbedUrl, youtubeVideoId } from './youtube';
 
 export const YoutubeVideo = Node.create({
+  addOptions() {
+    return { labels: () => ({ invalid: 'Invalid YouTube video', player: 'YouTube video player' }) };
+  },
   name: 'youtube',
   group: 'block',
   atom: true,
@@ -20,10 +23,10 @@ export const YoutubeVideo = Node.create({
   },
   renderHTML({ node }) {
     const src = youtubeEmbedUrl(node.attrs['videoId']);
-    if (!src) return ['div', { 'data-youtube-video': '', class: 'youtube-video' }, 'Invalid YouTube video'];
+    if (!src) return ['div', { 'data-youtube-video': '', class: 'youtube-video' }, this.options.labels().invalid];
     return ['div', { 'data-youtube-video': '', class: 'youtube-video' }, ['iframe', {
       src,
-      title: 'YouTube video player',
+      title: this.options.labels().player,
       loading: 'lazy',
       allow: 'accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen',
       allowfullscreen: '',

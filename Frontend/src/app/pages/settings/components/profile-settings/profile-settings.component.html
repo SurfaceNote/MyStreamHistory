@@ -1,6 +1,7 @@
 <div class="profile-settings">
-  <h2 class="section-title">Profile</h2>
-  <p class="section-description">Manage your social media links</p>
+  <h2 class="section-title">{{ 'ui.profile' | t }}</h2>
+  <p class="section-description">{{ 'settings.socialDescription' | t }}</p>
+  <p *ngIf="loadError" class="error-message" role="alert">{{ loadError }}</p>
 
   <div *ngIf="globalSuccessMessage" class="alert alert-success">
     <i class="fa fa-check-circle"></i>
@@ -9,7 +10,7 @@
 
   <div *ngIf="isLoading" class="loading">
     <i class="fa fa-spinner fa-spin"></i>
-    Loading...
+    {{ 'common.loading' | t }}
   </div>
 
   <div *ngIf="!isLoading" class="social-links-list">
@@ -31,13 +32,13 @@
               class="social-input"
               [value]="getLink(network.type)?.path || ''"
               (input)="getLink(network.type)!.path = $any($event.target).value"
-              [placeholder]="network.placeholder"
+              [placeholder]="network.placeholder | t"
               [readonly]="isReadonly(network) || !getLink(network.type)?.isEditing"
               [class.readonly]="isReadonly(network) || !getLink(network.type)?.isEditing"
             />
             
             <span *ngIf="!getLink(network.type)" class="no-link-text">
-              Not specified
+              {{ 'settings.notSpecified' | t }}
             </span>
           </div>
 
@@ -49,7 +50,7 @@
               (click)="startAdding(network.type)"
               [disabled]="getLink(network.type)?.isSaving">
               <i class="fa fa-plus"></i>
-              Add
+              {{ 'common.add' | t }}
             </button>
 
             <!-- If link exists and not editing -->
@@ -59,7 +60,7 @@
                 (click)="startEditing(network.type)"
                 [disabled]="getLink(network.type)?.isSaving">
                 <i class="fa fa-edit"></i>
-                Edit
+                {{ 'common.edit' | t }}
               </button>
               
               <button 
@@ -67,7 +68,7 @@
                 (click)="deleteLink(network.type)"
                 [disabled]="getLink(network.type)?.isSaving">
                 <i class="fa fa-trash"></i>
-                Delete
+                {{ 'common.delete' | t }}
               </button>
             </ng-container>
 
@@ -78,7 +79,7 @@
                 (click)="saveLink(network.type)"
                 [disabled]="getLink(network.type)?.isSaving || !getLink(network.type)?.path?.trim()">
                 <i class="fa fa-save"></i>
-                Save
+                {{ 'common.save' | t }}
               </button>
               
               <button 
@@ -86,7 +87,7 @@
                 (click)="cancelEditing(network.type)"
                 [disabled]="getLink(network.type)?.isSaving">
                 <i class="fa fa-times"></i>
-                Cancel
+                {{ 'common.cancel' | t }}
               </button>
             </ng-container>
           </div>
@@ -94,12 +95,12 @@
 
         <div *ngIf="getLink(network.type)?.error" class="error-message">
           <i class="fa fa-exclamation-circle"></i>
-          {{ getLink(network.type)?.error }}
+          {{ locale.message(getLink(network.type)?.error || '') }}
         </div>
 
         <div *ngIf="isReadonly(network)" class="readonly-hint">
           <i class="fa fa-info-circle"></i>
-          This is your main link and cannot be changed
+          {{ 'settings.mainLink' | t }}
         </div>
       </div>
     </div>

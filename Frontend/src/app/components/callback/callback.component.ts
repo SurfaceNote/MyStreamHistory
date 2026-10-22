@@ -1,37 +1,29 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { TranslatePipe } from '../../i18n/translate.pipe';
+import { LocaleService } from '../../i18n/locale.service';
+import { afterNextRender, Component, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { switchMap } from 'rxjs';
+import { switchMap, take, of } from 'rxjs';
 import { AuthService } from '../../auth/auth.service';
 
 @Component({
   selector: 'app-callback',
-  imports: [],
+  imports: [TranslatePipe, ],
   templateUrl: './callback.component.html',
   styleUrl: './callback.component.scss'
 })
-export class CallbackComponent implements OnInit {
+export class CallbackComponent {
+  readonly locale = inject(LocaleService);
   private authService = inject(AuthService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
 
-  ngOnInit() {
-    this.route.queryParams
-      .pipe(
-        switchMap((params) => {
-          const code = params['code'];
-          const state = params['state'];
-          if (!code || !state) {
-            return this.router.navigate(['/']);
-          }
-          return this.authService.handleTwitchCallback(code, state);
-        })
-      )
-      .subscribe((success) => {
-        if (success) {
-          this.router.navigate(['/']);
-        } else {
-          this.router.navigate(['/']);
-        }
-      });
-    }
+  constructor() { afterNextRender(() => this.completeSignIn()); }
+  private completeSignIn(): void {
+    const returnUrl = this.authService.consumeReturnUrl();
+    this.route.queryParams.pipe(
+      take(1),
+      switchMap(params => params['code'] && params['state']
+        ? this.authService.handleTwitchCallback(params['code'], params['state']) : of(false))
+    ).subscribe(() => void this.router.navigateByUrl(returnUrl));
+  }
 }

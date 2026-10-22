@@ -1,26 +1,45 @@
 <header>
     <div class="left-side">
-        <a class="brand" routerLink="/" aria-label="MyStreamHistory home"><img class="brand-mark" src="/logo.png" alt="" /><span>MyStreamHistory</span></a>
-        <span class="alpha-label" title="Alpha version in development">ALPHA</span>
+        <a class="brand" [routerLink]="'/' | localPath" [attr.aria-label]="'ui.mystreamhistoryHome' | t"><img class="brand-mark" src="/logo.png" alt="" /><span>MyStreamHistory</span></a>
+        <span class="alpha-label" [title]="'ui.alphaVersionInDevelopment' | t">{{ 'ui.alphaBadge' | t }}</span>
     </div>
-    <nav class="editorial-links" aria-label="Main navigation">
-        <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" ariaCurrentWhenActive="page">Streamers</a>
-        <a routerLink="/news" routerLinkActive="active" ariaCurrentWhenActive="page">News</a>
-        <a routerLink="/reviews" routerLinkActive="active" ariaCurrentWhenActive="page">Reviews</a>
-        <a *ngIf="authReady && isLoggedIn" routerLink="/analytics/community" routerLinkActive="active" ariaCurrentWhenActive="page">Community</a>
+    <nav class="editorial-links" [attr.aria-label]="'ui.mainNavigation' | t">
+        <a [routerLink]="'/' | localPath" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" ariaCurrentWhenActive="page">{{ 'ui.streamers' | t }}</a>
+        <a [routerLink]="'/news' | localPath" routerLinkActive="active" ariaCurrentWhenActive="page">{{ 'ui.news' | t }}</a>
+        <a [routerLink]="'/reviews' | localPath" routerLinkActive="active" ariaCurrentWhenActive="page">{{ 'ui.reviews' | t }}</a>
+        <a *ngIf="authReady && isLoggedIn" [routerLink]="'/analytics/community' | localPath" routerLinkActive="active" ariaCurrentWhenActive="page">{{ 'ui.community' | t }}</a>
     </nav>
+    <details class="language-menu">
+      <summary [attr.aria-label]="('ui.language' | t) + ': ' + currentLanguage().name">
+        <img class="language-flag" [src]="currentLanguage().flag" alt="" width="20" height="14" />
+        <span class="language-code">{{ locale.language().toUpperCase() }}</span>
+      </summary>
+      <nav [attr.aria-label]="'ui.language' | t">
+        @for (language of locale.languages; track language.code) {
+          <a [routerLink]="locale.switchUrl(language.code)" [attr.lang]="language.code"
+             [attr.hreflang]="locale.hasTranslation(language.code) ? language.code : null"
+             [attr.aria-current]="locale.language() === language.code ? 'true' : null"
+             (click)="locale.rememberLanguage(language.code); $any($event.currentTarget).closest('details').open = false">
+            <img class="language-flag" [src]="language.flag" alt="" width="20" height="14" />
+            <span>{{ language.name }}
+              @if (!locale.hasTranslation(language.code)) { <small>{{ 'translation.missing' | t: { language: language.name } }}</small> }
+            </span>
+          </a>
+        }
+      </nav>
+    </details>
     <div class="auth" [attr.aria-busy]="!authReady">
         <span *ngIf="!authReady" class="auth-placeholder" aria-hidden="true"></span>
         <app-login-component *ngIf="authReady && !isLoggedIn" [compact]="true"/>
         <div *ngIf="authReady && isLoggedIn" class="user-menu">
-            <a class="profile-link" [routerLink]="['/profile', twitchId]" [title]="username || ''" [attr.aria-label]="'Profile: ' + username">{{username}}</a>
-            <button *ngIf="isAdmin" class="icon-btn admin-btn" (click)="navigateToAdmin()" title="Publications admin" aria-label="Publications admin">
+            <a class="profile-link" [routerLink]="(['/profile', twitchId]) | localPath" [title]="username || ''" [attr.aria-label]="locale.t('ui.profile') + ': ' + username">{{username}}</a>
+            <button *ngIf="isAdmin" class="icon-btn admin-btn" (click)="navigateToAdmin()" [title]="'ui.publicationsAdmin' | t" [attr.aria-label]="'ui.publicationsAdmin' | t">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 6v6c0 5 8 9 8 9s8-4 8-9V6z"/></svg>
             </button>
-            <button class="icon-btn settings-btn" (click)="navigateToSettings()" title="Settings" aria-label="Settings">
+            <button class="icon-btn settings-btn" (click)="navigateToSettings()" [title]="'ui.settings' | t" [attr.aria-label]="'ui.settings' | t">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 3-.6 2.3-2 .9L4.3 6 2 10l1.7 1.6v2.3L2 15.5l2.3 4 2.1-.3 2 .9L9 22h5l.6-1.9 2-.9 2.1.3 2.3-4-1.7-1.6v-2.3L21 10l-2.3-4-2.1.2-2-.9L14 3z"/><circle cx="11.5" cy="12.5" r="3"/></svg>
             </button>
         </div>
-        <button *ngIf="authReady && isLoggedIn" class="logout-btn" (click)="logout()">Logout</button>
+        <button *ngIf="authReady && isLoggedIn" class="logout-btn" (click)="logout()">{{ 'ui.logout' | t }}</button>
     </div>
 </header>

@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.spec.json",
+  "include": [
+    "src/app/i18n/**/*.spec.ts",
+    "src/app/service/seo.service.spec.ts",
+    "src/app/pages/home/**/*.spec.ts",
+    "src/app/pages/streamer-profile/**/*.spec.ts",
+    "src/app/pages/stream-detail/**/*.spec.ts",
+    "src/app/pages/viewer-stats/**/*.spec.ts",
+    "src/app/features/content/**/*.spec.ts",
+    "src/**/*.d.ts",
+    "src/app/features/community/**/*.spec.ts",
+    "src/app/components/header/**/*.spec.ts"
+  ]
+}

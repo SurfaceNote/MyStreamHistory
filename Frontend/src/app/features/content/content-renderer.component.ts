@@ -1,4 +1,5 @@
 import { CommonModule } from '@angular/common';
+import { TranslatePipe } from '../../i18n/translate.pipe';
 import { Component, Input, inject } from '@angular/core';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { ContentNode } from './content.models';
@@ -7,7 +8,7 @@ import { youtubeEmbedUrl } from './youtube';
 @Component({
   selector: 'app-content-renderer',
   standalone: true,
-  imports: [CommonModule],
+  imports: [TranslatePipe, CommonModule],
   styleUrl: './content-renderer.component.scss',
   template: `
     <ng-container [ngSwitch]="node.type">
@@ -23,7 +24,7 @@ import { youtubeEmbedUrl } from './youtube';
         <ng-template #plain><strong *ngIf="hasMark('bold'); else noBold"><em *ngIf="hasMark('italic'); else onlyBold">{{ node.text }}</em><ng-template #onlyBold>{{ node.text }}</ng-template></strong><ng-template #noBold><em *ngIf="hasMark('italic'); else noMark">{{ node.text }}</em><ng-template #noMark>{{ node.text }}</ng-template></ng-template></ng-template>
       </ng-container>
       <img *ngSwitchCase="'image'" [src]="node.attrs?.['src']" [alt]="node.attrs?.['alt'] || ''" loading="lazy" />
-      <ng-container *ngSwitchCase="'youtube'"><div class="youtube-video" *ngIf="youtubeSrc"><iframe [src]="youtubeSrc" title="YouTube video player" loading="lazy" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div></ng-container>
+      <ng-container *ngSwitchCase="'youtube'"><div class="youtube-video" *ngIf="youtubeSrc"><iframe [src]="youtubeSrc" [title]="'editor.youtubePlayer' | t" loading="lazy" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div></ng-container>
       <br *ngSwitchCase="'hardBreak'" />
     </ng-container>
   `,

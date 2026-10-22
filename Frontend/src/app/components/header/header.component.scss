@@ -1,4 +1,4 @@
-:host { display: block; background: #0c1220d9; backdrop-filter: blur(20px); border-bottom: 1px solid #ffffff0a; }
+:host { display: block; position: relative; z-index: 40; background: #0c1220d9; backdrop-filter: blur(20px); border-bottom: 1px solid #ffffff0a; }
 header { display: flex; align-items: center; gap: 40px; min-height: 64px; max-width: var(--page-width); margin: auto; padding: 0 var(--page-gutter); }
 .left-side { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .brand { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 650; letter-spacing: -.3px; }
@@ -10,3 +10,15 @@ header { display: flex; align-items: center; gap: 40px; min-height: 64px; max-wi
 .profile-link { color: #d3deef; font-size: 13px; max-width: 12ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (max-width: 1050px) { header { gap: 22px; flex-wrap: wrap; padding-top: 12px; padding-bottom: 0; } .editorial-links { width: 100%; order: 3; } .editorial-links a { padding: 12px 0; } }
 @media (max-width: 480px) { header { padding-top: 12px; gap: 10px; } .brand { font-size: 14px; } .alpha-label { display: none; } .auth { gap: 5px; } .user-menu { gap: 5px; } .profile-link { max-width: 7ch; } .auth .logout-btn { display: none; } .editorial-links { gap: 24px; overflow-x: auto; } }
+
+.language-menu { position:relative; margin-left:auto; flex-shrink:0; font-size:13px;
+  summary { display:flex; align-items:center; gap:6px; list-style:none; cursor:pointer; padding:8px; border:1px solid var(--border); border-radius:8px; }
+  summary::-webkit-details-marker { display:none; }
+  nav { position:absolute; z-index:30; right:0; top:100%; min-width:210px; max-width:80vw; padding:8px; border:1px solid var(--border); border-radius:12px; background:#101a2b; box-shadow:0 12px 30px #0008; }
+  a { display:flex; align-items:center; gap:10px; padding:8px; border-radius:6px; } a:hover, a[aria-current=true] { background:#26324b; }
+  small { display:block; color:var(--muted); padding-top:3px; }
+}
+.language-flag { display:inline-block; width:20px; height:14px; object-fit:cover; vertical-align:middle; flex-shrink:0; border-radius:2px; box-shadow:0 0 0 1px #ffffff26; }
+@media (max-width:480px) { .language-code { display:none; } }
+.language-menu + .auth { margin-left:0; }
+.auth-placeholder { visibility:hidden; }

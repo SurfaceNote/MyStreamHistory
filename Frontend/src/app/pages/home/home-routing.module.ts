@@ -5,7 +5,7 @@ import { CallbackComponent } from '../../components/callback/callback.component'
 
 const routes: Routes = [
   {
-    path: '',
+    path: '', pathMatch: 'full',
     component: HomeComponent,
     data: {
       seo: {
@@ -13,8 +13,7 @@ const routes: Routes = [
         description: 'Track Twitch stream history, games, audience activity and channel performance with clear analytics for streamers and their communities.'
       }
     }
-  },
-  {path: 'callback', component: CallbackComponent}];
+  }];
 
 @NgModule({
   imports: [RouterModule.forChild(routes)],

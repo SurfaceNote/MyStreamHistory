@@ -1,7 +1,7 @@
 <div class="sidebar">
-  <h2 class="sidebar-title">Settings</h2>
+  <h2 class="sidebar-title">{{ 'ui.settings' | t }}</h2>
   
-  <nav class="sidebar-nav" aria-label="Settings sections">
+  <nav class="sidebar-nav" [attr.aria-label]="'settings.sections' | t">
     <button 
       *ngFor="let section of sections"
       class="sidebar-item"
@@ -11,8 +11,8 @@
       [attr.aria-current]="section.id === activeSection ? 'page' : null"
       (click)="selectSection(section.id, section.disabled)">
       <i class="fa" [ngClass]="section.icon"></i>
-      <span>{{ section.label }}</span>
-      <span *ngIf="section.disabled" class="badge">In Development</span>
+      <span>{{ section.label | t }}</span>
+      <span *ngIf="section.disabled" class="badge">{{ 'common.inDevelopment' | t }}</span>
     </button>
   </nav>
 </div>

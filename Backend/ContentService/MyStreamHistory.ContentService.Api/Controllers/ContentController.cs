@@ -14,23 +14,25 @@ public sealed class ContentController(ContentDbContext db, MediaStorage storage,
     MediaDeletion deletion, ILogger<ContentController> logger) : ControllerBase
 {
     public sealed record ArticleInput(string Type, string Slug, string Title, string? Summary,
-        string SeoTitle, string SeoDescription, JsonElement Body, Guid? CoverId, int Revision);
+        string SeoTitle, string SeoDescription, JsonElement Body, Guid? CoverId, int Revision, string Language = "en");
+    public sealed record TranslationInput(string Language);
 
     [HttpGet]
-    public async Task<IActionResult> ListPublished([FromQuery] string? type, [FromQuery] int page = 1)
+    public async Task<IActionResult> ListPublished([FromQuery] string? type, [FromQuery] int page = 1, [FromQuery] string language = "en")
     {
+        if (!ContentLanguages.IsSupported(language)) return BadRequest("Invalid language.");
         if (type is not null && type is not ("news" or "review")) return BadRequest("Invalid type.");
         page = Math.Clamp(page, 1, 10000);
-        var query = db.Articles.AsNoTracking().Where(x => x.PublishedAt != null);
+        var query = db.Articles.AsNoTracking().Where(x => x.PublishedAt != null && x.Language == language);
         if (type is not null) query = query.Where(x => x.Type == type);
         var total = await query.CountAsync();
         var items = await query.OrderByDescending(x => x.PublishedAt).Skip((page - 1) * 12).Take(12)
-            .Select(x => new { x.Id, x.Type, x.Slug, Title = x.PublishedTitle, Summary = x.PublishedSummary,
+            .Select(x => new { x.Id, x.Language, x.Type, x.Slug, Title = x.PublishedTitle, Summary = x.PublishedSummary,
                 CoverId = x.PublishedCoverId, x.PublishedAt }).ToListAsync();
         var coverIds = items.Where(x => x.CoverId.HasValue).Select(x => x.CoverId!.Value).ToList();
         var covers = await db.Media.AsNoTracking().Where(x => coverIds.Contains(x.Id)).ToListAsync();
         var urls = covers.ToDictionary(x => x.Id, delivery.Url);
-        return Ok(new { items = items.Select(x => new { x.Id, x.Type, x.Slug, x.Title, x.Summary,
+        return Ok(new { items = items.Select(x => new { x.Id, x.Language, x.Type, x.Slug, x.Title, x.Summary,
             x.CoverId, CoverUrl = x.CoverId is Guid id ? urls.GetValueOrDefault(id) : null, x.PublishedAt }), total, page, pageSize = 12 });
     }
 
@@ -39,40 +41,43 @@ public sealed class ContentController(ContentDbContext db, MediaStorage storage,
     {
         XNamespace ns = "http://www.sitemaps.org/schemas/sitemap/0.9";
         var articles = await db.Articles.AsNoTracking().Where(x => x.PublishedAt != null)
-            .Select(x => new { x.Type, x.Slug }).ToListAsync();
-        var urls = new[] { "/", "/news", "/reviews" }
+            .Select(x => new { x.Language, x.Type, x.Slug }).ToListAsync();
+        var urls = ContentLanguages.All.SelectMany(language => new[] { ContentLanguages.Prefix(language) + "/", ContentLanguages.Prefix(language) + "/news", ContentLanguages.Prefix(language) + "/reviews" })
             .Select(path => new XElement(ns + "url", new XElement(ns + "loc", "https://mystreamhistory.com" + path)))
             .Concat(articles.Select(article => new XElement(ns + "url",
-                new XElement(ns + "loc", $"https://mystreamhistory.com/{(article.Type == "news" ? "news" : "reviews")}/{article.Slug}"))));
+                new XElement(ns + "loc", "https://mystreamhistory.com" + ContentLanguages.ArticlePath(article.Language, article.Type, article.Slug)))));
         var xml = new XDocument(new XDeclaration("1.0", "utf-8", null), new XElement(ns + "urlset", urls));
         return Content(xml.ToString(), "application/xml");
     }
 
     [HttpGet("{type}/{slug}")]
-    public async Task<IActionResult> GetPublished(string type, string slug)
+    public async Task<IActionResult> GetPublished(string type, string slug, [FromQuery] string language = "en")
     {
+        if (!ContentLanguages.IsSupported(language)) return BadRequest("Invalid language.");
         if (type is not ("news" or "review")) return NotFound();
-        var article = await db.Articles.AsNoTracking().FirstOrDefaultAsync(x => x.Type == type && x.Slug == slug && x.PublishedAt != null);
+        var article = await db.Articles.AsNoTracking().FirstOrDefaultAsync(x => x.Language == language && x.Type == type && x.Slug == slug && x.PublishedAt != null);
         if (article is null) return NotFound();
         var mediaIds = ContentDocument.Validate(JsonSerializer.Deserialize<JsonElement>(article.PublishedBody!));
         if (article.PublishedCoverId is Guid coverId) mediaIds.Add(coverId);
         var assets = await db.Media.AsNoTracking().Where(x => mediaIds.Contains(x.Id)).ToListAsync();
-        return Ok(PublicResponse(article, assets.ToDictionary(x => x.Id, delivery.Url)));
+        return Ok(PublicResponse(article, assets.ToDictionary(x => x.Id, delivery.Url), await Translations(article, true)));
     }
 
     [HttpGet("admin/articles")]
     [Authorize(Policy = "ContentAuthor")]
-    public async Task<IActionResult> ListAdmin([FromQuery] string? type, [FromQuery] string? status, [FromQuery] string? search, [FromQuery] int page = 1)
+    public async Task<IActionResult> ListAdmin([FromQuery] string? type, [FromQuery] string? status, [FromQuery] string? search, [FromQuery] int page = 1, [FromQuery] string? language = null)
     {
+        if (language is not null && !ContentLanguages.IsSupported(language)) return BadRequest("Invalid language.");
         page = Math.Clamp(page, 1, 10000);
         var query = db.Articles.AsNoTracking().AsQueryable();
+        if (language is not null) query = query.Where(x => x.Language == language);
         if (type is "news" or "review") query = query.Where(x => x.Type == type);
         if (status == "published") query = query.Where(x => x.PublishedAt != null);
         if (status == "draft") query = query.Where(x => x.PublishedAt == null);
         if (!string.IsNullOrWhiteSpace(search)) query = query.Where(x => x.Title.ToLower().Contains(search.Trim().ToLower()));
         var total = await query.CountAsync();
         var items = await query.OrderByDescending(x => x.UpdatedAt).Skip((page - 1) * 20).Take(20)
-            .Select(x => new { x.Id, x.Type, x.Slug, x.Title, x.Summary, x.CoverId, x.PublishedAt, x.UpdatedAt, x.Revision }).ToListAsync();
+            .Select(x => new { x.Id, x.Language, x.Type, x.Slug, x.Title, x.Summary, x.CoverId, x.PublishedAt, x.UpdatedAt, x.Revision }).ToListAsync();
         return Ok(new { items, total, page, pageSize = 20 });
     }
 
@@ -84,14 +89,14 @@ public sealed class ContentController(ContentDbContext db, MediaStorage storage,
         if (input.Type is not ("news" or "review")) return BadRequest("Invalid article type.");
         var error = await ValidateInput(input);
         if (error is not null) return BadRequest(error);
-        var article = new Article { Type = input.Type };
+        var article = new Article { Type = input.Type, Language = input.Language };
         CopyDraft(article, input);
         db.Articles.Add(article);
         try { await db.SaveChangesAsync(); }
         catch (DbUpdateException) { return Conflict("Article URL is already in use."); }
         await transaction.CommitAsync();
         logger.LogInformation("Content author created article {ArticleId}", article.Id);
-        return Created($"/content/admin/articles/{article.Id}", AdminResponse(article));
+        return Created($"/content/admin/articles/{article.Id}", await AdminResponse(article));
     }
 
     [HttpGet("admin/articles/{id:guid}")]
@@ -99,7 +104,7 @@ public sealed class ContentController(ContentDbContext db, MediaStorage storage,
     public async Task<IActionResult> GetAdmin(Guid id)
     {
         var article = await db.Articles.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
-        return article is null ? NotFound() : Ok(AdminResponse(article));
+        return article is null ? NotFound() : Ok(await AdminResponse(article));
     }
 
     [HttpPut("admin/articles/{id:guid}")]
@@ -110,6 +115,9 @@ public sealed class ContentController(ContentDbContext db, MediaStorage storage,
         var article = await db.Articles.FirstOrDefaultAsync(x => x.Id == id);
         if (article is null) return NotFound();
         if (article.Revision != input.Revision) return Conflict("This article was changed in another tab. Reload before saving.");
+        if (input.Language != article.Language) return BadRequest("Article language cannot be changed.");
+        if (input.Type != article.Type && await db.Articles.AnyAsync(x => x.TranslationGroupId == article.TranslationGroupId && x.Id != article.Id))
+            return BadRequest("The type of a translated publication cannot be changed.");
         if (article.SlugLocked && (input.Slug != article.Slug || input.Type != article.Type))
             return BadRequest("Published article type and URL cannot be changed.");
         var error = await ValidateInput(input);
@@ -120,7 +128,7 @@ public sealed class ContentController(ContentDbContext db, MediaStorage storage,
         catch (DbUpdateConcurrencyException) { return Conflict("This article was changed in another tab."); }
         catch (DbUpdateException) { return Conflict("Article URL is already in use."); }
         await transaction.CommitAsync();
-        return Ok(AdminResponse(article));
+        return Ok(await AdminResponse(article));
     }
 
     [HttpGet("admin/articles/{id:guid}/preview")]
@@ -128,7 +136,7 @@ public sealed class ContentController(ContentDbContext db, MediaStorage storage,
     public async Task<IActionResult> Preview(Guid id)
     {
         var article = await db.Articles.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
-        return article is null ? NotFound() : Ok(AdminResponse(article));
+        return article is null ? NotFound() : Ok(await AdminResponse(article));
     }
 
     [HttpPost("admin/articles/{id:guid}/publish")]
@@ -157,7 +165,7 @@ public sealed class ContentController(ContentDbContext db, MediaStorage storage,
         catch (DbUpdateConcurrencyException) { return Conflict("This article was changed in another tab."); }
         await transaction.CommitAsync();
         logger.LogInformation("Content author published article {ArticleId}", id);
-        return Ok(AdminResponse(article));
+        return Ok(await AdminResponse(article));
     }
 
     [HttpPost("admin/articles/{id:guid}/unpublish")]
@@ -174,7 +182,39 @@ public sealed class ContentController(ContentDbContext db, MediaStorage storage,
         catch (DbUpdateConcurrencyException) { return Conflict("This article was changed in another tab."); }
         await transaction.CommitAsync();
         logger.LogInformation("Content author unpublished article {ArticleId}", id);
-        return Ok(AdminResponse(article));
+        return Ok(await AdminResponse(article));
+    }
+
+    [HttpPost("admin/articles/{id:guid}/translations")]
+    [Authorize(Policy = "ContentAuthor")]
+    public async Task<IActionResult> CreateTranslation(Guid id, [FromBody] TranslationInput input)
+    {
+        if (!ContentLanguages.IsSupported(input.Language)) return BadRequest("Invalid language.");
+        await using var transaction = await db.BeginMediaMutationAsync();
+        var source = await db.Articles.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
+        if (source is null) return NotFound();
+        if (await db.Articles.AnyAsync(x => x.TranslationGroupId == source.TranslationGroupId && x.Language == input.Language))
+            return Conflict("A translation in this language already exists.");
+        var article = new Article
+        {
+            Language = input.Language, TranslationGroupId = source.TranslationGroupId, Type = source.Type,
+            Slug = "untitled-" + Guid.NewGuid().ToString("N"), Title = source.Title, Summary = source.Summary,
+            SeoTitle = source.SeoTitle, SeoDescription = source.SeoDescription, Body = source.Body, CoverId = source.CoverId
+        };
+        db.Articles.Add(article);
+        try { await db.SaveChangesAsync(); }
+        catch (DbUpdateException) { return Conflict("A translation in this language already exists."); }
+        await transaction.CommitAsync();
+        return Created($"/content/admin/articles/{article.Id}", await AdminResponse(article));
+    }
+
+    private async Task<object> Translations(Article article, bool publishedOnly)
+    {
+        var versions = await db.Articles.AsNoTracking()
+            .Where(x => x.TranslationGroupId == article.TranslationGroupId && (!publishedOnly || x.PublishedAt != null))
+            .Select(x => new { x.Id, x.Language, x.Type, x.Slug, x.PublishedAt }).ToListAsync();
+        return versions.Select(x => new { x.Id, x.Language, x.Type, x.Slug, x.PublishedAt,
+            Path = ContentLanguages.ArticlePath(x.Language, x.Type, x.Slug) }).ToArray();
     }
 
     [HttpGet("admin/media")]
@@ -248,6 +288,7 @@ public sealed class ContentController(ContentDbContext db, MediaStorage storage,
 
     private async Task<string?> ValidateInput(ArticleInput input)
     {
+        if (!ContentLanguages.IsSupported(input.Language)) return "Invalid language.";
         if (input.Type is not ("news" or "review") || string.IsNullOrWhiteSpace(input.Slug)
             || !Regex.IsMatch(input.Slug, "^[a-z0-9]+(?:-[a-z0-9]+)*$") || input.Slug.Length > 100)
             return "Use a lowercase URL slug with letters, numbers and hyphens.";
@@ -275,18 +316,18 @@ public sealed class ContentController(ContentDbContext db, MediaStorage storage,
         article.UpdatedAt = DateTime.UtcNow;
     }
 
-    private static object AdminResponse(Article a) => new
+    private async Task<object> AdminResponse(Article a) => new
     {
-        a.Id, a.Type, a.Slug, a.SlugLocked, a.Title, a.Summary, a.SeoTitle, a.SeoDescription,
-        Body = JsonSerializer.Deserialize<JsonElement>(a.Body), a.CoverId, a.PublishedAt, a.UpdatedAt, a.Revision
+        a.Id, a.Language, a.TranslationGroupId, a.Type, a.Slug, a.SlugLocked, a.Title, a.Summary, a.SeoTitle, a.SeoDescription,
+        Body = JsonSerializer.Deserialize<JsonElement>(a.Body), a.CoverId, a.PublishedAt, a.UpdatedAt, a.Revision, Translations = await Translations(a, false)
     };
 
-    private object PublicResponse(Article a, IReadOnlyDictionary<Guid, string> urls) => new
+    private object PublicResponse(Article a, IReadOnlyDictionary<Guid, string> urls, object translations) => new
     {
-        a.Id, a.Type, a.Slug, Title = a.PublishedTitle, Summary = a.PublishedSummary,
+        a.Id, a.Language, a.TranslationGroupId, a.Type, a.Slug, Title = a.PublishedTitle, Summary = a.PublishedSummary,
         SeoTitle = a.PublishedSeoTitle, SeoDescription = a.PublishedSeoDescription,
         Body = delivery.Body(a.PublishedBody!, urls), CoverId = a.PublishedCoverId,
-        CoverUrl = a.PublishedCoverId is Guid id ? urls.GetValueOrDefault(id) : null, a.PublishedAt
+        CoverUrl = a.PublishedCoverId is Guid id ? urls.GetValueOrDefault(id) : null, a.PublishedAt, Translations = translations
     };
 
 }

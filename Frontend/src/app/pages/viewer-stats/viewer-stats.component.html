@@ -2,17 +2,17 @@
   @if (isLoading) {
     <div class="state-card">
       <div class="spinner"></div>
-      <p>Loading viewer statistics...</p>
+      <p>{{ 'ui.loadingViewerStatistics' | t }}</p>
     </div>
   }
 
   @if (!isLoading && error) {
     <div class="state-card error-card">
-      <h1>Statistics unavailable</h1>
+      <h1>{{ 'ui.statisticsUnavailable' | t }}</h1>
       <p>{{ error }}</p>
       <div class="state-actions">
-        <button type="button" class="primary-button" (click)="loadStats()">Try again</button>
-        <button type="button" class="secondary-button" (click)="navigateBack()">Back to streamer</button>
+        <button type="button" class="primary-button" (click)="loadStats()">{{ 'ui.tryAgain' | t }}</button>
+        <button type="button" class="secondary-button" (click)="navigateBack()">{{ 'ui.backToStreamer' | t }}</button>
       </div>
     </div>
   }
@@ -20,19 +20,19 @@
   @if (!isLoading && stats && streamer) {
     <div class="page-shell">
       <button type="button" class="back-button" (click)="navigateBack()">
-        <span aria-hidden="true">&#8249;</span> Back to {{ streamer.displayName }}
+        <span aria-hidden="true">&#8249;</span> {{ 'viewer.back' | t: { name: streamer.displayName } }}
       </button>
 
       <section class="profile-card">
         <div class="identity">
           <img [src]="stats.viewer?.profileImageUrl || getDefaultAvatar()"
-               [alt]="(stats.viewer?.displayName || 'Viewer') + ' avatar'">
+               [alt]="'avatar' | t: { name: stats.viewer?.displayName || locale.t('ui.viewer') }">
           <div>
-            <span class="eyebrow">Viewer statistics at {{ streamer.displayName }}</span>
+            <span class="eyebrow">{{ 'viewer.at' | t: { name: streamer.displayName } }}</span>
             <div class="viewer-title-row">
-              <h1>{{ stats.viewer?.displayName || 'Unknown viewer' }}</h1>
+              <h1>{{ stats.viewer?.displayName || ('ui.unknownViewer' | t) }}</h1>
               @if (stats.top100Rank) {
-                <span class="rank-badge">#{{ stats.top100Rank }} in TOP-100</span>
+                <span class="rank-badge">{{ 'viewer.rank' | t: { rank: stats.top100Rank } }}</span>
               }
             </div>
             <p>&#64;{{ stats.viewer?.login || stats.viewer?.twitchUserId }}</p>
@@ -40,49 +40,49 @@
         </div>
 
         <div class="streamer-chip">
-          <img [src]="streamer.avatar" [alt]="streamer.displayName + ' avatar'">
+          <img [src]="streamer.avatar" [alt]="'avatar' | t: { name: streamer.displayName }">
           <div>
-            <span>Channel</span>
+            <span>{{ 'ui.channel' | t }}</span>
             <strong>{{ streamer.displayName }}</strong>
           </div>
         </div>
       </section>
 
-      <section class="metrics-grid" aria-label="Viewer statistics">
+      <section class="metrics-grid" [attr.aria-label]="'ui.viewerStatistics' | t">
         <article class="metric-card accent-card">
-          <span class="metric-label">Watch time</span>
+          <span class="metric-label">{{ 'ui.watchTime' | t }}</span>
           <strong>{{ formatWatchTime(stats.minutesWatched) }}</strong>
-          <small>{{ stats.minutesWatched | number }} minutes total</small>
+          <small>{{ stats.minutesWatched | number: '1.0-3' : locale.locale() }} {{ locale.countLabel('minutes', stats.minutesWatched) }}</small>
         </article>
         <article class="metric-card">
-          <span class="metric-label">Streams watched</span>
-          <strong>{{ stats.streamsWatched | number }}</strong>
-          <small>Unique broadcasts visited</small>
+          <span class="metric-label">{{ 'ui.streamsWatched' | t }}</span>
+          <strong>{{ stats.streamsWatched | number: '1.0-3' : locale.locale() }}</strong>
+          <small>{{ 'ui.uniqueBroadcastsVisited' | t }}</small>
         </article>
         <article class="metric-card">
-          <span class="metric-label">Broadcast watched</span>
-          <strong>{{ stats.watchedPercentage | number:'1.0-1' }}%</strong>
-          <small>Of attended streams by duration</small>
+          <span class="metric-label">{{ 'ui.broadcastWatched' | t }}</span>
+          <strong>{{ stats.watchedPercentage | number: '1.0-1' : locale.locale() }}%</strong>
+          <small>{{ 'ui.ofAttendedStreamsByDuration' | t }}</small>
         </article>
         <article class="metric-card">
-          <span class="metric-label">Message points</span>
-          <strong>{{ stats.earnedMsgPoints | number:'1.0-2' }}</strong>
-          <small>Earned from chat activity</small>
+          <span class="metric-label">{{ 'ui.messagePoints' | t }}</span>
+          <strong>{{ stats.earnedMsgPoints | number: '1.0-2' : locale.locale() }}</strong>
+          <small>{{ 'ui.earnedFromChatActivity' | t }}</small>
         </article>
         <article class="metric-card">
-          <span class="metric-label">Experience</span>
-          <strong>{{ stats.experience | number:'1.0-2' }}</strong>
-          <small>Activity score on this channel</small>
+          <span class="metric-label">{{ 'ui.experience' | t }}</span>
+          <strong>{{ stats.experience | number: '1.0-2' : locale.locale() }}</strong>
+          <small>{{ 'ui.activityScoreOnThisChannel' | t }}</small>
         </article>
       </section>
 
       <section class="details-card">
         <div>
-          <span>First watched stream</span>
-          <strong>{{ stats.firstWatchedAt ? formatDate(stats.firstWatchedAt) : 'No history yet' }}</strong>
+          <span>{{ 'ui.firstWatchedStream' | t }}</span>
+          <strong>{{ stats.firstWatchedAt ? formatDate(stats.firstWatchedAt) : ('ui.noHistoryYet' | t) }}</strong>
         </div>
         <div>
-          <span>Last view</span>
+          <span>{{ 'ui.lastView' | t }}</span>
           <strong>{{ stats.lastWatchedAt ? formatDate(stats.lastWatchedAt) : formatDate(stats.lastUpdatedAt) }}</strong>
         </div>
       </section>
@@ -91,19 +91,19 @@
         <section class="content-section">
           <div class="section-heading">
             <div>
-              <span class="eyebrow">Most watched</span>
-              <h2>Favorite categories</h2>
+              <span class="eyebrow">{{ 'ui.mostWatched' | t }}</span>
+              <h2>{{ 'ui.favoriteCategories' | t }}</h2>
             </div>
           </div>
-          <div class="game-library" role="list" aria-label="Favorite categories">
+          <div class="game-library" role="list" [attr.aria-label]="'ui.favoriteCategories' | t">
             @for (category of stats.favoriteCategories; track category.twitchCategoryId) {
               <article class="game-entry" role="listitem">
                 <app-game-art [src]="category.boxArtUrl" />
                 <div class="game-copy">
                   <h3 class="game-name">{{ category.name }}</h3>
                   <dl class="game-facts">
-                    <div><dt>Time watched</dt><dd>{{ formatWatchTime(category.minutesWatched) }}</dd></div>
-                    <div><dt>Streams watched</dt><dd>{{ category.streamsCount }}</dd></div>
+                    <div><dt>{{ 'ui.timeWatched' | t }}</dt><dd>{{ formatWatchTime(category.minutesWatched) }}</dd></div>
+                    <div><dt>{{ 'ui.streamsWatched' | t }}</dt><dd>{{ category.streamsCount }}</dd></div>
                   </dl>
                 </div>
               </article>
@@ -116,29 +116,29 @@
         <section class="content-section">
           <div class="section-heading">
             <div>
-              <span class="eyebrow">Latest activity</span>
-              <h2>Recent streams</h2>
+              <span class="eyebrow">{{ 'ui.latestActivity' | t }}</span>
+              <h2>{{ 'ui.recentStreams' | t }}</h2>
             </div>
           </div>
           <div class="history-list">
             @for (stream of stats.recentStreams; track stream.streamSessionId) {
               <button type="button" class="history-row" (click)="navigateToStream(stream.streamSessionId)">
                 <div class="history-main">
-                  <strong>{{ stream.streamTitle || 'Untitled stream' }}</strong>
+                  <strong>{{ stream.streamTitle || ('ui.untitledStream' | t) }}</strong>
                   <span>{{ formatDate(stream.startedAt) }}</span>
                   <span class="game-tokens">
                     @for (name of stream.categories; track $index) { <span class="game-token">{{ name }}</span> }
-                    @empty { <span class="game-token">No category</span> }
+                    @empty { <span class="game-token">{{ 'ui.noCategory' | t }}</span> }
                   </span>
                 </div>
                 <div class="history-watch-time">
                   <strong>{{ formatWatchTime(stream.minutesWatched) }}</strong>
-                  <span>of {{ formatWatchTime(stream.durationMinutes) }}</span>
+                  <span>{{ 'viewer.of' | t: { duration: formatWatchTime(stream.durationMinutes) } }}</span>
                 </div>
                 <div class="history-progress">
                   <div class="progress-label">
-                    <span>Watched</span>
-                    <strong>{{ stream.watchedPercentage | number:'1.0-1' }}%</strong>
+                    <span>{{ 'ui.watchedLabel' | t }}</span>
+                    <strong>{{ stream.watchedPercentage | number: '1.0-1' : locale.locale() }}%</strong>
                   </div>
                   <div class="progress-track">
                     <span [style.width.%]="stream.watchedPercentage"></span>

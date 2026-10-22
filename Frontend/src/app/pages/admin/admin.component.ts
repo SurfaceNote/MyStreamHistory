@@ -1,5 +1,7 @@
+import { TranslatePipe } from '../../i18n/translate.pipe';
+import { LocaleService, LocalizedMessage } from '../../i18n/locale.service';
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { forkJoin, Observable } from 'rxjs';
@@ -18,11 +20,12 @@ type AdminAction = 'refresh' | 'subscribeAll' | 'deleteEventSub' | 'cleanupChat'
 @Component({
   selector: 'app-admin',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [TranslatePipe, CommonModule, FormsModule, RouterLink],
   templateUrl: './admin.component.html',
   styleUrl: './admin.component.scss'
 })
 export class AdminComponent implements OnInit {
+  readonly locale = inject(LocaleService);
   readonly deleteEventSubConfirmation = 'delete-all-eventsub-subscriptions';
   readonly cleanupChatConfirmation = 'cleanup-all-chat-subscriptions';
 
@@ -31,8 +34,12 @@ export class AdminComponent implements OnInit {
   isAdmin = false;
   loading = false;
   actionInProgress: AdminAction | null = null;
-  errorMessage = '';
-  successMessage = '';
+  private _errorMessage: LocalizedMessage = '';
+  get errorMessage(): string { return this.locale.message(this._errorMessage); }
+  set errorMessage(value: LocalizedMessage) { this._errorMessage = value; }
+  private _successMessage: LocalizedMessage = '';
+  get successMessage(): string { return this.locale.message(this._successMessage); }
+  set successMessage(value: LocalizedMessage) { this._successMessage = value; }
   deleteEventSubInput = '';
   cleanupChatInput = '';
 
@@ -70,19 +77,19 @@ export class AdminComponent implements OnInit {
 
   subscribeToAllUsers(): void {
     this.runAction('subscribeAll', () => this.diagnosticsService.subscribeToAllUsers(), (result) => {
-      this.successMessage = result.message || `Created subscriptions for ${result.successCount} of ${result.userCount} users.`;
+      this.successMessage = { key: 'admin.subscribed', params: { count: result.successCount, total: result.userCount } };
       this.refreshDiagnostics();
     });
   }
 
   deleteAllEventSubSubscriptions(): void {
     if (this.deleteEventSubInput !== this.deleteEventSubConfirmation) {
-      this.errorMessage = 'Enter the exact EventSub confirmation phrase before deleting.';
+      this.errorMessage = 'admin.confirmEventSub';
       return;
     }
 
     this.runAction('deleteEventSub', () => this.diagnosticsService.deleteAllEventSubSubscriptions(), (result) => {
-      this.successMessage = result.message || `Deleted ${result.deletedCount} EventSub subscriptions.`;
+      this.successMessage = { key: 'admin.deletedEventSub', params: { count: result.deletedCount } };
       this.deleteEventSubInput = '';
       this.refreshDiagnostics();
     });
@@ -90,12 +97,12 @@ export class AdminComponent implements OnInit {
 
   cleanupChatSubscriptions(): void {
     if (this.cleanupChatInput !== this.cleanupChatConfirmation) {
-      this.errorMessage = 'Enter the exact chat confirmation phrase before cleanup.';
+      this.errorMessage = 'admin.confirmChat';
       return;
     }
 
     this.runAction('cleanupChat', () => this.diagnosticsService.cleanupChatSubscriptions(), (result) => {
-      this.successMessage = result.message || `Cleaned up ${result.deletedCount} chat subscriptions.`;
+      this.successMessage = { key: 'admin.cleanedChat', params: { count: result.deletedCount } };
       this.cleanupChatInput = '';
       this.refreshDiagnostics();
     });
@@ -130,21 +137,21 @@ export class AdminComponent implements OnInit {
     this.errorMessage = this.getErrorMessage(error);
   }
 
-  private getErrorMessage(error: unknown): string {
+  private getErrorMessage(error: unknown): LocalizedMessage {
     const httpError = error as { status?: number; error?: { message?: string }; message?: string };
 
     if (httpError.status === 401) {
-      return 'You need to sign in before opening diagnostics.';
+      return 'admin.signInRequired';
     }
 
     if (httpError.status === 403) {
-      return 'Diagnostics are available only for admin accounts, and production access must be enabled on the backend.';
+      return 'admin.forbidden';
     }
 
     if (httpError.status === 429) {
-      return 'Diagnostics rate limit reached. Wait a moment and try again.';
+      return 'admin.rateLimited';
     }
 
-    return httpError.error?.message ?? httpError.message ?? 'Diagnostics request failed.';
+    return 'admin.failed';
   }
 }

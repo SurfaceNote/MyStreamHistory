@@ -1,3 +1,5 @@
+import { TranslatePipe } from '../../i18n/translate.pipe';
+import { LocaleService } from '../../i18n/locale.service';
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -9,13 +11,14 @@ import { SeoService } from '../../service/seo.service';
 
 @Component({
   selector: 'app-article-preview', standalone: true,
-  imports: [CommonModule, RouterLink, ContentRendererComponent],
-  template: `<div class="preview-banner">Draft preview · Only you can see this <a [routerLink]="['/admin/publications', article?.id]">Back to editor</a></div>
-    <main *ngIf="article as item" class="preview-page"><p class="category">{{ item.type === 'news' ? 'NEWS' : 'REVIEW' }}</p><h1>{{ item.title || 'Untitled draft' }}</h1><img *ngIf="cover" [src]="cover" [alt]="item.title" /><div class="body"><app-content-renderer [node]="body" /></div></main>
-    <p *ngIf="error">Preview could not be loaded.</p>`,
+  imports: [TranslatePipe, CommonModule, RouterLink, ContentRendererComponent],
+  template: `<div class="preview-banner">{{ 'editor.draftPreview' | t }} <a [routerLink]="['/admin/publications', article?.id]">{{ 'editor.backToEditor' | t }}</a></div>
+    <main *ngIf="article as item" class="preview-page" [attr.lang]="item.language || 'en'"><p class="category">{{ item.type === 'news' ? ('ui.newsLabel' | t) : ('ui.review' | t) }}</p><h1>{{ item.title || ('editor.untitled' | t) }}</h1><img *ngIf="cover" [src]="cover" [alt]="item.title" /><div class="body"><app-content-renderer [node]="body" /></div></main>
+    <p *ngIf="error">{{ 'editor.previewFailed' | t }}</p>`,
   styles: [`.preview-banner { background:var(--accent-soft); color:#fff; padding:12px 24px; display:flex; flex-wrap:wrap; gap:12px; justify-content:space-between; } .preview-banner a { color:#fff; text-decoration:underline; } .preview-page { max-width:900px; margin:50px auto; padding:24px; } .category { color:var(--accent); font-size:.75rem; letter-spacing:.14em; font-weight:800; } h1 { font-size:clamp(2.2rem,5vw,4rem); font-weight:550; letter-spacing:-.04em; line-height:1.1; overflow-wrap:anywhere; } img { width:100%; border-radius:16px; margin:25px 0; } .body { max-width:760px; margin:auto; }`]
 })
 export class ArticlePreviewComponent implements OnInit, OnDestroy {
+  readonly locale = inject(LocaleService);
   private readonly route = inject(ActivatedRoute);
   private readonly content = inject(ContentService);
   private readonly seo = inject(SeoService);
@@ -26,7 +29,7 @@ export class ArticlePreviewComponent implements OnInit, OnDestroy {
   private objectUrls: string[] = [];
   ngOnDestroy(): void { this.objectUrls.forEach(url => URL.revokeObjectURL(url)); }
   async ngOnInit(): Promise<void> {
-    this.seo.update({ title: 'Draft preview — MyStreamHistory', description: 'Private article preview.', noIndex: true });
+    this.seo.update({ title: this.locale.t('seo.previewTitle'), description: this.locale.t('seo.previewDescription'), noIndex: true });
     try {
       const id = this.route.snapshot.paramMap.get('id')!;
       this.article = await firstValueFrom(this.content.article(id));

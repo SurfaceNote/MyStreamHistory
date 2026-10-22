@@ -1,4 +1,6 @@
-import { afterNextRender, ChangeDetectorRef, Component, inject, OnDestroy } from '@angular/core';
+import { LocaleService } from '../../i18n/locale.service';
+import { TranslatePipe, LocalPathPipe } from '../../i18n/translate.pipe';
+import { afterNextRender, ChangeDetectorRef, Component, computed, inject, OnDestroy } from '@angular/core';
 import { LoginComponentComponent } from '../buttons/login-component/login-component.component';
 import { AuthService } from '../../auth/auth.service';
 import { CommonModule } from '@angular/common';
@@ -7,11 +9,13 @@ import { Router, RouterModule } from '@angular/router';
 
 @Component({
   selector: 'app-header',
-  imports: [CommonModule, LoginComponentComponent, RouterModule],
+  imports: [TranslatePipe, LocalPathPipe, CommonModule, LoginComponentComponent, RouterModule],
   templateUrl: './header.component.html',
   styleUrl: './header.component.scss'
 })
 export class HeaderComponent implements OnDestroy {
+  readonly locale = inject(LocaleService);
+  readonly currentLanguage = computed(() => this.locale.languages.find(language => language.code === this.locale.language())!);
   isLoggedIn: boolean = false;
   authReady = false;
   private authService = inject(AuthService);

@@ -1,7 +1,9 @@
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { ContentRendererComponent } from './content-renderer.component';
 
 describe('YouTube article rendering', () => {
+  beforeEach(() => TestBed.configureTestingModule({ providers: [provideRouter([])] }));
   it('renders a responsive player for a saved video inside the document', () => {
     const fixture = TestBed.createComponent(ContentRendererComponent);
     fixture.componentRef.setInput('node', { type: 'doc', content: [

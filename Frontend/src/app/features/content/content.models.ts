@@ -1,3 +1,5 @@
+import { Language } from '../../i18n/languages';
+export interface ArticleTranslation { id: string; language: Language; type: ArticleType; slug: string; path: string; publishedAt: string | null; }
 export type ArticleType = 'news' | 'review';
 
 export interface ContentNode {
@@ -9,6 +11,7 @@ export interface ContentNode {
 }
 
 export interface ArticleInput {
+  language?: Language;
   type: ArticleType;
   slug: string;
   title: string;
@@ -21,13 +24,17 @@ export interface ArticleInput {
 }
 
 export interface Article extends ArticleInput {
+  language: Language;
   id: string;
+  translationGroupId: string;
+  translations: ArticleTranslation[];
   slugLocked: boolean;
   publishedAt: string | null;
   updatedAt: string;
 }
 
 export interface ArticleSummary {
+  language?: Language;
   id: string;
   type: ArticleType;
   slug: string;
@@ -41,6 +48,9 @@ export interface ArticleSummary {
 }
 
 export interface PublicArticle extends Omit<ArticleInput, 'revision'> {
+  language: Language;
+  translationGroupId: string;
+  translations: ArticleTranslation[];
   id: string;
   coverUrl?: string | null;
   publishedAt: string;

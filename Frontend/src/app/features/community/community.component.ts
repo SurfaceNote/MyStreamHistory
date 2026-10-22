@@ -1,4 +1,7 @@
-import { afterNextRender, ChangeDetectorRef, Component, ElementRef, inject, OnDestroy, ViewChild } from '@angular/core';
+import { TranslationKey } from '../../i18n/translations';
+import { TranslatePipe } from '../../i18n/translate.pipe';
+import { LocaleService, LocalizedMessage } from '../../i18n/locale.service';
+import { afterNextRender, ChangeDetectorRef, Component, effect, ElementRef, inject, OnDestroy, untracked, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -14,10 +17,11 @@ import { StreamerShortDTO } from '../../models/streamer-short.dto';
 Chart.register(...registerables);
 
 @Component({
-  selector: 'app-community', imports: [CommonModule, FormsModule],
+  selector: 'app-community', imports: [TranslatePipe, CommonModule, FormsModule],
   templateUrl: './community.component.html', styleUrl: './community.component.scss'
 })
 export class CommunityComponent implements OnDestroy {
+  readonly locale = inject(LocaleService);
   @ViewChild('trend') trend?: ElementRef<HTMLCanvasElement>;
   private api = inject(CommunityService);
   private analytics = inject(AnalyticsService);
@@ -54,23 +58,28 @@ export class CommunityComponent implements OnDestroy {
   loading = true;
   membersLoading = false;
   saving = false;
-  error = '';
-  settingsError = '';
+  private _error: LocalizedMessage = '';
+  get error(): string { return this.locale.message(this._error); }
+  set error(value: LocalizedMessage) { this._error = value; }
+  private _settingsError: LocalizedMessage = '';
+  get settingsError(): string { return this.locale.message(this._settingsError); }
+  set settingsError(value: LocalizedMessage) { this._settingsError = value; }
   readonly levels = [
-    { id: 'core', label: 'Core', rule: 'At least 60% attendance, four days across three weeks.' },
-    { id: 'regular', label: 'Regular', rule: 'At least 30% attendance, three days across two weeks. Excludes core members.' },
-    { id: 'returning', label: 'Returning', rule: 'At least two broadcast days.' },
-    { id: 'occasional', label: 'Occasional', rule: 'One broadcast day.' }
-  ];
-  readonly transitionLabels: Record<string, string> = {
-    enteredCore: 'Joined core', restoredCore: 'Rejoined core', leftCore: 'Left core',
-    becameRegular: 'Became regular', returned: 'Returned'
+    { id: 'core', label: 'community.core', rule: 'community.coreRule' },
+    { id: 'regular', label: 'community.regular', rule: 'community.regularRule' },
+    { id: 'returning', label: 'community.returning', rule: 'community.returningRule' },
+    { id: 'occasional', label: 'community.occasional', rule: 'community.occasionalRule' }
+  ] satisfies { id: string; label: TranslationKey; rule: TranslationKey }[];
+  readonly transitionLabels: Record<string, TranslationKey> = {
+    enteredCore: 'community.joinedCore', restoredCore: 'community.rejoinedCore', leftCore: 'community.leftCore',
+    becameRegular: 'community.becameRegular', returned: 'community.returned'
   };
-  readonly memberTransitionLabels: Record<string, string> = {
-    enteredCore: 'Joined core', restoredCore: 'Rejoined core', leftCore: 'Left core',
-    becameRegular: 'Became regular', returned: 'Returned'
+  readonly memberTransitionLabels: Record<string, TranslationKey> = {
+    enteredCore: 'community.joinedCore', restoredCore: 'community.rejoinedCore', leftCore: 'community.leftCore',
+    becameRegular: 'community.becameRegular', returned: 'community.returned'
   };
   constructor() {
+    effect(() => { this.locale.language(); untracked(() => this.drawChart()); });
     afterNextRender(() => this.subscriptions.add(this.route.queryParamMap.pipe(
       map(params => params.get('channelId')), distinctUntilChanged()
     ).subscribe(id => this.openChannel(id))));
@@ -101,7 +110,7 @@ export class CommunityComponent implements OnDestroy {
       this.channelsRequested = true;
       this.subscriptions.add(this.streamers.getAllStreamers().subscribe({
         next: channels => { this.channels = [...channels].sort((a, b) => a.displayName.localeCompare(b.displayName)); this.cdr.markForCheck(); },
-        error: () => { this.channelsRequested = false; this.settingsError = 'Could not load channels.'; this.cdr.markForCheck(); }
+        error: () => { this.channelsRequested = false; this.settingsError = 'community.loadChannelsFailed'; this.cdr.markForCheck(); }
       }));
     }
     this.apply(response.report);
@@ -114,7 +123,7 @@ export class CommunityComponent implements OnDestroy {
     this.error = '';
     this.reportRequest = this.api.report(this.channelId).subscribe({
       next: response => this.applyResponse(response),
-      error: () => { this.loading = false; this.error = 'Could not load community.'; this.poll = setTimeout(() => this.load(true), 60000); this.cdr.markForCheck(); }
+      error: () => { this.loading = false; this.error = 'community.loadFailed'; this.poll = setTimeout(() => this.load(true), 60000); this.cdr.markForCheck(); }
     });
   }
   private apply(report: CommunityReport): void {
@@ -129,7 +138,7 @@ export class CommunityComponent implements OnDestroy {
           next: response => { this.saving = false; this.apply(response.report); },
           error: () => {
             this.saving = false;
-            this.settingsError = 'Could not sync your time zone. Reload to retry.';
+            this.settingsError = 'community.timezoneFailed';
             this.apply(report);
           }
         }));
@@ -178,14 +187,14 @@ export class CommunityComponent implements OnDestroy {
         this.membersLoading = false;
         this.cdr.markForCheck();
       },
-      error: () => { this.membersLoading = false; this.error = 'Could not load members. Try again.'; this.cdr.markForCheck(); }
+      error: () => { this.membersLoading = false; this.error = 'community.loadMembersFailed'; this.cdr.markForCheck(); }
     });
   }
   loadExclusions(): void {
     this.exclusionsRequest?.unsubscribe();
     this.exclusionsRequest = this.api.exclusions(this.channelId).subscribe({
       next: r => { this.exclusions = r.exclusions; this.cdr.markForCheck(); },
-      error: () => { this.settingsError = 'Could not load excluded accounts.'; this.cdr.markForCheck(); }
+      error: () => { this.settingsError = 'community.loadExclusionsFailed'; this.cdr.markForCheck(); }
     });
   }
   exclusion(id: string, restore: boolean): void {
@@ -194,35 +203,36 @@ export class CommunityComponent implements OnDestroy {
     this.saving = true; this.settingsError = '';
     this.channelRequests.add((restore ? this.api.restore(id) : this.api.exclude(id)).subscribe({
       next: r => { this.saving = false; this.apply(r.report); this.loadExclusions(); },
-      error: () => { this.saving = false; this.settingsError = 'Could not update exclusions. Try again.'; this.cdr.markForCheck(); }
+      error: () => { this.saving = false; this.settingsError = 'community.updateExclusionsFailed'; this.cdr.markForCheck(); }
     }));
   }
   opened(event: Event): void {
     if (!this.readOnly && (event.target as HTMLDetailsElement).open) this.analytics.trackEvent('community_history_open', { level: this.selectedLevel });
   }
   memberChange(member: CommunityMember): string {
-    if (member.dormant) return 'Inactive';
-    if (member.declining) return 'Less active';
-    const transition = member.transition ? this.memberTransitionLabels[member.transition] || '' : '';
-    return member.returned && member.transition !== 'returned' ? 'Returned' + (transition ? ' · ' + transition : '') : transition || '—';
+    if (member.dormant) return this.locale.t('community.inactive');
+    if (member.declining) return this.locale.t('community.lessActive');
+    const key = member.transition ? this.memberTransitionLabels[member.transition] : undefined;
+    const transition = key ? this.locale.t(key) : '';
+    return member.returned && member.transition !== 'returned' ? this.locale.t('community.returned') + (transition ? ' · ' + transition : '') : transition || '—';
   }
-  format(value: number | null | undefined): string { return value == null ? '—' : value.toLocaleString('en-US'); }
+  format(value: number | null | undefined): string { return value == null ? '—' : this.locale.number(value, 0); }
   hasTrend(): boolean { return !!this.report?.trend.some(point => point.core !== null); }
   calculatedLabel(): string {
-    return this.report?.calculatedAt ? new Intl.DateTimeFormat('en-US', {
+    return this.report?.calculatedAt ? new Intl.DateTimeFormat(this.locale.locale(), {
       timeZone: this.report.timeZoneId, dateStyle: 'short', timeStyle: 'short'
-    }).format(new Date(this.report.calculatedAt)) : 'not calculated yet';
+    }).format(new Date(this.report.calculatedAt)) : this.locale.t('community.notCalculated');
   }
   private drawChart(): void {
     this.chart?.destroy(); this.chart = undefined;
     if (!this.trend || !this.report?.trend.length || this.report.recalculating) return;
     this.chart = new Chart(this.trend.nativeElement, {
       type: 'line', data: {
-        labels: this.report.trend.map(p => new Date(p.date + 'T00:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })),
-        datasets: [{ label: 'Core members', data: this.report.trend.map(p => p.core),
+        labels: this.report.trend.map(p => new Date(p.date + 'T00:00:00Z').toLocaleDateString(this.locale.locale(), { month: 'short', day: 'numeric', timeZone: 'UTC' })),
+        datasets: [{ label: this.locale.t('community.coreMembers'), data: this.report.trend.map(p => p.core),
           borderColor: '#bca0f3', backgroundColor: '#bca0f31a', fill: true, tension: .15, spanGaps: false, pointRadius: 2 }]
       }, options: {
-        responsive: true, maintainAspectRatio: false, animation: false,
+        responsive: true, maintainAspectRatio: false, animation: false, locale: this.locale.locale(),
         plugins: { legend: { display: false } },
         scales: {
           x: { ticks: { color: '#bcb8c6', maxTicksLimit: 5 }, grid: { display: false } },

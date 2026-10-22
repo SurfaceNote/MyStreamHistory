@@ -3,9 +3,20 @@ using Microsoft.EntityFrameworkCore.Storage;
 
 namespace MyStreamHistory.ContentService.Api;
 
+public static class ContentLanguages
+{
+    public static readonly string[] All = ["en", "ru", "cs", "de", "es"];
+    public static bool IsSupported(string language) => All.Contains(language);
+    public static string Prefix(string language) => language == "en" ? "" : "/" + language;
+    public static string ArticlePath(string language, string type, string slug) =>
+        $"{Prefix(language)}/{(type == "news" ? "news" : "reviews")}/{slug}";
+}
+
 public sealed class Article
 {
     public Guid Id { get; set; } = Guid.NewGuid();
+    public string Language { get; set; } = "en";
+    public Guid TranslationGroupId { get; set; } = Guid.NewGuid();
     public string Type { get; set; } = "news";
     public string Slug { get; set; } = "";
     public bool SlugLocked { get; set; }
@@ -94,7 +105,9 @@ public sealed class ContentDbContext(DbContextOptions<ContentDbContext> options)
         modelBuilder.Entity<Article>(entity =>
         {
             entity.HasKey(x => x.Id);
-            entity.HasIndex(x => new { x.Type, x.Slug }).IsUnique();
+            entity.Property(x => x.Language).HasMaxLength(2).HasDefaultValue("en");
+            entity.HasIndex(x => new { x.Language, x.Type, x.Slug }).IsUnique();
+            entity.HasIndex(x => new { x.TranslationGroupId, x.Language }).IsUnique();
             entity.HasIndex(x => x.PublishedAt);
             entity.Property(x => x.Body).HasColumnType("jsonb");
             entity.Property(x => x.PublishedBody).HasColumnType("jsonb");

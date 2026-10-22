@@ -1,3 +1,6 @@
+import { ResponseStatusService } from '../../core/api/response-status.service';
+import { LocaleService } from '../../i18n/locale.service';
+import { TranslatePipe } from '../../i18n/translate.pipe';
 import { GameArtComponent } from '../../components/game-art/game-art.component';
 import { Component, ElementRef, inject, OnDestroy, OnInit, PLATFORM_ID, ViewChild } from '@angular/core';
 import { Chart, registerables } from 'chart.js';
@@ -21,11 +24,13 @@ interface CategorySegment {
 
 @Component({
   selector: 'app-stream-detail',
-  imports: [GameArtComponent, CommonModule],
+  imports: [TranslatePipe, GameArtComponent, CommonModule],
   templateUrl: './stream-detail.component.html',
   styleUrl: './stream-detail.component.scss'
 })
 export class StreamDetailComponent implements OnInit, OnDestroy {
+  private readonly responseStatus = inject(ResponseStatusService);
+  readonly locale = inject(LocaleService);
   streamId!: string;
   streamDetails: StreamDetails | null = null;
   isLoading: boolean = false;
@@ -90,7 +95,7 @@ export class StreamDetailComponent implements OnInit, OnDestroy {
     this.chart = new Chart(this.audienceCanvas, {
       type: 'line',
       data: { datasets: [{
-        label: 'Average viewers', data: this.audience.map(p => ({
+        label: this.locale.t('ui.averageViewers'), data: this.audience.map(p => ({
           x: (new Date(p.startedAt).getTime() - new Date(this.streamDetails!.startedAt).getTime()) / 60000,
           y: p.averageViewers
         })),
@@ -119,7 +124,7 @@ export class StreamDetailComponent implements OnInit, OnDestroy {
           ctx.restore();
         }
       }],
-      options: { responsive: true, maintainAspectRatio: false, parsing: false, animation: false,
+      options: { locale: this.locale.locale(), responsive: true, maintainAspectRatio: false, parsing: false, animation: false,
         plugins: { legend: { display: false }, tooltip: { callbacks: {
           title: items => {
             const from = items[0]?.parsed.x ?? 0;
@@ -160,22 +165,25 @@ export class StreamDetailComponent implements OnInit, OnDestroy {
   loadStreamDetails(): void {
     this.isLoading = true;
     this.error = null;
-    
+
     this.detailsSub?.unsubscribe();
     this.detailsSub = this.streamerService.getStreamDetails(this.streamId).subscribe({
       next: (data: StreamDetails) => {
+        this.responseStatus.reset();
         this.streamDetails = data;
         this.seo.update({
-          title: `Stream ${this.formatDateShort(data.startedAt)} — ${data.streamerDisplayName} | MyStreamHistory`,
-          description: `View ${data.streamerDisplayName}'s stream details, categories, duration and audience statistics on MyStreamHistory.`,
+          title: this.locale.t('seo.streamTitle', { date: this.formatDateShort(data.startedAt), name: data.streamerDisplayName }),
+          description: this.locale.t('seo.streamDescription', { name: data.streamerDisplayName }),
           image: data.streamerAvatarUrl || undefined,
           type: 'article'
         });
         this.isLoading = false;
       },
       error: (err) => {
+        this.responseStatus.fail(err);
+        this.seo.update({ title: this.locale.t(err.status === 404 ? 'error.notFound' : 'error.unavailable'), description: this.locale.t('error.unavailable'), noIndex: true });
         console.error('Error loading stream details', err);
-        this.error = 'Failed to load stream details';
+        this.error = this.locale.t('ui.failedToLoadStreamDetails');
         this.isLoading = false;
       }
     });
@@ -183,26 +191,26 @@ export class StreamDetailComponent implements OnInit, OnDestroy {
 
   navigateToStreamerProfile(): void {
     if (this.streamDetails) {
-      this.router.navigate(['/profile', this.streamDetails.twitchUserId]);
+      this.router.navigateByUrl(this.locale.path(['/profile', this.streamDetails.twitchUserId]));
     }
   }
 
   navigateToViewerStats(viewer: StreamViewer): void {
     if (this.streamDetails) {
-      this.router.navigate([
+      this.router.navigateByUrl(this.locale.path([
         '/profile',
         this.streamDetails.twitchUserId,
         'viewer',
         viewer.twitchUserId
-      ]);
+      ]));
     }
   }
 
   formatDate(date: Date): string {
     const d = new Date(date);
-    return d.toLocaleDateString('en-US', { 
-      day: '2-digit', 
-      month: 'long', 
+    return d.toLocaleDateString(this.locale.locale(), {
+      timeZone: 'UTC', day: '2-digit',
+      month: 'long',
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
@@ -211,8 +219,8 @@ export class StreamDetailComponent implements OnInit, OnDestroy {
 
   formatDateShort(date: Date): string {
     const d = new Date(date);
-    return d.toLocaleDateString('en-US', { 
-      month: 'short', 
+    return d.toLocaleDateString(this.locale.locale(), {
+      timeZone: 'UTC', month: 'short',
       day: 'numeric',
       year: 'numeric'
     });
@@ -231,30 +239,24 @@ export class StreamDetailComponent implements OnInit, OnDestroy {
     const durationMs = end.getTime() - start.getTime();
     const hours = Math.floor(durationMs / (1000 * 60 * 60));
     const minutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
-    
-    if (hours > 0) {
-      return `${hours}h ${minutes}m`;
-    }
-    return `${minutes}m`;
+
+    return this.locale.duration(hours * 60 + minutes);
   }
 
   formatMinutes(minutes: number): string {
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
-    
-    if (hours > 0) {
-      return `${hours}h ${mins}m`;
-    }
-    return `${mins}m`;
+
+    return this.locale.duration(minutes);
   }
 
   formatHours(minutes: number): string {
     const hours = (minutes / 60).toFixed(2);
-    return hours;
+    return this.locale.number(Number(hours), 2);
   }
 
   formatPoints(points: number): string {
-    return points.toFixed(2);
+    return this.locale.number(points, 2);
   }
 
   getCategoryBoxArt(boxArtUrl: string, width: number, height: number): string {

@@ -1,3 +1,7 @@
+import { SeoService } from '../../service/seo.service';
+import { ResponseStatusService } from '../../core/api/response-status.service';
+import { LocaleService } from '../../i18n/locale.service';
+import { TranslatePipe, LocalPathPipe } from '../../i18n/translate.pipe';
 import { afterNextRender, ChangeDetectorRef, Component, inject, OnDestroy, OnInit, PLATFORM_ID } from '@angular/core';
 import { StreamerListType } from '../../enums/streamer-list-type.enum';
 import { AuthService } from '../../auth/auth.service';
@@ -11,11 +15,14 @@ import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-home',
-  imports: [CommonModule, FormsModule, RouterLink, LoginComponentComponent],
+  imports: [TranslatePipe, LocalPathPipe, CommonModule, FormsModule, RouterLink, LoginComponentComponent],
   templateUrl: './home.component.html',
   styleUrl: './home.component.scss'
 })
 export class HomeComponent implements OnInit, OnDestroy {
+  private readonly seo = inject(SeoService);
+  private readonly responseStatus = inject(ResponseStatusService);
+  readonly locale = inject(LocaleService);
   StreamerListType = StreamerListType;
 
   private authService = inject(AuthService);
@@ -97,12 +104,15 @@ export class HomeComponent implements OnInit, OnDestroy {
         })
       ).subscribe({
         next: (streamers) => {
+          this.responseStatus.reset();
+          this.seo.update({ title: this.locale.t('seo.homeTitle'), description: this.locale.t('seo.homeDescription') });
           this.updateStreamers(streamers);
           this.watchLiveStatus();
           this.isLoadingStreamers = false;
           this.changeDetector.markForCheck();
         },
         error: (error) => {
+          this.responseStatus.fail({ status: 502 });
           this.streamersLoadFailed = true;
           this.showingRecentStreamers = false;
           console.error('Error loading streamers:', error);

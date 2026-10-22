@@ -1,5 +1,6 @@
-import { Injectable } from "@angular/core";
-import { HttpClient } from '@angular/common/http';
+import { API_BASE, ANONYMOUS_REQUEST } from '../core/api/api-base';
+import { inject, Injectable } from "@angular/core";
+import { HttpClient, HttpContext } from '@angular/common/http';
 import { Observable } from "rxjs";
 import { StreamerShortDTO } from "../models/streamer-short.dto";
 import { API_ENDPOINTS } from "../constants/api-endpoints";
@@ -16,10 +17,14 @@ import { StreamerStatistics } from "../models/streamer-statistics.model";
     providedIn: 'root'
 })
 export class StreamerService {
+    private readonly base = inject(API_BASE);
     constructor(private http: HttpClient) {}
+    private endpoint(url: string): string {
+        return this.base.replace(/\/$/, '') + new URL(url, 'https://api.invalid').pathname + new URL(url, 'https://api.invalid').search;
+    }
 
     getAllStreamers(): Observable<StreamerShortDTO[]> {
-        return this.http.get<ApiResponse<StreamerShortDTO[]>>(API_ENDPOINTS.STREAMERS.ALL, {withCredentials: true})
+        return this.http.get<ApiResponse<StreamerShortDTO[]>>(this.endpoint(API_ENDPOINTS.STREAMERS.ALL), { context: new HttpContext().set(ANONYMOUS_REQUEST, true) })
             .pipe(unwrapData<StreamerShortDTO[]>());
     }
 
@@ -34,48 +39,48 @@ export class StreamerService {
                 throw new Error('Unkown stream list type');
         }
 
-        return this.http.get<ApiResponse<StreamerShortDTO[]>>(url, {withCredentials: true}).pipe(unwrapData<StreamerShortDTO[]>());
+        return this.http.get<ApiResponse<StreamerShortDTO[]>>(this.endpoint(url), { context: new HttpContext().set(ANONYMOUS_REQUEST, true) }).pipe(unwrapData<StreamerShortDTO[]>());
     }
 
     getStreamerByTwitchId(twitchId: number): Observable<StreamerShortDTO> {
         const url = API_ENDPOINTS.STREAMER(twitchId);
-        return this.http.get<ApiResponse<StreamerShortDTO>>(url, {withCredentials: true})
+        return this.http.get<ApiResponse<StreamerShortDTO>>(this.endpoint(url), { context: new HttpContext().set(ANONYMOUS_REQUEST, true) })
             .pipe(unwrapData<StreamerShortDTO>());
     }
 
     getRecentStreams(twitchId: number, count: number = 10): Observable<StreamSession[]> {
         const url = API_ENDPOINTS.RECENT_STREAMS(twitchId, count);
-        return this.http.get<ApiResponse<StreamSession[]>>(url, {withCredentials: true})
+        return this.http.get<ApiResponse<StreamSession[]>>(this.endpoint(url), { context: new HttpContext().set(ANONYMOUS_REQUEST, true) })
             .pipe(unwrapData<StreamSession[]>());
     }
 
     getStreamDetails(streamId: string): Observable<StreamDetails> {
         const url = API_ENDPOINTS.STREAM_DETAILS(streamId);
-        return this.http.get<ApiResponse<StreamDetails>>(url, {withCredentials: true})
+        return this.http.get<ApiResponse<StreamDetails>>(this.endpoint(url), { context: new HttpContext().set(ANONYMOUS_REQUEST, true) })
             .pipe(unwrapData<StreamDetails>());
     }
 
     getTopViewers(twitchId: number, limit: number = 100): Observable<ViewerStats[]> {
         const url = API_ENDPOINTS.TOP_VIEWERS(twitchId, limit);
-        return this.http.get<ApiResponse<ViewerStats[]>>(url, {withCredentials: true})
+        return this.http.get<ApiResponse<ViewerStats[]>>(this.endpoint(url), { context: new HttpContext().set(ANONYMOUS_REQUEST, true) })
             .pipe(unwrapData<ViewerStats[]>());
     }
 
     getViewerStats(twitchId: number, viewerTwitchId: string): Observable<ViewerStats> {
         const url = API_ENDPOINTS.VIEWER_STATS(twitchId, viewerTwitchId);
-        return this.http.get<ApiResponse<ViewerStats>>(url, {withCredentials: true})
+        return this.http.get<ApiResponse<ViewerStats>>(this.endpoint(url), { context: new HttpContext().set(ANONYMOUS_REQUEST, true) })
             .pipe(unwrapData<ViewerStats>());
     }
 
     getSocialLinksByTwitchId(twitchId: number): Observable<GetSocialLinksResponse> {
         const url = API_ENDPOINTS.SOCIAL_LINKS_PUBLIC(twitchId);
-        return this.http.get<ApiResponse<GetSocialLinksResponse>>(url, {withCredentials: true})
+        return this.http.get<ApiResponse<GetSocialLinksResponse>>(this.endpoint(url), { context: new HttpContext().set(ANONYMOUS_REQUEST, true) })
             .pipe(unwrapData<GetSocialLinksResponse>());
     }
 
     getStreamerStatistics(twitchId: number, period: string = '30d'): Observable<StreamerStatistics> {
         const url = API_ENDPOINTS.STREAMER_STATISTICS(twitchId, period);
-        return this.http.get<ApiResponse<StreamerStatistics>>(url, {withCredentials: true})
+        return this.http.get<ApiResponse<StreamerStatistics>>(this.endpoint(url), { context: new HttpContext().set(ANONYMOUS_REQUEST, true) })
             .pipe(unwrapData<StreamerStatistics>());
     }
 };

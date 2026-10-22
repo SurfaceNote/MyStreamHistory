@@ -1,5 +1,11 @@
+import { TranslationKey } from '../../i18n/translations';
+import { ResponseStatusService } from '../../core/api/response-status.service';
+import { LocaleService } from '../../i18n/locale.service';
+import { TranslatePipe, LocalPathPipe } from '../../i18n/translate.pipe';
 import { GameArtComponent } from '../../components/game-art/game-art.component';
 import {
+  afterNextRender,
+  PLATFORM_ID,
   AfterViewInit,
   ChangeDetectorRef,
   Component,
@@ -25,7 +31,7 @@ import {
 } from 'rxjs';
 import { StreamSession } from '../../models/stream-session.model';
 import { ViewerStats } from '../../models/viewer-stats.model';
-import { CommonModule } from '@angular/common';
+import { isPlatformBrowser, CommonModule } from '@angular/common';
 import { SocialLink } from '../../models/social-link.model';
 import {
   StreamerDashboardPeriod,
@@ -54,13 +60,16 @@ interface DashboardSummaryCard {
 
 @Component({
   selector: 'app-streamer-profile',
-  imports: [GameArtComponent, CommonModule, RouterLink],
+  imports: [TranslatePipe, LocalPathPipe, GameArtComponent, CommonModule, RouterLink],
   templateUrl: './streamer-profile.component.html',
   styleUrl: './streamer-profile.component.scss',
 })
 export class StreamerProfileComponent
   implements OnInit, AfterViewInit, OnDestroy
 {
+  private readonly responseStatus = inject(ResponseStatusService);
+  readonly Math = Math;
+  readonly locale = inject(LocaleService);
   @ViewChild('streamedHoursChart')
   streamedHoursChart?: ElementRef<HTMLCanvasElement>;
 
@@ -78,11 +87,11 @@ export class StreamerProfileComponent
   sections = ['Overview', 'Streams', 'Games', 'Viewers'];
   gameStatus = 'All';
   readonly gameStatuses = [
-    { value: 'All', label: 'All Games' },
-    { value: 'Playing', label: 'Playing Now' },
-    { value: 'Completed', label: 'Completed' },
-    { value: 'Planned', label: 'Planned' },
-    { value: 'Dropped', label: 'Dropped' },
+    { value: 'All', label: this.locale.t('ui.allGames') },
+    { value: 'Playing', label: this.locale.t('ui.playingNow') },
+    { value: 'Completed', label: this.locale.t('ui.completed') },
+    { value: 'Planned', label: this.locale.t('ui.planned') },
+    { value: 'Dropped', label: this.locale.t('ui.dropped') },
   ];
   gameQuery = '';
   gameSort = 'hours';
@@ -131,9 +140,9 @@ export class StreamerProfileComponent
   statistics: StreamerStatistics | null = null;
   selectedDashboardPeriod: StreamerDashboardPeriod = '30d';
   dashboardPeriods: Array<{ value: StreamerDashboardPeriod; label: string }> = [
-    { value: '7d', label: '7 days' },
-    { value: '30d', label: '30 days' },
-    { value: '90d', label: '90 days' },
+    { value: '7d', label: this.locale.t('ui.7Days') },
+    { value: '30d', label: this.locale.t('ui.30Days') },
+    { value: '90d', label: this.locale.t('ui.90Days') },
   ];
   isLoadingStreams: boolean = false;
   isLoadingViewers: boolean = false;
@@ -150,8 +159,13 @@ export class StreamerProfileComponent
   private seo = inject(SeoService);
   private analytics = inject(AnalyticsService);
   private auth = inject(AuthService);
-  get isOwnProfile(): boolean { return this.auth.getTwitchIdFromToken() === String(this.twitchId); }
-  get canViewCommunity(): boolean { return this.isOwnProfile || this.auth.isAdmin(); }
+  private readonly browser = isPlatformBrowser(inject(PLATFORM_ID));
+  private authReady = false;
+  constructor() { afterNextRender(() => { this.authReady = true; this.changeDetector.markForCheck(); }); }
+  readonly sectionLabels: Record<string, TranslationKey> = { Overview: 'ui.overview', Streams: 'ui.streamsLabel', Games: 'ui.gamesLabel', Viewers: 'ui.viewers' };
+  readonly statusLabels: Record<string, TranslationKey> = { Playing: 'ui.playing', Completed: 'ui.completed', Planned: 'ui.planned', Dropped: 'ui.dropped' };
+  get isOwnProfile(): boolean { return this.authReady && this.auth.getTwitchIdFromToken() === String(this.twitchId); }
+  get canViewCommunity(): boolean { return this.authReady && (this.isOwnProfile || this.auth.isAdmin()); }
 
   ngOnInit(): void {
     this.routeSub = this.route.paramMap.subscribe((params) => {
@@ -192,10 +206,10 @@ export class StreamerProfileComponent
     const playthroughs = this.statistics?.playthroughs ?? [];
 
     const sections: Array<{ status: string; title: string }> = [
-      { status: 'Playing', title: 'Playing Now' },
-      { status: 'Planned', title: 'Will Play' },
-      { status: 'Dropped', title: 'Dropped' },
-      { status: 'Completed', title: 'Completed' },
+      { status: 'Playing', title: this.locale.t('ui.playingNow') },
+      { status: 'Planned', title: this.locale.t('ui.willPlay') },
+      { status: 'Dropped', title: this.locale.t('ui.dropped') },
+      { status: 'Completed', title: this.locale.t('ui.completed') },
     ];
 
     return sections
@@ -222,39 +236,39 @@ export class StreamerProfileComponent
     return [
       {
         icon: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18 M12 7v5l4 2',
-        label: 'Hours Live',
-        value: `${this.formatNumber(dashboard?.totalStreamedHours ?? 0)} h`,
+        label: this.locale.t('ui.hoursLiveLabel'),
+        value: `${this.formatNumber(dashboard?.totalStreamedHours ?? 0)} ${this.locale.t('unit.hours')}`,
         hint: this.selectedPeriodLabel,
       },
       {
         icon: 'M4 20V10h3v10H4Zm7 0V6h3v14h-3Zm7 0V2h3v18h-3Z',
-        label: 'Streams',
+        label: this.locale.t('ui.streamsLabel'),
         value: `${dashboard?.totalStreamsCount ?? 0}`,
-        hint: dashboard?.streamedHoursByDay?.length ? `${streamedDays} live days` : 'Daily history unavailable',
+        hint: dashboard?.streamedHoursByDay?.length ? this.locale.plural('dayCount', streamedDays) : this.locale.t('ui.dailyHistoryUnavailable'),
       },
       {
         icon: 'M7 7h10c3 0 4 4 5 10 .5 3-2 4-4 1l-2-2H8l-2 2c-2 3-4 2-4-1 1-6 2-10 5-10Z M7 10v5m-2.5-2.5h5m6-1h.1m3 3h.1',
-        label: 'Games played',
+        label: this.locale.t('ui.gamesPlayed'),
         value: `${dashboard?.totalUniqueGamesCount ?? 0}`,
-        hint: topCategory ? `Lead: ${topCategory.name}` : 'No categories yet',
+        hint: topCategory ? this.locale.t('lead', { name: topCategory.name }) : this.locale.t('ui.noCategoriesYet'),
       },
       {
         icon: 'M5 5h14v16H5V5Zm3-3v6m8-6v6M5 10h14M8 14h1m3 0h1m3 0h1m-9 4h1m3 0h1',
-        label: 'Active days',
+        label: this.locale.t('ui.activeDays'),
         value: dashboard?.streamedHoursByDay?.length ? `${streamedDays}` : '—',
-        hint: 'Days with a broadcast',
+        hint: this.locale.t('ui.daysWithABroadcast'),
       },
       {
         icon: 'M6 3h12M6 21h12M7 3v5l10 8v5M17 3v5L7 16v5M7 7h10',
-        label: 'Average stream',
-        value: dashboard?.totalStreamsCount ? `${this.formatNumber(dashboard.totalStreamedHours / dashboard.totalStreamsCount)} h` : '—',
-        hint: 'Hours per broadcast',
+        label: this.locale.t('ui.averageStream'),
+        value: dashboard?.totalStreamsCount ? `${this.formatNumber(dashboard.totalStreamedHours / dashboard.totalStreamsCount)} ${this.locale.t('unit.hours')}` : '—',
+        hint: this.locale.t('ui.hoursPerBroadcast'),
       },
       {
         icon: 'M4 4h16v12H9l-5 4V4Zm4 5h8m-8 3h5',
-        label: 'Chat points',
+        label: this.locale.t('ui.chatPoints'),
         value: dashboard?.chatPointsByDay?.length ? this.formatNumber(dashboard.chatPointsByDay.reduce((sum, point) => sum + point.value, 0)) : '—',
-        hint: 'Recorded chat activity',
+        hint: this.locale.t('ui.recordedChatActivity'),
       },
     ];
   }
@@ -276,7 +290,7 @@ export class StreamerProfileComponent
     return (
       this.dashboardPeriods.find(
         (period) => period.value === this.selectedDashboardPeriod,
-      )?.label ?? '30 days'
+      )?.label ?? this.locale.t('ui.30Days')
     );
   }
 
@@ -313,15 +327,18 @@ export class StreamerProfileComponent
     this.profileLoadFailed = false;
     this.streamerService.getStreamerByTwitchId(this.twitchId).subscribe({
       next: (data: StreamerShortDTO) => {
+        this.responseStatus.reset();
         this.streamerShortDTO = data;
         this.seo.update({
-          title: `${data.displayName} — Twitch Stream Stats | MyStreamHistory`,
-          description: `Explore ${data.displayName}'s Twitch stream history, games, audience activity and channel performance.`,
+          title: this.locale.t('seo.profileTitle', { name: data.displayName }),
+          description: this.locale.t('seo.profileDescription', { name: data.displayName }),
           image: data.avatar,
           type: 'profile',
         });
       },
       error: (err) => {
+        this.responseStatus.fail(err);
+        this.seo.update({ title: this.locale.t(err.status === 404 ? 'error.notFound' : 'error.unavailable'), description: this.locale.t('error.unavailable'), noIndex: true });
         this.profileLoadFailed = true;
         console.error('Error loading streamer', err);
       },
@@ -381,8 +398,8 @@ export class StreamerProfileComponent
 
   formatDate(dateString: string): string {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      day: '2-digit',
+    return date.toLocaleDateString(this.locale.locale(), {
+      timeZone: 'UTC', day: '2-digit',
       month: '2-digit',
       year: 'numeric',
     });
@@ -395,10 +412,7 @@ export class StreamerProfileComponent
     const hours = Math.floor(durationMs / (1000 * 60 * 60));
     const minutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
 
-    if (hours > 0) {
-      return `${hours}h ${minutes}m`;
-    }
-    return `${minutes}m`;
+    return this.locale.duration(hours * 60 + minutes);
   }
 
   getCategoryBoxArt(boxArtUrl: string, width: number, height: number): string {
@@ -423,11 +437,11 @@ export class StreamerProfileComponent
 
   formatHours(minutes: number): string {
     const hours = Math.floor(minutes / 60);
-    return `${hours} h`;
+    return this.locale.number(hours, 0) + ' ' + this.locale.t('unit.hours');
   }
 
   formatMessagePoints(points: number): string {
-    return points.toFixed(1);
+    return this.locale.number(points, 1);
   }
 
   getDefaultAvatar(): string {
@@ -435,7 +449,7 @@ export class StreamerProfileComponent
   }
 
   navigateToStreamDetail(streamId: string): void {
-    this.router.navigate(['/stream', streamId]);
+    this.router.navigateByUrl(this.locale.path(['/stream', streamId]));
   }
 
   private streamCardPointer?: {
@@ -485,12 +499,12 @@ export class StreamerProfileComponent
   navigateToViewerStats(viewer: ViewerStats): void {
     const viewerTwitchId = viewer.viewer?.twitchUserId;
     if (viewerTwitchId) {
-      this.router.navigate([
+      this.router.navigateByUrl(this.locale.path([
         '/profile',
         this.twitchId,
         'viewer',
         viewerTwitchId,
-      ]);
+      ]));
     }
   }
 
@@ -540,21 +554,22 @@ export class StreamerProfileComponent
   }
 
   formatNumber(value: number): string {
-    return Number.isInteger(value) ? value.toString() : value.toFixed(1);
+    return this.locale.number(value);
   }
 
   formatSeriesDate(dateString: string): string {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
+    return new Date(dateString).toLocaleDateString(this.locale.locale(), {
+      timeZone: 'UTC', month: 'short',
       day: 'numeric',
     });
   }
 
   private scheduleDashboardRender(): void {
-    requestAnimationFrame(() => this.renderDashboardCharts());
+    if (this.browser) requestAnimationFrame(() => this.renderDashboardCharts());
   }
 
   private renderDashboardCharts(): void {
+    if (!this.browser) return;
     const dashboard = this.statistics?.dashboard;
     if (!dashboard) {
       return;
@@ -632,6 +647,7 @@ export class StreamerProfileComponent
     const overridePlugins = overrides.plugins ?? {};
 
     return {
+      locale: this.locale.locale(),
       responsive: true,
       maintainAspectRatio: false,
       interaction: {

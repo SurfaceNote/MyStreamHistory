@@ -1,3 +1,5 @@
+import { LocaleService } from '../../i18n/locale.service';
+import { TranslatePipe } from '../../i18n/translate.pipe';
 import { GameArtComponent } from '../../components/game-art/game-art.component';
 import { CommonModule } from '@angular/common';
 import { Component, inject, OnDestroy, OnInit } from '@angular/core';
@@ -10,11 +12,12 @@ import { SeoService } from '../../service/seo.service';
 
 @Component({
   selector: 'app-viewer-stats',
-  imports: [GameArtComponent, CommonModule],
+  imports: [TranslatePipe, GameArtComponent, CommonModule],
   templateUrl: './viewer-stats.component.html',
   styleUrl: './viewer-stats.component.scss'
 })
 export class ViewerStatsComponent implements OnInit, OnDestroy {
+  readonly locale = inject(LocaleService);
   twitchId!: number;
   viewerTwitchId = '';
   streamer: StreamerShortDTO | null = null;
@@ -42,7 +45,7 @@ export class ViewerStatsComponent implements OnInit, OnDestroy {
 
   loadStats(): void {
     if (!Number.isFinite(this.twitchId) || !this.viewerTwitchId) {
-      this.error = 'Invalid viewer statistics link';
+      this.error = this.locale.t('ui.invalidViewerStatisticsLink');
       this.isLoading = false;
       return;
     }
@@ -57,10 +60,10 @@ export class ViewerStatsComponent implements OnInit, OnDestroy {
       next: result => {
         this.streamer = result.streamer;
         this.stats = result.stats;
-        const viewerName = result.stats.viewer?.displayName || 'Viewer';
+        const viewerName = result.stats.viewer?.displayName || this.locale.t('ui.viewer');
         this.seo.update({
-          title: `${viewerName} — Viewer Stats for ${result.streamer.displayName} | MyStreamHistory`,
-          description: `Private viewer activity and watch statistics for ${result.streamer.displayName}.`,
+          title: this.locale.t('seo.viewerTitle', { viewer: viewerName, name: result.streamer.displayName }),
+          description: this.locale.t('seo.viewerDescription', { name: result.streamer.displayName }),
           image: result.stats.viewer?.profileImageUrl || result.streamer.avatar,
           noIndex: true
         });
@@ -68,29 +71,29 @@ export class ViewerStatsComponent implements OnInit, OnDestroy {
       },
       error: error => {
         console.error('Error loading viewer statistics', error);
-        this.error = 'Viewer statistics are not available';
+        this.error = this.locale.t('ui.viewerStatisticsAreNotAvailable');
         this.isLoading = false;
       }
     });
   }
 
   navigateBack(): void {
-    this.router.navigate(['/profile', this.twitchId]);
+    this.router.navigateByUrl(this.locale.path(['/profile', this.twitchId]));
   }
 
   navigateToStream(streamSessionId: string): void {
-    this.router.navigate(['/stream', streamSessionId]);
+    this.router.navigateByUrl(this.locale.path(['/stream', streamSessionId]));
   }
 
   formatWatchTime(minutes: number): string {
     const hours = Math.floor(minutes / 60);
     const remainingMinutes = minutes % 60;
-    return hours > 0 ? `${hours}h ${remainingMinutes}m` : `${remainingMinutes}m`;
+    return this.locale.duration(minutes);
   }
 
   formatDate(value: string): string {
-    return new Date(value).toLocaleString('en-US', {
-      day: 'numeric',
+    return new Date(value).toLocaleString(this.locale.locale(), {
+      timeZone: 'UTC', day: 'numeric',
       month: 'long',
       year: 'numeric',
       hour: '2-digit',

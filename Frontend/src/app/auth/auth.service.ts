@@ -1,3 +1,5 @@
+import { LocaleService } from '../i18n/locale.service';
+import { safeReturnUrl } from '../i18n/languages';
 import { HttpClient } from "@angular/common/http";
 import { inject, Injectable } from "@angular/core";
 import { BehaviorSubject, Observable, of, throwError } from "rxjs";
@@ -23,6 +25,7 @@ export class AuthService {
 
     private http = inject(HttpClient);
     private router = inject(Router);
+    private locale = inject(LocaleService);
 
     private setTokens(tokens: TokenResponse): void {
         localStorage.setItem(this.accessTokenKey, tokens.accessToken);
@@ -53,7 +56,14 @@ export class AuthService {
         const twitchAuthUrl = `https://id.twitch.tv/oauth2/authorize?client_id=${this.clientId}&redirect_uri=${this.redirectUri}&response_type=code&scope=${scope}&state=${state}`;
 
         localStorage.setItem('twitchAuthState', state);
+        sessionStorage.setItem('twitchReturnUrl', safeReturnUrl(this.router.url) || this.locale.path('/'));
         window.location.href = twitchAuthUrl;
+    }
+
+    consumeReturnUrl(): string {
+        let saved: string | null = null;
+        try { saved = sessionStorage.getItem('twitchReturnUrl'); sessionStorage.removeItem('twitchReturnUrl'); } catch { /* Storage is optional. */ }
+        return safeReturnUrl(saved) || this.locale.path('/');
     }
 
     handleTwitchCallback(code: string, state: string): Observable<boolean> {
@@ -173,7 +183,7 @@ export class AuthService {
 
     logoutLocal(): void {
         this.clearTokens();
-        this.router.navigate(['/']);
+        this.router.navigateByUrl(this.locale.path('/'));
     }
 
     private decodeJwtPayload(token: string): any | null {
@@ -193,12 +203,12 @@ export class AuthService {
                 this.clearTokens();
                 this.tokenSubject.next(null);
                 this.usernameSubject.next(null);
-                this.router.navigate(['/']);
+                this.router.navigateByUrl(this.locale.path('/'));
             },
             error: (err) => {
                 console.error('Logout failed', err);
                 this.clearTokens();
-                this.router.navigate(['/']);
+                this.router.navigateByUrl(this.locale.path('/'));
             }
         })
     }

@@ -1,4 +1,7 @@
-import { Component, OnInit } from '@angular/core';
+import { TranslationKey } from '../../../../i18n/translations';
+import { TranslatePipe } from '../../../../i18n/translate.pipe';
+import { LocaleService, LocalizedMessage } from '../../../../i18n/locale.service';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SettingsService } from '../../../../service/settings.service';
@@ -9,13 +12,13 @@ interface SocialNetworkConfig {
   label: string;
   icon: string;
   domain: string;
-  placeholder: string;
+  placeholder: TranslationKey;
   readonly?: boolean;
 }
 
 interface SocialLinkState extends SocialLink {
   isEditing: boolean;
-  error?: string;
+  error?: LocalizedMessage;
   isSaving?: boolean;
   originalPath?: string;
 }
@@ -23,24 +26,30 @@ interface SocialLinkState extends SocialLink {
 @Component({
   selector: 'app-profile-settings',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [TranslatePipe, CommonModule, FormsModule],
   templateUrl: './profile-settings.component.html',
   styleUrls: ['./profile-settings.component.scss']
 })
 export class ProfileSettingsComponent implements OnInit {
+  readonly locale = inject(LocaleService);
   socialNetworks: SocialNetworkConfig[] = [
-    { type: SocialNetworkType.YouTube, label: 'YouTube', icon: 'fa-youtube', domain: 'youtube.com/', placeholder: '@username or c/channelname' },
-    { type: SocialNetworkType.Instagram, label: 'Instagram', icon: 'fa-instagram', domain: 'instagram.com/', placeholder: 'username' },
-    { type: SocialNetworkType.Discord, label: 'Discord', icon: 'fa-discord', domain: 'discord.gg/', placeholder: 'invite-code' },
-    { type: SocialNetworkType.Steam, label: 'Steam', icon: 'fa-steam', domain: 'steamcommunity.com/', placeholder: 'id/username' },
-    { type: SocialNetworkType.VK, label: 'VK', icon: 'fa-vk', domain: 'vk.com/', placeholder: 'username' },
-    { type: SocialNetworkType.Yandex, label: 'Yandex Dzen', icon: 'fa-yandex', domain: 'dzen.ru/', placeholder: 'username' },
-    { type: SocialNetworkType.Telegram, label: 'Telegram', icon: 'fa-telegram', domain: 't.me/', placeholder: 'username or joinchat/code' }
+    { type: SocialNetworkType.YouTube, label: 'YouTube', icon: 'fa-youtube', domain: 'youtube.com/', placeholder: 'settings.youtubePath' },
+    { type: SocialNetworkType.Instagram, label: 'Instagram', icon: 'fa-instagram', domain: 'instagram.com/', placeholder: 'settings.username' },
+    { type: SocialNetworkType.Discord, label: 'Discord', icon: 'fa-discord', domain: 'discord.gg/', placeholder: 'settings.inviteCode' },
+    { type: SocialNetworkType.Steam, label: 'Steam', icon: 'fa-steam', domain: 'steamcommunity.com/', placeholder: 'settings.steamPath' },
+    { type: SocialNetworkType.VK, label: 'VK', icon: 'fa-vk', domain: 'vk.com/', placeholder: 'settings.username' },
+    { type: SocialNetworkType.Yandex, label: 'Yandex Dzen', icon: 'fa-yandex', domain: 'dzen.ru/', placeholder: 'settings.username' },
+    { type: SocialNetworkType.Telegram, label: 'Telegram', icon: 'fa-telegram', domain: 't.me/', placeholder: 'settings.telegramPath' }
   ];
 
   socialLinks: Map<string, SocialLinkState> = new Map();
   isLoading = false;
-  globalSuccessMessage = '';
+  private _loadError: LocalizedMessage = '';
+  get loadError(): string { return this.locale.message(this._loadError); }
+  set loadError(value: LocalizedMessage) { this._loadError = value; }
+  private _globalSuccessMessage: LocalizedMessage = '';
+  get globalSuccessMessage(): string { return this.locale.message(this._globalSuccessMessage); }
+  set globalSuccessMessage(value: LocalizedMessage) { this._globalSuccessMessage = value; }
 
   constructor(private settingsService: SettingsService) {}
 
@@ -50,6 +59,7 @@ export class ProfileSettingsComponent implements OnInit {
 
   loadSocialLinks(): void {
     this.isLoading = true;
+    this.loadError = '';
     this.settingsService.getSocialLinks().subscribe({
       next: (response) => {
         response.socialLinks.forEach(link => {
@@ -63,6 +73,7 @@ export class ProfileSettingsComponent implements OnInit {
       },
       error: (error) => {
         console.error('Failed to load social links', error);
+        this.loadError = 'settings.loadLinksFailed';
         this.isLoading = false;
       }
     });
@@ -144,7 +155,7 @@ export class ProfileSettingsComponent implements OnInit {
     const link = this.socialLinks.get(type);
     if (!link || !link.path.trim()) {
       if (link) {
-        link.error = 'Path cannot be empty';
+        link.error = 'settings.pathRequired';
       }
       return;
     }
@@ -165,7 +176,7 @@ export class ProfileSettingsComponent implements OnInit {
           link.isEditing = false;
           link.isSaving = false;
           link.originalPath = undefined;
-          this.globalSuccessMessage = 'Successfully saved';
+          this.globalSuccessMessage = 'settings.saved';
           setTimeout(() => this.globalSuccessMessage = '', 3000);
           this.loadSocialLinks();
         } else {
@@ -181,7 +192,7 @@ export class ProfileSettingsComponent implements OnInit {
             link.originalPath = undefined;
           }
           
-          link.error = response.error || 'Failed to save link';
+          link.error = 'settings.saveLinkFailed';
           link.isSaving = false;
           // Keep isEditing = true for new links, so user can try again
         }
@@ -200,25 +211,7 @@ export class ProfileSettingsComponent implements OnInit {
           link.originalPath = undefined;
         }
         
-        // Try to extract error message from different possible locations
-        let errorMessage = 'Failed to save link';
-        
-        if (err.error) {
-          // If error is ApiResponse structure
-          if (err.error.data && err.error.data.error) {
-            errorMessage = err.error.data.error;
-          }
-          // If error is direct UpdateSocialLinksResponse
-          else if (err.error.error) {
-            errorMessage = err.error.error;
-          }
-          // If error is string
-          else if (typeof err.error === 'string') {
-            errorMessage = err.error;
-          }
-        }
-        
-        link.error = errorMessage;
+        link.error = 'settings.saveLinkFailed';
         link.isSaving = false;
         // Keep isEditing = true for new links, so user can try again
         if (!isNewLink) {
@@ -229,7 +222,7 @@ export class ProfileSettingsComponent implements OnInit {
   }
 
   deleteLink(type: SocialNetworkType): void {
-    if (!confirm('Are you sure you want to delete this link?')) {
+    if (!confirm(this.locale.t('settings.deleteLinkConfirm'))) {
       return;
     }
 
@@ -252,12 +245,12 @@ export class ProfileSettingsComponent implements OnInit {
       next: (response) => {
         if (response.success) {
           this.socialLinks.delete(type);
-          this.globalSuccessMessage = 'Link successfully deleted';
+          this.globalSuccessMessage = 'settings.linkDeleted';
           setTimeout(() => this.globalSuccessMessage = '', 3000);
         } else {
           // Restore the link if deletion failed
           if (link) {
-            link.error = response.error || 'Failed to delete link';
+            link.error = 'settings.deleteLinkFailed';
             link.isSaving = false;
           }
         }
@@ -266,25 +259,7 @@ export class ProfileSettingsComponent implements OnInit {
         console.error('Failed to delete social link', err);
         // Restore the link if deletion failed
         if (link) {
-          // Try to extract error message from different possible locations
-          let errorMessage = 'Failed to delete link';
-          
-          if (err.error) {
-            // If error is ApiResponse structure
-            if (err.error.data && err.error.data.error) {
-              errorMessage = err.error.data.error;
-            }
-            // If error is direct UpdateSocialLinksResponse
-            else if (err.error.error) {
-              errorMessage = err.error.error;
-            }
-            // If error is string
-            else if (typeof err.error === 'string') {
-              errorMessage = err.error;
-            }
-          }
-          
-          link.error = errorMessage;
+          link.error = 'settings.deleteLinkFailed';
           link.isSaving = false;
         }
       }
