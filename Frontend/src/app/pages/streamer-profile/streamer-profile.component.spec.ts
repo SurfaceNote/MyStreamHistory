@@ -80,6 +80,20 @@ describe('StreamerProfileComponent', () => {
     }
   });
 
+  it('links to the current Twitch login when it differs from the display name', () => {
+    component.streamerShortDTO = {
+      twitchId: 1, login: 'new_login', displayName: 'Новое имя', avatar: '',
+    };
+    fixture.detectChanges();
+    const link: HTMLAnchorElement = fixture.nativeElement.querySelector('.social-icon.twitch');
+    expect(link.href).toBe('https://www.twitch.tv/new_login');
+  });
+
+  it('keeps the Twitch link working with a legacy profile response', () => {
+    const link: HTMLAnchorElement = fixture.nativeElement.querySelector('.social-icon.twitch');
+    expect(link.href).toBe('https://www.twitch.tv/Example');
+  });
+
   it('tracks each tab button click without counting the default overview', () => {
     expect(gtag).not.toHaveBeenCalled();
     const buttons: HTMLButtonElement[] = Array.from(

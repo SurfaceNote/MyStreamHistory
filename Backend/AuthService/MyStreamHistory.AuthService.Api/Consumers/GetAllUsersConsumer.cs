@@ -20,6 +20,7 @@ public class GetAllUsersConsumer(IAuthUserRepository authUserRepository) : ICons
             Users = users.Select(u => new UserDto
             {
                 TwitchId = u.TwitchId,
+                Login = u.Login,
                 DisplayName = u.DisplayName,
                 Avatar = u.Avatar
             }).ToList()

@@ -3,6 +3,7 @@ using MyStreamHistory.AuthService.Api.Consumers;
 using MyStreamHistory.AuthService.Api.Extensions;
 using MyStreamHistory.AuthService.Infrastructure.Persistence;
 using MyStreamHistory.Shared.Api.Extensions;
+using MyStreamHistory.Shared.Api.Features;
 using MyStreamHistory.Shared.Infrastructure;
 using MyStreamHistory.Shared.Infrastructure.Logging;
 using MyStreamHistory.Shared.Infrastructure.Persistence;
@@ -13,6 +14,7 @@ Console.OutputEncoding = Encoding.UTF8;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddSentryObservability();
+var twitchDataCollection = builder.AddTwitchDataCollectionFeature();
 
 builder.Services.AddInfrastructure(builder.Configuration)
     .AddSerilog()
@@ -36,7 +38,8 @@ builder.Services.AddInfrastructure(builder.Configuration)
 
 builder.Services
     .AddApplicationServices()
-    .AddAppOptions(builder.Configuration);
+    .AddAppOptions(builder.Configuration)
+    .AddTwitchProfileSync(builder.Configuration, twitchDataCollection);
     
 var app = builder.Build();
 

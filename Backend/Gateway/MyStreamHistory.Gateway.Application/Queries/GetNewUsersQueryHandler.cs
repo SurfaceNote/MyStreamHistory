@@ -23,6 +23,7 @@ public class GetNewUsersQueryHandler(ITransportBus bus) : IRequestHandler<GetNew
             return response.Success!.Users.Select(u => new UserDto
             {
                 TwitchId = u.TwitchId,
+                Login = u.Login,
                 DisplayName = u.DisplayName,
                 Avatar = u.Avatar
             }).ToList();

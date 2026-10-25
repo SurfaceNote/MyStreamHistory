@@ -4,6 +4,9 @@ public class UserDto
 {
     public int TwitchId { get; set; }
 
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public string? Login { get; set; }
+
     public string DisplayName { get; set; } = null!;
     
     public string Avatar { get; set; } = null!;

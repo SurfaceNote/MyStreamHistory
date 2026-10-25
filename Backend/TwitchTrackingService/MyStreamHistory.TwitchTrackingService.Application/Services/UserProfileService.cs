@@ -19,7 +19,7 @@ public class UserProfileService : IUserProfileService
         _logger = logger;
     }
 
-    public async Task<(string DisplayName, string Avatar)?> GetUserProfileAsync(int twitchUserId, CancellationToken cancellationToken = default)
+    public async Task<UserProfileDto?> GetUserProfileAsync(int twitchUserId, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -42,7 +42,16 @@ public class UserProfileService : IUserProfileService
             }
 
             _logger.LogDebug("Successfully retrieved user profile for TwitchUserId: {TwitchUserId}", twitchUserId);
-            return (response.Success.User.DisplayName, response.Success.User.Avatar);
+            return new UserProfileDto
+            {
+                Login = response.Success.User.Login,
+                DisplayName = response.Success.User.DisplayName,
+                Avatar = response.Success.User.Avatar
+            };
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex)
         {

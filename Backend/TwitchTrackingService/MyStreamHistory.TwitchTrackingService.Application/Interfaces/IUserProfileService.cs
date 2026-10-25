@@ -9,8 +9,8 @@ public interface IUserProfileService
     /// </summary>
     /// <param name="twitchUserId">Twitch User ID</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>User profile data (DisplayName, Avatar) or null if not found</returns>
-    Task<(string DisplayName, string Avatar)?> GetUserProfileAsync(int twitchUserId, CancellationToken cancellationToken = default);
+    /// <returns>Current public profile or null if not found</returns>
+    Task<UserProfileDto?> GetUserProfileAsync(int twitchUserId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Returns all users whose streams should be reconciled. A null result means

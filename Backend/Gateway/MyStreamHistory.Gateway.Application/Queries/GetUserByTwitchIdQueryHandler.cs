@@ -24,6 +24,7 @@ public class GetUserByTwitchIdQueryHandler(ITransportBus bus) : IRequestHandler<
             return new UserDto
             {
                 TwitchId = user.TwitchId,
+                Login = user.Login,
                 DisplayName = user.DisplayName,
                 Avatar = user.Avatar
             };

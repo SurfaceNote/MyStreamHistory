@@ -457,6 +457,13 @@ public class StreamSessionService : IStreamSessionService
             count,
             cancellationToken);
 
+        if (sessionDtos.Count > 0)
+        {
+            var profile = await _userProfileService.GetUserProfileAsync(twitchUserId, cancellationToken);
+            foreach (var sessionDto in sessionDtos)
+                profile?.ApplyTo(sessionDto);
+        }
+
         _logger.LogInformation("Found {SessionCount} recent streams for TwitchUserId {TwitchUserId}", sessionDtos.Count, twitchUserId);
 
         return sessionDtos;
@@ -475,6 +482,9 @@ public class StreamSessionService : IStreamSessionService
         }
 
         _logger.LogInformation("Found stream session for StreamSessionId {StreamSessionId}", streamSessionId);
+
+        var profile = await _userProfileService.GetUserProfileAsync(session.TwitchUserId, cancellationToken);
+        profile?.ApplyTo(session);
 
         return session;
     }

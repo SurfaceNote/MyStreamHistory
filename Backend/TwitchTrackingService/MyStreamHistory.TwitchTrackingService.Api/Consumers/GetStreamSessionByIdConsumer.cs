@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using MyStreamHistory.Shared.Base.Contracts.StreamSessions.Requests;
 using MyStreamHistory.Shared.Base.Contracts.StreamSessions.Responses;
 using MyStreamHistory.TwitchTrackingService.Application.Interfaces;
+using MyStreamHistory.TwitchTrackingService.Application.DTOs;
 using MyStreamHistory.TwitchTrackingService.Application.Services;
 using MyStreamHistory.TwitchTrackingService.Infrastructure.Persistence;
 
@@ -98,8 +99,9 @@ public class GetStreamSessionByIdConsumer : IConsumer<GetStreamSessionByIdReques
                 StreamSession = session
             };
 
-            session.StreamerDisplayName = userProfile?.DisplayName ?? session.StreamerDisplayName;
-            session.StreamerAvatarUrl = userProfile?.Avatar ?? session.StreamerAvatarUrl;
+            session.StreamerLogin = UserProfileDto.CurrentOrStored(userProfile?.Login, session.StreamerLogin)!;
+            session.StreamerDisplayName = UserProfileDto.CurrentOrStored(userProfile?.DisplayName, session.StreamerDisplayName)!;
+            session.StreamerAvatarUrl = UserProfileDto.CurrentOrStored(userProfile?.Avatar, session.StreamerAvatarUrl);
 
             await context.RespondAsync(response);
             _logger.LogInformation("Successfully responded with stream session details for ID {StreamSessionId}", 

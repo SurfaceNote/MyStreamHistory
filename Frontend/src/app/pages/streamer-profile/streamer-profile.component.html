@@ -19,7 +19,7 @@
           <div class="socials">
             <a
               class="social-icon twitch"
-              [href]="'https://www.twitch.tv/' + streamer.displayName"
+              [href]="'https://www.twitch.tv/' + (streamer.login || streamer.displayName)"
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Twitch"

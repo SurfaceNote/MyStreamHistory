@@ -48,6 +48,7 @@ public class GetAllUsersQueryHandler(ITransportBus bus) : IRequestHandler<GetAll
             return users.Select(u => new UserDto
             {
                 TwitchId = u.TwitchId,
+                Login = u.Login,
                 DisplayName = u.DisplayName,
                 Avatar = u.Avatar,
                 IsLive = liveIds.Contains(u.TwitchId)

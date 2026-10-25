@@ -41,6 +41,7 @@ public class GetUserByTwitchIdConsumer : IConsumer<GetUserByTwitchIdRequestContr
                 User = new UserDto
                 {
                     TwitchId = user.TwitchId,
+                    Login = user.Login,
                     DisplayName = user.DisplayName,
                     Avatar = user.Avatar
                 }
