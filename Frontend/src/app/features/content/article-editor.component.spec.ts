@@ -43,6 +43,202 @@ describe('Article editor writing and persistence', () => {
     tick(0);
   }
 
+  it('allows correcting a published slug through the form and autosaves it', fakeAsync(() => {
+    draft = { ...draft, slug: 'tyop', slugLocked: true, publishedAt: '2026-10-02T00:00:00Z' };
+    load();
+    const input: HTMLInputElement = fixture.nativeElement.querySelector('input[maxlength="100"]');
+    expect(input.disabled).toBeFalse();
+    expect(fixture.nativeElement.textContent).toContain('Links to the old URL will stop working');
+    input.value = 'corrected';
+    input.dispatchEvent(new Event('input'));
+    tick(1200);
+    const save = http.expectOne(endpoint);
+    expect(save.request.body.slug).toBe('corrected');
+    save.flush({ ...draft, slug: 'corrected', revision: 2 });
+    flushMicrotasks();
+    fixture.componentInstance.article!.title = 'New headline';
+    fixture.componentInstance.titleChanged();
+    expect(fixture.componentInstance.article!.slug).toBe('corrected');
+    tick(1200);
+    http.expectOne(endpoint).flush({ ...draft, slug: 'corrected', revision: 3 });
+    flushMicrotasks();
+  }));
+
+  it('deletes from the editor without saving invalid pending changes and allows navigation', fakeAsync(() => {
+    load();
+    const component = fixture.componentInstance;
+    const navigate = spyOn(TestBed.inject(Router), 'navigate').and.callFake(async () => component.flush());
+    spyOn(window, 'confirm').and.returnValue(true);
+    component.article!.slug = '';
+    component.changed();
+    fixture.nativeElement.querySelector('.delete-article').click();
+    const request = http.expectOne(endpoint + '?revision=1');
+    expect(request.request.method).toBe('DELETE');
+    tick(1200);
+    http.expectNone(request => request.method === 'PUT');
+    request.flush(null);
+    flushMicrotasks();
+    expect(navigate).toHaveBeenCalledWith(['/admin/publications']);
+    expect(component.article).toBeNull();
+    expect(component.busy).toBeFalse();
+    const event = new Event('beforeunload', { cancelable: true }) as BeforeUnloadEvent;
+    component.beforeUnload(event);
+    expect(event.defaultPrevented).toBeFalse();
+  }));
+
+  it('waits for an in-flight save before deleting with the latest revision', fakeAsync(() => {
+    load();
+    const component = fixture.componentInstance;
+    spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
+    spyOn(window, 'confirm').and.returnValue(true);
+    component.changed();
+    void component.flush();
+    const save = http.expectOne(endpoint);
+    component.changed();
+    void component.deleteArticle();
+    http.expectNone(request => request.method === 'DELETE');
+    save.flush({ ...draft, revision: 2 });
+    flushMicrotasks();
+    const deletion = http.expectOne(endpoint + '?revision=2');
+    expect(deletion.request.method).toBe('DELETE');
+    deletion.flush(null);
+    flushMicrotasks();
+    tick(1200);
+    http.expectNone(request => request.method === 'PUT');
+  }));
+
+  it('keeps the article when deletion is cancelled or rejected by a revision conflict', fakeAsync(() => {
+    load();
+    const confirm = spyOn(window, 'confirm').and.returnValue(false);
+    const navigate = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
+    const component = fixture.componentInstance;
+    void component.deleteArticle();
+    flushMicrotasks();
+    http.expectNone(request => request.method === 'DELETE');
+    confirm.and.returnValue(true);
+    void component.deleteArticle();
+    http.expectOne(endpoint + '?revision=1').flush('This article was changed in another tab.', { status: 409, statusText: 'Conflict' });
+    flushMicrotasks();
+    expect(component.article).not.toBeNull();
+    expect(component.error).toContain('Reload before saving');
+    expect(component.busy).toBeFalse();
+    expect(component.editor!.isEditable).toBeTrue();
+    expect(navigate).not.toHaveBeenCalled();
+  }));
+
+  it('restores a wiped draft through the form including published images, video and metadata', fakeAsync(() => {
+    draft = { ...draft, slug: 'corrected', slugLocked: true, publishedAt: '2026-10-02T00:00:00Z' };
+    load();
+    const component = fixture.componentInstance;
+    const confirm = spyOn(window, 'confirm').and.returnValue(true);
+    component.editor!.commands.clearContent();
+    component.article!.slug = '';
+    const coverId = '11111111-1111-1111-1111-111111111111';
+    const restored: Article = { ...draft, title: 'Published headline', summary: 'Published summary',
+      seoTitle: 'Published SEO title', seoDescription: 'Published SEO description', coverId, revision: 2,
+      body: { type: 'doc', content: [
+        { type: 'paragraph', content: [{ type: 'text', text: 'Published text' }] },
+        { type: 'image', attrs: { src: `/content/media/${coverId}`, alt: 'Cover' } },
+        { type: 'youtube', attrs: { videoId: 'dQw4w9WgXcQ' } }
+      ] } };
+    fixture.nativeElement.querySelector('.restore-draft').click();
+    fixture.detectChanges();
+    expect(confirm).toHaveBeenCalled();
+    expect(fixture.nativeElement.querySelector('fieldset').disabled).toBeTrue();
+    expect(component.editor!.isEditable).toBeFalse();
+    const request = http.expectOne(endpoint + '/restore');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toBe(1);
+    tick(1200);
+    http.expectNone(request => request.method === 'PUT');
+    request.flush(restored);
+    flushMicrotasks();
+    expect(component.editorReady).toBeFalse();
+    http.expectOne(`/api/content/media/${coverId}`).flush(new Blob(['image'], { type: 'image/png' }));
+    flushMicrotasks();
+    fixture.detectChanges();
+    expect(component.article).toEqual(restored);
+    expect(component.editor!.getText()).toContain('Published text');
+    expect(component.editor!.getJSON().content?.some(node => node.type === 'youtube')).toBeTrue();
+    expect(component.coverPreview).toMatch(/^blob:/);
+    expect(component.editorReady).toBeTrue();
+    expect(component.editor!.isEditable).toBeTrue();
+    expect(component.busy).toBeFalse();
+    expect(component.saveState).toBe('Saved');
+    expect(component.publicationRequirements).toEqual([]);
+    expect(fixture.nativeElement.querySelector('fieldset').disabled).toBeFalse();
+    tick(1200);
+    http.expectNone(request => request.method === 'PUT');
+    component.editor!.commands.insertContent(' Next edit');
+    tick(1200);
+    const save = http.expectOne(endpoint);
+    expect(save.request.body.revision).toBe(2);
+    expect(JSON.stringify(save.request.body.body)).toContain(`/content/media/${coverId}`);
+    expect(JSON.stringify(save.request.body.body)).not.toContain('blob:');
+    save.flush({ ...restored, revision: 3 });
+    flushMicrotasks();
+  }));
+
+  it('waits for an in-flight save and prevents discarded edits from overwriting restoration', fakeAsync(() => {
+    draft = { ...draft, slugLocked: true, publishedAt: '2026-10-02T00:00:00Z' };
+    load();
+    const component = fixture.componentInstance;
+    spyOn(window, 'confirm').and.returnValue(true);
+    component.editor!.commands.clearContent();
+    void component.flush();
+    const save = http.expectOne(endpoint);
+    component.changed();
+    void component.restoreDraft();
+    http.expectNone(endpoint + '/restore');
+    save.flush({ ...draft, revision: 2 });
+    flushMicrotasks();
+    const restore = http.expectOne(endpoint + '/restore');
+    expect(restore.request.body).toBe(2);
+    restore.flush({ ...draft, revision: 3 });
+    flushMicrotasks();
+    tick(1200);
+    http.expectNone(request => request.method === 'PUT');
+    expect(component.editor!.getText()).toContain('Existing draft text');
+    expect(component.article!.revision).toBe(3);
+    const event = new Event('beforeunload', { cancelable: true }) as BeforeUnloadEvent;
+    component.beforeUnload(event);
+    expect(event.defaultPrevented).toBeFalse();
+  }));
+
+  it('keeps draft edits when restoration is cancelled or conflicts with another tab', fakeAsync(() => {
+    draft = { ...draft, slugLocked: true, publishedAt: '2026-10-02T00:00:00Z' };
+    load();
+    const component = fixture.componentInstance;
+    const confirm = spyOn(window, 'confirm').and.returnValue(false);
+    component.editor!.commands.insertContent(' Keep these edits');
+    void component.restoreDraft();
+    http.expectNone(endpoint + '/restore');
+    confirm.and.returnValue(true);
+    void component.restoreDraft();
+    const request = http.expectOne(endpoint + '/restore');
+    tick(1200);
+    request.flush('This article was changed in another tab.', { status: 409, statusText: 'Conflict' });
+    flushMicrotasks();
+    expect(component.editor!.getText()).toContain('Keep these edits');
+    expect(component.error).toContain('Reload before saving');
+    expect(component.busy).toBeFalse();
+    expect(component.restoring).toBeFalse();
+    expect(component.editor!.isEditable).toBeTrue();
+    const event = new Event('beforeunload', { cancelable: true }) as BeforeUnloadEvent;
+    component.beforeUnload(event);
+    expect(event.defaultPrevented).toBeTrue();
+  }));
+
+  it('does not offer restoration for a draft without a publication', fakeAsync(() => {
+    load();
+    const confirm = spyOn(window, 'confirm');
+    expect(fixture.nativeElement.querySelector('.restore-draft')).toBeNull();
+    void fixture.componentInstance.restoreDraft();
+    flushMicrotasks();
+    expect(confirm).not.toHaveBeenCalled();
+    http.expectNone(endpoint + '/restore');
+  }));
+
   it('creates a manual translation draft after saving pending source changes', fakeAsync(() => {
     load();
     const navigate = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);

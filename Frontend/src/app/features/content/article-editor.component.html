@@ -9,7 +9,7 @@
     </div>
   </div>
   <p class="error" role="alert" *ngIf="error">{{ error }} <button type="button" class="text-button" (click)="flush()" *ngIf="saveState === 'Save failed'">{{ 'ui.retry' | t }}</button></p>
-  <div class="editor-layout">
+  <fieldset class="editor-layout" [disabled]="restoring" [attr.aria-busy]="restoring">
     <section class="writing-pane">
       <p class="hint writing-guide">{{ 'editor.writingGuide' | t }}</p>
       <p class="eyebrow">{{ item.type === 'news' ? ('editor.newsStory' | t) : ('ui.review' | t) }}</p>
@@ -56,9 +56,9 @@
       <p class="hint" *ngIf="publicationRequirements.length">{{ 'editor.requirementsHint' | t: { fields: publicationRequirements.join(', ') } }}</p>
       <p class="hint" *ngIf="!publicationRequirements.length">{{ 'editor.ready' | t }}</p>
       <label>{{ 'common.type' | t }}<select [(ngModel)]="item.type" (ngModelChange)="changed()" [disabled]="item.slugLocked || (item.translations.length || 0) > 1"><option value="news">{{ 'ui.news' | t }}</option><option value="review">{{ 'editor.review' | t }}</option></select></label>
-      <label>{{ 'editor.slug' | t }}<input [(ngModel)]="item.slug" (ngModelChange)="slugEdited = true; changed()" [disabled]="item.slugLocked" maxlength="100" /></label>
+      <label>{{ 'editor.slug' | t }}<input [(ngModel)]="item.slug" (ngModelChange)="slugEdited = true; changed()" [disabled]="busy || !editorReady" maxlength="100" /></label>
       <p class="hint" *ngIf="!item.slugLocked">{{ 'editor.slugHint' | t }}</p>
-      <p class="hint" *ngIf="item.slugLocked">{{ 'editor.slugLocked' | t }}</p>
+      <p class="hint" *ngIf="item.slugLocked">{{ 'editor.slugChangeHint' | t }}</p>
       <label>{{ 'editor.coverImage' | t }}</label>
       <button type="button" class="cover-picker" (click)="mediaOpen = true">
         <img *ngIf="coverPreview" [src]="coverPreview" [alt]="'editor.selectedCover' | t" />
@@ -68,9 +68,11 @@
       <label>{{ 'editor.seoTitle' | t }}<input [attr.lang]="item.language || 'en'" [(ngModel)]="item.seoTitle" (ngModelChange)="changed()" maxlength="180" [placeholder]="'editor.defaultHeadline' | t" /></label>
       <label>{{ 'editor.seoDescription' | t }}<textarea [attr.lang]="item.language || 'en'" [(ngModel)]="item.seoDescription" (ngModelChange)="changed()" maxlength="300" rows="3" [placeholder]="'editor.searchDescription' | t"></textarea></label>
       <p class="hint" *ngIf="item.publishedAt">{{ 'editor.publishedAt' | t: { date: (item.publishedAt | date:'medium':'UTC':locale.locale())! } }}</p>
+      <button type="button" class="ghost restore-draft" *ngIf="item.publishedAt" (click)="restoreDraft()" [disabled]="busy">{{ 'editor.restoreDraft' | t }}</button>
       <button type="button" class="unpublish" *ngIf="item.publishedAt" (click)="unpublish()" [disabled]="busy || !editorReady">{{ 'editor.unpublish' | t }}</button>
+      <button type="button" class="delete-article" (click)="deleteArticle()" [disabled]="busy">{{ 'editor.deleteArticle' | t }}</button>
     </aside>
-  </div>
+  </fieldset>
   <div class="media-backdrop" *ngIf="mediaOpen" (click)="mediaOpen = false"></div>
   <aside class="media-drawer" *ngIf="mediaOpen" [attr.aria-label]="'editor.mediaLibrary' | t">
     <div class="drawer-head"><div><p class="eyebrow">{{ 'editor.assets' | t }}</p><h2>{{ 'editor.mediaLibrary' | t }}</h2></div><button type="button" class="ghost" (click)="mediaOpen = false">✕</button></div>

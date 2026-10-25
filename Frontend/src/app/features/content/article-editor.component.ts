@@ -54,6 +54,7 @@ export class ArticleEditorComponent implements OnInit, OnDestroy {
   slugEdited = false;
   loading = true;
   busy = false;
+  restoring = false;
   saveState = 'Saved';
   get saveStateLabel(): string {
     const labels: Record<string, TranslationKey> = { 'Saved': 'editor.saved', 'Unsaved changes': 'editor.unsaved', 'Saving…': 'editor.saving', 'Save failed': 'editor.saveFailed', 'Published': 'editor.published', 'Unpublished': 'editor.unpublished' };
@@ -66,6 +67,7 @@ export class ArticleEditorComponent implements OnInit, OnDestroy {
   private changeSeq = 0;
   private savedSeq = 0;
   private savePromise: Promise<void> | null = null;
+  private deleting = false;
   private blobById = new Map<string, string>();
   private idByBlob = new Map<string, string>();
   private destroyed = false;
@@ -172,7 +174,7 @@ export class ArticleEditorComponent implements OnInit, OnDestroy {
         tr.setSelection(Selection.atStart(tr.doc));
         return true;
       });
-      this.editor.setEditable(true, false);
+      this.editor.setEditable(!this.restoring, false);
       this.editor.view.dom.setAttribute('lang', this.article?.language || 'en');
       this.editorReady = true;
     }
@@ -256,7 +258,9 @@ export class ArticleEditorComponent implements OnInit, OnDestroy {
   }
 
   async flush(): Promise<boolean> {
-    if (!this.article || this.changeSeq === this.savedSeq) return true;
+    if (!this.article) return true;
+    if (this.deleting || this.restoring) return false;
+    if (this.changeSeq === this.savedSeq) return true;
     if (!this.editorReady) {
       this.error = 'editor.waitForBody';
       return false;
@@ -311,6 +315,8 @@ export class ArticleEditorComponent implements OnInit, OnDestroy {
     const backendMessage = typeof error?.error === 'string' ? error.error : error?.error?.detail || error?.error?.title;
     const knownErrors: Record<string, TranslationKey> = {
       'Article URL is already in use.': 'editor.urlInUse',
+      'Use a lowercase URL slug with letters, numbers and hyphens.': 'editor.invalidSlug',
+      'This article has no published version to restore.': 'editor.noPublishedVersion',
       'This image is used in an article.': 'editor.imageUsed',
       'Image in use': 'editor.imageInUse',
       'This image is used in a draft or published article. Remove it from all articles and update any published versions before deleting.': 'editor.imageUsedDetailed',
@@ -353,6 +359,62 @@ export class ArticleEditorComponent implements OnInit, OnDestroy {
       this.saveState = 'Unpublished';
     } catch { this.error = 'editor.unpublishFailed'; }
     finally { this.busy = false; }
+  }
+
+  async restoreDraft(): Promise<void> {
+    if (!this.article?.publishedAt || this.busy || !this.browser) return;
+    if (!window.confirm(this.locale.t('editor.restoreDraftConfirm'))) return;
+    this.busy = true;
+    this.restoring = true;
+    this.error = '';
+    this.editor?.setEditable(false, false);
+    try {
+      // Stop autosave from putting discarded edits back after the restored version.
+      if (this.savePromise) await this.savePromise;
+      const restored = await firstValueFrom(this.content.restoreDraft(this.article.id, this.article.revision));
+      this.article = restored;
+      this.slugEdited = true;
+      this.savedSeq = this.changeSeq;
+      this.saveState = 'Saved';
+      this.error = '';
+      this.editorReady = false;
+      this.coverPreview = '';
+      this.linkOpen = this.youtubeOpen = this.mediaOpen = false;
+      try {
+        await this.setEditorBody(restored.body);
+        if (restored.coverId) this.coverPreview = await this.resolveMedia(restored.coverId);
+      } catch {
+        this.editorReady = false;
+        this.error = 'editor.openBodyFailed';
+      }
+    } catch (error: any) { this.error = this.requestError(error, 'editor.restoreDraftFailed'); }
+    finally {
+      this.restoring = false;
+      this.busy = false;
+      this.editor?.setEditable(this.editorReady, false);
+    }
+  }
+
+  async deleteArticle(): Promise<void> {
+    if (!this.article || this.busy || !this.browser) return;
+    if (!window.confirm(this.locale.t('editor.deleteArticleConfirm', { title: this.article.title || this.article.slug }))) return;
+    this.busy = true;
+    this.deleting = true;
+    this.error = '';
+    this.editor?.setEditable(false, false);
+    try {
+      // Let an existing save finish, but do not save pending (possibly invalid) edits before deletion.
+      if (this.savePromise) await this.savePromise;
+      await firstValueFrom(this.content.deleteArticle(this.article.id, this.article.revision));
+      this.savedSeq = this.changeSeq;
+      this.article = null;
+      await this.router.navigate(['/admin/publications']);
+    } catch (error: any) { this.error = this.requestError(error, 'editor.deleteArticleFailed'); }
+    finally {
+      this.deleting = false;
+      this.busy = false;
+      if (this.article && this.editorReady) this.editor?.setEditable(true, false);
+    }
   }
 
   chooseFile(): void { this.fileInput.nativeElement.click(); }

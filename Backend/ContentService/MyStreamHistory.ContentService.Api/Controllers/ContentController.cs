@@ -118,8 +118,8 @@ public sealed class ContentController(ContentDbContext db, MediaStorage storage,
         if (input.Language != article.Language) return BadRequest("Article language cannot be changed.");
         if (input.Type != article.Type && await db.Articles.AnyAsync(x => x.TranslationGroupId == article.TranslationGroupId && x.Id != article.Id))
             return BadRequest("The type of a translated publication cannot be changed.");
-        if (article.SlugLocked && (input.Slug != article.Slug || input.Type != article.Type))
-            return BadRequest("Published article type and URL cannot be changed.");
+        if (article.SlugLocked && input.Type != article.Type)
+            return BadRequest("Published article type cannot be changed.");
         var error = await ValidateInput(input);
         if (error is not null) return BadRequest(error);
         CopyDraft(article, input);
@@ -129,6 +129,22 @@ public sealed class ContentController(ContentDbContext db, MediaStorage storage,
         catch (DbUpdateException) { return Conflict("Article URL is already in use."); }
         await transaction.CommitAsync();
         return Ok(await AdminResponse(article));
+    }
+
+    [HttpDelete("admin/articles/{id:guid}")]
+    [Authorize(Policy = "ContentAuthor")]
+    public async Task<IActionResult> Delete(Guid id, [FromQuery] int revision)
+    {
+        await using var transaction = await db.BeginMediaMutationAsync();
+        var article = await db.Articles.Include(x => x.PublishedMedia).FirstOrDefaultAsync(x => x.Id == id);
+        if (article is null) return NotFound();
+        if (article.Revision != revision) return Conflict("This article was changed in another tab.");
+        db.Articles.Remove(article);
+        try { await db.SaveChangesAsync(); }
+        catch (DbUpdateConcurrencyException) { return Conflict("This article was changed in another tab."); }
+        await transaction.CommitAsync();
+        logger.LogInformation("Content author deleted article {ArticleId}", id);
+        return NoContent();
     }
 
     [HttpGet("admin/articles/{id:guid}/preview")]
@@ -165,6 +181,31 @@ public sealed class ContentController(ContentDbContext db, MediaStorage storage,
         catch (DbUpdateConcurrencyException) { return Conflict("This article was changed in another tab."); }
         await transaction.CommitAsync();
         logger.LogInformation("Content author published article {ArticleId}", id);
+        return Ok(await AdminResponse(article));
+    }
+
+    [HttpPost("admin/articles/{id:guid}/restore")]
+    [Authorize(Policy = "ContentAuthor")]
+    public async Task<IActionResult> RestoreDraft(Guid id, [FromBody] int revision)
+    {
+        await using var transaction = await db.BeginMediaMutationAsync();
+        var article = await db.Articles.FirstOrDefaultAsync(x => x.Id == id);
+        if (article is null) return NotFound();
+        if (article.Revision != revision) return Conflict("This article was changed in another tab.");
+        if (article.PublishedAt is null || article.PublishedBody is null)
+            return BadRequest("This article has no published version to restore.");
+        article.Title = article.PublishedTitle ?? "";
+        article.Summary = article.PublishedSummary ?? "";
+        article.SeoTitle = article.PublishedSeoTitle ?? "";
+        article.SeoDescription = article.PublishedSeoDescription ?? "";
+        article.Body = article.PublishedBody;
+        article.CoverId = article.PublishedCoverId;
+        article.UpdatedAt = DateTime.UtcNow;
+        article.Revision++;
+        try { await db.SaveChangesAsync(); }
+        catch (DbUpdateConcurrencyException) { return Conflict("This article was changed in another tab."); }
+        await transaction.CommitAsync();
+        logger.LogInformation("Content author restored draft of article {ArticleId} from publication", id);
         return Ok(await AdminResponse(article));
     }
 

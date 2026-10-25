@@ -129,6 +129,143 @@ public sealed class LocalizationTests
         Assert.False(db.Database.HasPendingModelChanges());
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task SlugCanBeCorrectedAfterPublicationIncludingWhenUnpublished(bool unpublish)
+    {
+        await using var f = await Fixture.Create();
+        var article = f.Article("ru", "tyop"); article.Publish();
+        if (unpublish) article.Unpublish();
+        f.Db.Add(article); await f.Db.SaveChangesAsync();
+        var input = new ContentController.ArticleInput("news", "corrected", "Pending title", "", "", "",
+            JsonSerializer.Deserialize<JsonElement>(article.Body), article.CoverId, article.Revision, "ru");
+        Assert.IsType<OkObjectResult>(await f.Controller.Save(article.Id, input));
+        Assert.Equal("corrected", article.Slug);
+        Assert.Equal(input.Revision + 1, article.Revision);
+        Assert.IsType<BadRequestObjectResult>(await f.Controller.Save(article.Id, input with { Type = "review", Revision = article.Revision }));
+        Assert.IsType<NotFoundResult>(await f.Controller.GetPublished("news", "tyop", "ru"));
+        if (!unpublish)
+        {
+            var published = Json(await f.Controller.GetPublished("news", "corrected", "ru"));
+            Assert.Equal("Example", published.GetProperty("Title").GetString());
+            var sitemap = Assert.IsType<ContentResult>(await f.Controller.Sitemap()).Content!;
+            Assert.Contains("/ru/news/corrected", sitemap);
+            Assert.DoesNotContain("/ru/news/tyop", sitemap);
+        }
+    }
+
+    [Fact]
+    public async Task SlugChangesRejectInvalidDuplicateAndStaleInputs()
+    {
+        await using var f = await Fixture.Create();
+        var article = f.Article("en", "original"); article.Publish();
+        f.Db.AddRange(article, f.Article("en", "occupied")); await f.Db.SaveChangesAsync();
+        var input = new ContentController.ArticleInput("news", "corrected", article.Title, "", "", "",
+            JsonSerializer.Deserialize<JsonElement>(article.Body), article.CoverId, article.Revision);
+        Assert.IsType<ConflictObjectResult>(await f.Controller.Save(article.Id, input with { Revision = 0 }));
+        Assert.IsType<BadRequestObjectResult>(await f.Controller.Save(article.Id, input with { Slug = "Invalid slug" }));
+        Assert.IsType<ConflictObjectResult>(await f.Controller.Save(article.Id, input with { Slug = "occupied" }));
+        f.Db.ChangeTracker.Clear();
+        Assert.Equal("original", (await f.Db.Articles.FindAsync(article.Id))!.Slug);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task DeletingOneVersionRemovesPublicationReferencesButKeepsTranslationsAndMedia(bool published)
+    {
+        await using var f = await Fixture.Create();
+        var article = f.Article("en", "original");
+        var translation = f.Article("ru", "translated"); translation.TranslationGroupId = article.TranslationGroupId;
+        translation.Publish();
+        if (published) article.Publish();
+        f.Db.AddRange(article, translation);
+        f.Db.PublishedMedia.Add(new() { ArticleId = translation.Id, MediaId = f.Cover.Id });
+        if (published) f.Db.PublishedMedia.Add(new() { ArticleId = article.Id, MediaId = f.Cover.Id });
+        await f.Db.SaveChangesAsync();
+        Assert.IsType<NoContentResult>(await f.Controller.Delete(article.Id, article.Revision));
+        f.Db.ChangeTracker.Clear();
+        Assert.IsType<NotFoundResult>(await f.Controller.GetAdmin(article.Id));
+        Assert.IsType<NotFoundResult>(await f.Controller.GetPublished("news", "original"));
+        Assert.Equal(1, Json(await f.Controller.ListAdmin(null, null, null)).GetProperty("total").GetInt32());
+        Assert.DoesNotContain("/news/original", Assert.IsType<ContentResult>(await f.Controller.Sitemap()).Content!);
+        Assert.Single(Json(await f.Controller.GetPublished("news", "translated", "ru")).GetProperty("Translations").EnumerateArray());
+        Assert.Single(await f.Db.Media.ToListAsync());
+        var reference = Assert.Single(await f.Db.PublishedMedia.ToListAsync());
+        Assert.Equal(translation.Id, reference.ArticleId);
+        Assert.IsType<NotFoundResult>(await f.Controller.Delete(article.Id, article.Revision));
+    }
+
+    [Fact]
+    public async Task DeleteRequiresCurrentRevisionAndContentAuthorPolicy()
+    {
+        await using var f = await Fixture.Create();
+        var article = f.Article("en", "original"); f.Db.Add(article); await f.Db.SaveChangesAsync();
+        Assert.IsType<ConflictObjectResult>(await f.Controller.Delete(article.Id, article.Revision - 1));
+        Assert.NotNull(await f.Db.Articles.FindAsync(article.Id));
+        var policy = typeof(ContentController).GetMethod(nameof(ContentController.Delete))!
+            .GetCustomAttribute<Microsoft.AspNetCore.Authorization.AuthorizeAttribute>();
+        Assert.Equal("ContentAuthor", policy?.Policy);
+    }
+
+    [Fact]
+    public async Task RestoreDraftRecoversLatestPublishedContentAfterAnEmptyDraftWasSaved()
+    {
+        await using var f = await Fixture.Create();
+        var article = f.Article("en", "original");
+        var translation = f.Article("ru", "translated"); translation.TranslationGroupId = article.TranslationGroupId;
+        f.Db.AddRange(article, translation); await f.Db.SaveChangesAsync();
+        Assert.IsType<OkObjectResult>(await f.Controller.Publish(article.Id, article.Revision));
+        article.Title = "Latest publication"; article.Summary = "Published summary";
+        article.SeoTitle = "Published SEO title"; article.SeoDescription = "Published SEO description";
+        article.Body = """{"type":"doc","content":[{"type":"image","attrs":{"src":"/content/media/COVER"}},{"type":"youtube","attrs":{"videoId":"dQw4w9WgXcQ"}}]}""".Replace("COVER", f.Cover.Id.ToString());
+        Assert.IsType<OkObjectResult>(await f.Controller.Publish(article.Id, article.Revision));
+        var publishedAt = article.PublishedAt;
+        var publishedBody = article.PublishedBody;
+        var publishedResponse = Json(await f.Controller.GetPublished("news", "original"));
+        var empty = new ContentController.ArticleInput("news", "corrected", "", "", "", "",
+            JsonSerializer.Deserialize<JsonElement>("""{"type":"doc","content":[]}"""), null, article.Revision);
+        Assert.IsType<OkObjectResult>(await f.Controller.Save(article.Id, empty));
+        var revision = article.Revision;
+        var restored = Json(await f.Controller.RestoreDraft(article.Id, revision));
+        Assert.Equal(revision + 1, restored.GetProperty("Revision").GetInt32());
+        f.Db.ChangeTracker.Clear();
+        var saved = (await f.Db.Articles.FindAsync(article.Id))!;
+        Assert.Equal("Latest publication", saved.Title);
+        Assert.Equal("Published summary", saved.Summary);
+        Assert.Equal("Published SEO title", saved.SeoTitle);
+        Assert.Equal("Published SEO description", saved.SeoDescription);
+        Assert.Equal(publishedBody, saved.Body);
+        Assert.Equal(f.Cover.Id, saved.CoverId);
+        Assert.Equal("corrected", saved.Slug);
+        Assert.Equal(publishedAt, saved.PublishedAt);
+        Assert.Equal(publishedBody, saved.PublishedBody);
+        Assert.Equal(publishedResponse.GetProperty("Body").GetRawText(), Json(await f.Controller.GetPublished("news", "corrected")).GetProperty("Body").GetRawText());
+        Assert.Equal("Example", (await f.Db.Articles.FindAsync(translation.Id))!.Title);
+        Assert.Single(await f.Db.PublishedMedia.Where(x => x.ArticleId == article.Id).ToListAsync());
+        Assert.IsType<ConflictObjectResult>(await f.Controller.Save(article.Id, empty));
+    }
+
+    [Fact]
+    public async Task RestoreDraftRejectsStaleRevisionsMissingArticlesAndUnavailablePublications()
+    {
+        await using var f = await Fixture.Create();
+        var article = f.Article("en", "original"); article.Publish(); article.Title = "Draft to keep";
+        var draft = f.Article("ru", "draft");
+        var unpublished = f.Article("de", "unpublished"); unpublished.Publish(); unpublished.Unpublish();
+        f.Db.AddRange(article, draft, unpublished); await f.Db.SaveChangesAsync();
+        Assert.IsType<ConflictObjectResult>(await f.Controller.RestoreDraft(article.Id, article.Revision - 1));
+        Assert.IsType<BadRequestObjectResult>(await f.Controller.RestoreDraft(draft.Id, draft.Revision));
+        Assert.IsType<BadRequestObjectResult>(await f.Controller.RestoreDraft(unpublished.Id, unpublished.Revision));
+        Assert.IsType<NotFoundResult>(await f.Controller.RestoreDraft(Guid.NewGuid(), 1));
+        f.Db.ChangeTracker.Clear();
+        Assert.Equal("Draft to keep", (await f.Db.Articles.FindAsync(article.Id))!.Title);
+        var policy = typeof(ContentController).GetMethod(nameof(ContentController.RestoreDraft))!
+            .GetCustomAttribute<Microsoft.AspNetCore.Authorization.AuthorizeAttribute>();
+        Assert.Equal("ContentAuthor", policy?.Policy);
+    }
+
     private static JsonElement Json(IActionResult result) => JsonSerializer.SerializeToElement(Assert.IsType<OkObjectResult>(result).Value);
     private sealed class Fixture : IAsyncDisposable
     {

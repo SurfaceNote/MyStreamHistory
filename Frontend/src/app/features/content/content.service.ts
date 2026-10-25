@@ -34,8 +34,10 @@ export class ContentService {
   article(id: string): Observable<Article> { return this.http.get<Article>(`${this.base}/admin/articles/${id}`); }
   create(input: ArticleInput): Observable<Article> { return this.http.post<Article>(`${this.base}/admin/articles`, input); }
   save(id: string, input: ArticleInput): Observable<Article> { return this.http.put<Article>(`${this.base}/admin/articles/${id}`, input); }
+  deleteArticle(id: string, revision: number): Observable<void> { return this.http.delete<void>(`${this.base}/admin/articles/${id}`, { params: { revision } }); }
   publish(id: string, revision: number): Observable<Article> { return this.http.post<Article>(`${this.base}/admin/articles/${id}/publish`, revision); }
   unpublish(id: string, revision: number): Observable<Article> { return this.http.post<Article>(`${this.base}/admin/articles/${id}/unpublish`, revision); }
+  restoreDraft(id: string, revision: number): Observable<Article> { return this.http.post<Article>(`${this.base}/admin/articles/${id}/restore`, revision); }
   media(): Observable<MediaAsset[]> { return this.http.get<MediaAsset[]>(`${this.base}/admin/media`); }
   deleteMedia(id: string): Observable<void> { return this.http.delete<void>(`${this.base}/admin/media/${id}`); }
   mediaBlob(id: string): Observable<Blob> { return this.http.get(`${this.base}/media/${id}`, { responseType: 'blob' }); }
