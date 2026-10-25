@@ -66,5 +66,9 @@ h2 { font-size: 19px; font-weight: 600; letter-spacing: -.3px; }
 .primary-button { background: var(--action-fill); border-color: #aeb4ff50; color: white; border-radius: 10px; box-shadow: 0 6px 18px #5558ed26; }
 .guide-panel { padding: 22px 16px; }
 .site-footer { margin-top: 32px; padding: 20px 0; }
+.open-source-panel { display: grid; grid-template-columns: minmax(180px, .7fr) minmax(0, 1.3fr); gap: 32px; margin-top: 32px; padding: 28px; border: 1px solid var(--border); border-radius: 20px; background: var(--panel-fill); }
+.open-source-heading { .panel-kicker { margin: 0 0 12px; } h2 { max-width: 300px; font-size: 24px; line-height: 1.25; } }
+.open-source-copy { min-width: 0; p { margin: 0 0 14px; color: var(--muted); font-size: 14px; line-height: 1.8; } p:last-of-type { color: inherit; } a { margin-top: 4px; max-width: 100%; gap: 12px; &:hover { color: var(--accent); border-color: var(--accent); } &:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; } } }
+@media (max-width: 600px) { .open-source-panel { grid-template-columns: 1fr; gap: 18px; padding: 24px; } }
 @media (max-width: 850px) { .page-layout { grid-template-columns: 1fr; } .intro { grid-template-columns: 1fr; gap: 18px; padding: 28px; } .intro-copy { max-width: 440px; } .sidebar { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; } }
 @media (max-width: 520px) { .intro { margin-top: 16px; padding: 24px; } .directory { padding: 16px; } .sidebar { grid-template-columns: 1fr; } }

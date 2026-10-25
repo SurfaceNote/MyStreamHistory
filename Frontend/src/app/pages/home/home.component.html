@@ -83,7 +83,7 @@
           <app-login-component *ngIf="authReady && !isLoggedIn" />
           <a *ngIf="authReady && isLoggedIn" [routerLink]="(['/profile', twitchId]) | localPath" class="primary-button">{{ 'ui.openMyProfile' | t }} <span aria-hidden="true">→</span></a>
         </div>
-        <span class="panel-note">{{ 'ui.freeDuringAlpha' | t }}</span>
+        <span class="panel-note">{{ 'ui.freeForever' | t }}</span>
       </section>
 
       <section class="guide-panel">
@@ -97,6 +97,20 @@
       <a class="feedback-link" href="https://discord.gg/Cm77XVeUsd" target="_blank" rel="noopener noreferrer">{{ 'ui.feedbackSupportOnDiscord' | t }} <span aria-hidden="true">↗</span></a>
     </aside>
   </div>
+
+  <section class="open-source-panel" aria-labelledby="open-source-title">
+    <div class="open-source-heading">
+      <p class="panel-kicker">{{ 'ui.openSource' | t }}</p>
+      <h2 id="open-source-title">{{ 'ui.openSourceTitle' | t }}</h2>
+    </div>
+    <div class="open-source-copy">
+      <p>{{ 'ui.openSourceContribution' | t }}</p>
+      <p>{{ 'ui.openSourcePromise' | t }}</p>
+      <a class="secondary-button" href="https://github.com/SurfaceNote/MyStreamHistory" target="_blank" rel="noopener noreferrer">
+        {{ 'ui.contributeOnGitHub' | t }} <span aria-hidden="true">↗</span>
+      </a>
+    </div>
+  </section>
 
   <footer class="site-footer">
     <span>MyStreamHistory <span class="footer-divider">/</span> {{ 'ui.builtAroundYourBroadcasts' | t }}</span>
