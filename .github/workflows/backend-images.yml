@@ -5,7 +5,14 @@ on:
     branches: [ "main" ]
     paths:
       - "Backend/**"
+      - "Frontend/**"
       - ".github/workflows/backend-images.yml"
+  pull_request:
+    paths:
+      - "Backend/**"
+      - "Frontend/**"
+      - ".github/workflows/backend-images.yml"
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -15,7 +22,32 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  admin-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: Frontend/package-lock.json
+      - run: dotnet test Backend/AdminService/MyStreamHistory.AdminService.Tests/MyStreamHistory.AdminService.Tests.csproj -c Release
+      - run: dotnet test Backend/ContentService/MyStreamHistory.ContentService.Api.Tests/MyStreamHistory.ContentService.Api.Tests.csproj -c Release
+      - run: dotnet test Backend/Community.Tests/MyStreamHistory.Community.Tests.csproj -c Release --filter FullyQualifiedName~CommunityAccessTests
+      - run: npm ci
+        working-directory: Frontend
+      - run: npm run build:admin
+        working-directory: Frontend
+      - run: npm run test:admin
+        working-directory: Frontend
+      - run: npm run test:ssr-metrics
+        working-directory: Frontend
+
   build-and-push:
+    needs: admin-checks
     runs-on: ubuntu-latest
 
     strategy:
@@ -42,6 +74,10 @@ jobs:
             context: Backend
             dockerfile: Backend/ViewerService/MyStreamHistory.ViewerService.Api/Dockerfile
             image: viewerservice
+          - service: adminservice
+            context: .
+            dockerfile: Backend/AdminService/MyStreamHistory.AdminService.Api/Dockerfile
+            image: mystreamhistoryadmin
 
     steps:
       - name: Checkout
@@ -77,5 +113,5 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             SENTRY_RELEASE=${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
