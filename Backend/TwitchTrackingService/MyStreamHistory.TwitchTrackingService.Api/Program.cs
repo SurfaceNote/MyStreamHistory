@@ -36,6 +36,7 @@ builder.Services.AddInfrastructure(builder.Configuration)
         configurator.AddConsumer<ChannelUpdateConsumer>();
         configurator.AddConsumer<UserRegisteredConsumer>();
         configurator.AddConsumer<GetRecentStreamsConsumer>();
+        configurator.AddConsumer<GetAdminStreamsConsumer>();
         configurator.AddConsumer<GetLiveStreamersConsumer>();
         configurator.AddConsumer<GetStreamSessionByIdConsumer>();
         configurator.AddConsumer<GetEventSubSubscriptionsConsumer>();

@@ -20,6 +20,21 @@ namespace MyStreamHistory.Community.Tests;
 public class CommunityAccessTests
 {
     [Fact]
+    public async Task StreamListRequiresItsOwnServicePermissionAndValidPagination()
+    {
+        await using var app = await CreateApp(new FakeBus());
+        using var client = app.GetTestClient();
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/admin/streams")).StatusCode);
+        client.DefaultRequestHeaders.Authorization = new("Bearer", "admin");
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/admin/streams")).StatusCode);
+        client.DefaultRequestHeaders.Authorization = new("Bearer", Credentials.Issue("operator", AdminServiceAuthentication.CommunityRead));
+        Assert.Equal(HttpStatusCode.Forbidden, (await client.GetAsync("/admin/streams")).StatusCode);
+        client.DefaultRequestHeaders.Authorization = new("Bearer", Credentials.Issue("operator", AdminServiceAuthentication.StreamsRead));
+        foreach (var query in new[] { "page=0", "page=-1", "pageSize=0", "pageSize=101" })
+            Assert.Equal(HttpStatusCode.BadRequest, (await client.GetAsync("/admin/streams?" + query)).StatusCode);
+    }
+
+    [Fact]
     public async Task AllCommunityRoutesRejectAnonymousRequests()
     {
         await using var app = await CreateApp(new FakeBus());
@@ -148,9 +163,15 @@ public class CommunityAccessTests
         builder.Services.AddAuthentication("Tests").AddScheme<AuthenticationSchemeOptions, OwnerHandler>("Tests", _ => { });
         builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?> { ["AdminServiceAuth:Key"] = Credentials.Key });
         builder.Services.AddAdminServiceAuthentication(builder.Configuration);
-        builder.Services.AddAuthorization(options => options.AddPolicy("AdminCommunityRead", policy => policy
-            .AddAuthenticationSchemes(AdminServiceAuthentication.Scheme).RequireAuthenticatedUser()
-            .RequireClaim(AdminServiceAuthentication.PermissionClaim, AdminServiceAuthentication.CommunityRead)));
+        builder.Services.AddAuthorization(options =>
+        {
+            options.AddPolicy("AdminCommunityRead", policy => policy
+                .AddAuthenticationSchemes(AdminServiceAuthentication.Scheme).RequireAuthenticatedUser()
+                .RequireClaim(AdminServiceAuthentication.PermissionClaim, AdminServiceAuthentication.CommunityRead));
+            options.AddPolicy("AdminStreamsRead", policy => policy
+                .AddAuthenticationSchemes(AdminServiceAuthentication.Scheme).RequireAuthenticatedUser()
+                .RequireClaim(AdminServiceAuthentication.PermissionClaim, AdminServiceAuthentication.StreamsRead));
+        });
         var app = builder.Build();
         app.UseAuthentication(); app.UseAuthorization(); app.MapControllers();
         await app.StartAsync();

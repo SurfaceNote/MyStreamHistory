@@ -19,6 +19,7 @@ public static class AdminServiceAuthentication
     public const string Diagnostics = "diagnostics";
     public const string Content = "content";
     public const string CommunityRead = "community.read";
+    public const string StreamsRead = "streams.read";
 
     public static void AddAdminServiceAuthentication(this IServiceCollection services, IConfiguration configuration)
     {

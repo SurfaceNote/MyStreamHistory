@@ -6,6 +6,7 @@ import { RouterLink } from '@angular/router';
   template: `<section class="panel-page"><p class="eyebrow">ПРОЕКТ</p><h1>Панель управления</h1>
     <p class="muted">Администрирование MyStreamHistory и наблюдение за работой сервисов.</p>
     <div class="overview-grid">
+      <a routerLink="/streams" class="overview-card"><span>ИСТОРИЯ ЭФИРОВ</span><h2>Стримы</h2><p>Все стримы по дням: категории, длительность и уникальные зрители.</p></a>
       <a routerLink="/admin" class="overview-card"><span>01 / TWITCH</span><h2>Подписки и диагностика</h2><p>EventSub, chat-подписки и операции управления.</p></a>
       <a routerLink="/admin/publications" class="overview-card"><span>02 / КОНТЕНТ</span><h2>Публикации</h2><p>Редактор, переводы, медиа и публикация материалов.</p></a>
       <a routerLink="/community" class="overview-card"><span>03 / АУДИТОРИЯ</span><h2>Community</h2><p>Просмотр отчётов по каналам в режиме чтения.</p></a>

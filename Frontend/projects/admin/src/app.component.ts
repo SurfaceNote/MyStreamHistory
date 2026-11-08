@@ -9,6 +9,7 @@ import { LocaleService } from '../../../src/app/i18n/locale.service';
       <a routerLink="/overview" class="admin-brand">MyStreamHistory<span>ПАНЕЛЬ УПРАВЛЕНИЯ</span></a>
       <nav aria-label="Разделы панели">
         <a routerLink="/overview" routerLinkActive="selected">Обзор</a>
+        <a routerLink="/streams" routerLinkActive="selected">Стримы</a>
         <a routerLink="/admin" routerLinkActive="selected" [routerLinkActiveOptions]="{exact:true}">Twitch / диагностика</a>
         <a routerLink="/admin/publications" routerLinkActive="selected">Публикации</a>
         <a routerLink="/community" routerLinkActive="selected">Community</a>

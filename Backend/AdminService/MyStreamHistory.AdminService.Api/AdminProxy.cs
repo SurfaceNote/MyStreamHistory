@@ -13,6 +13,7 @@ public static partial class AdminProxy
             || method == "POST" && path == "diagnostics/eventsub-subscriptions/subscribe-all")
             return ("gateway", AdminServiceAuthentication.Diagnostics);
         if (method == "GET" && path == "user/all") return ("gateway", AdminServiceAuthentication.CommunityRead);
+        if (method == "GET" && path == "admin/streams") return ("gateway", AdminServiceAuthentication.StreamsRead);
         if (method == "GET" && path is "analytics/community" or "analytics/community/members" or "analytics/community/exclusions")
             return ("gateway", AdminServiceAuthentication.CommunityRead);
         if (method == "GET" && MediaPath().IsMatch(path)) return ("content", AdminServiceAuthentication.Content);

@@ -1,0 +1,52 @@
+<section class="panel-page" [attr.aria-busy]="loading">
+  <p class="eyebrow">ИСТОРИЯ ЭФИРОВ</p>
+  <h1>Стримы</h1>
+  <p class="muted">Все стримы по дате начала, от новых к старым. Часовой пояс: {{ timeZone }}.</p>
+  <p class="muted hint">Уникальные зрители — аккаунты, зафиксированные сбором данных. Для текущих эфиров показаны данные на момент загрузки.</p>
+  @if (loading) { <p role="status" class="notice">Загружаем стримы…</p> }
+  @if (error) {
+    <p role="alert" class="notice error">{{ error }}</p>
+    <button type="button" (click)="retry()">Повторить</button>
+  }
+  @if (!loading && !error && data) {
+    <p class="muted">Всего стримов: {{ data.totalCount }}</p>
+    @if (data.items.length === 0) { <p class="notice">Стримов пока нет.</p> }
+    @for (group of groups; track group.day) {
+      <section class="day-group" [attr.aria-label]="group.day">
+        <h2>{{ group.day }}</h2>
+        <div class="table-scroll">
+          <table>
+            <caption class="sr-only">Стримы за {{ group.day }}</caption>
+            <thead><tr><th scope="col">Стример</th><th scope="col">Категории</th><th scope="col">Дата и время</th><th scope="col">Длительность</th><th scope="col">Уникальные зрители</th><th scope="col"><span class="sr-only">Профиль стрима</span></th></tr></thead>
+            <tbody>
+              @for (stream of group.streams; track stream.id) {
+                <tr>
+                  <td><div class="streamer">
+                    @if (stream.streamerAvatarUrl) {
+                      <img [src]="stream.streamerAvatarUrl" alt="" width="40" height="40" loading="lazy" referrerpolicy="no-referrer" (error)="stream.streamerAvatarUrl = null">
+                    } @else { <span class="avatar-placeholder" aria-hidden="true">{{ (stream.streamerDisplayName || stream.streamerLogin).slice(0, 1) }}</span> }
+                    <div><strong>{{ stream.streamerDisplayName || stream.streamerLogin }}</strong><small>{{ stream.streamerLogin }}</small></div>
+                  </div></td>
+                  <td><div class="categories">@for (category of stream.categories; track category) { <span>{{ category }}</span> } @empty { <span class="muted">Нет категорий</span> }</div></td>
+                  <td><time [attr.datetime]="stream.startedAt">{{ group.day }}<small>{{ time(stream.startedAt) }}</small></time></td>
+                  <td class="numeric">{{ duration(stream.durationHours) }} @if (stream.isLive) { <small class="live">В эфире</small> }</td>
+                  <td class="numeric">{{ viewers(stream.uniqueViewers) }}</td>
+                  <td><a class="profile-link" [href]="streamUrl(stream.id)" target="_blank" rel="noopener" [attr.aria-label]="'Открыть стрим ' + stream.streamerDisplayName + ' за ' + group.day">Открыть стрим ↗</a></td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+    }
+  }
+  @if (data && data.totalCount > 0) {
+    <nav class="pagination" aria-label="Страницы списка стримов">
+      <button type="button" (click)="goToPage(1)" [disabled]="loading || !!error || data.page <= 1" aria-label="Первая страница">«</button>
+      <button type="button" (click)="goToPage(data.page - 1)" [disabled]="loading || !!error || data.page <= 1">Назад</button>
+      <span aria-live="polite">Страница {{ data.page }} из {{ totalPages }}</span>
+      <button type="button" (click)="goToPage(data.page + 1)" [disabled]="loading || !!error || data.page >= totalPages">Далее</button>
+      <button type="button" (click)="goToPage(totalPages)" [disabled]="loading || !!error || data.page >= totalPages" aria-label="Последняя страница">»</button>
+    </nav>
+  }
+</section>

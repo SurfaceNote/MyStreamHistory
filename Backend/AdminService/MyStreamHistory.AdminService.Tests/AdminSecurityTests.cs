@@ -33,6 +33,9 @@ public class AdminSecurityTests
 
     [Theory]
     [InlineData("GET", "content/admin/articles", true)]
+    [InlineData("GET", "admin/streams", true)]
+    [InlineData("POST", "admin/streams", false)]
+    [InlineData("DELETE", "admin/streams", false)]
     [InlineData("GET", "content/media/00000000-0000-0000-0000-000000000001", true)]
     [InlineData("DELETE", "diagnostics/eventsub-subscriptions", true)]
     [InlineData("POST", "analytics/community/settings", false)]

@@ -204,6 +204,9 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("AdminCommunityRead", policy => policy
         .AddAuthenticationSchemes(AdminServiceAuthentication.Scheme).RequireAuthenticatedUser()
         .RequireClaim(AdminServiceAuthentication.PermissionClaim, AdminServiceAuthentication.CommunityRead));
+    options.AddPolicy("AdminStreamsRead", policy => policy
+        .AddAuthenticationSchemes(AdminServiceAuthentication.Scheme).RequireAuthenticatedUser()
+        .RequireClaim(AdminServiceAuthentication.PermissionClaim, AdminServiceAuthentication.StreamsRead));
 });
 
 var app = builder.Build();
