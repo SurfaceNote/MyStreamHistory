@@ -25,24 +25,14 @@ public class ChannelActivityRepository(TwitchTrackingDbContext context) : IChann
         var sessions = await context.StreamSessions.AsNoTracking()
             .Select(s => new ProductSessionRow(s.TwitchUserId, s.StartedAt, s.IsLive, s.StreamerLogin, s.StreamerDisplayName, s.StreamerAvatarUrl))
             .ToListAsync(cancellationToken);
-        var subscriptions = await context.EventSubSubscriptions.AsNoTracking()
-            .Select(s => new ProductSubscriptionRow(s.TwitchUserId, s.EventType, s.Status))
-            .ToListAsync(cancellationToken);
         var activity = await context.ChannelActivityDays.AsNoTracking()
             .Select(a => new ProductActivityRow(a.TwitchUserId, a.Day, a.Kind, a.FirstSeenAt, a.LastSeenAt))
             .ToListAsync(cancellationToken);
-        return new ProductData(sessions, subscriptions, activity);
+        return new ProductData(sessions, activity);
     }
 
     public async Task<ChannelCollectionSnapshot> GetCollectionSnapshotAsync(int twitchUserId, CancellationToken cancellationToken = default)
     {
-        var subscriptions = await context.EventSubSubscriptions
-            .AsNoTracking()
-            .Where(s => s.TwitchUserId == twitchUserId)
-            .OrderBy(s => s.EventType)
-            .Select(s => new ChannelSubscriptionState(s.EventType, s.Status))
-            .ToListAsync(cancellationToken);
-
         var sessions = context.StreamSessions.AsNoTracking().Where(s => s.TwitchUserId == twitchUserId);
         var streamsCount = await sessions.CountAsync(cancellationToken);
         var lastStream = await sessions
@@ -59,7 +49,6 @@ public class ChannelActivityRepository(TwitchTrackingDbContext context) : IChann
             .MaxAsync(a => (DateTime?)a.LastSeenAt, cancellationToken);
 
         return new ChannelCollectionSnapshot(
-            subscriptions,
             streamsCount,
             lastStream?.IsLive ?? false,
             lastStream?.StartedAt,

@@ -37,16 +37,12 @@ public class ProductActivityTests
     }
 
     [Fact]
-    public async Task CollectionSnapshot_ReportsOwnSubscriptionsLastStreamAndSurfaces()
+    public async Task CollectionSnapshot_ReportsOwnStreamsAndSurfaces()
     {
         await using var db = CreateDb();
         var now = DateTime.UtcNow;
         db.StreamSessions.AddRange(Session(now.AddDays(-3)), Session(now.AddHours(-1), live: true));
         db.StreamSessions.Add(Session(now, twitchUserId: 999));
-        db.EventSubSubscriptions.AddRange(
-            Subscription(123, "stream.online", "enabled"),
-            Subscription(123, "stream.offline", "enabled"),
-            Subscription(999, "stream.online", "enabled"));
         db.ChannelActivityDays.AddRange(
             Activity(123, ChannelActivityKinds.Overlay, now.AddDays(-2)),
             Activity(123, ChannelActivityKinds.Overlay, now.AddMinutes(-5)),
@@ -56,7 +52,6 @@ public class ProductActivityTests
 
         var snapshot = await new ChannelActivityRepository(db).GetCollectionSnapshotAsync(123);
 
-        Assert.Equal(["stream.offline", "stream.online"], snapshot.Subscriptions.Select(s => s.EventType));
         Assert.Equal(2, snapshot.StreamsCount);
         Assert.True(snapshot.IsLive);
         Assert.Equal(now.AddHours(-1), snapshot.LastStreamStartedAt);
@@ -71,7 +66,6 @@ public class ProductActivityTests
 
         var snapshot = await new ChannelActivityRepository(db).GetCollectionSnapshotAsync(123);
 
-        Assert.Empty(snapshot.Subscriptions);
         Assert.Equal(0, snapshot.StreamsCount);
         Assert.False(snapshot.IsLive);
         Assert.Null(snapshot.LastStreamStartedAt);
@@ -154,14 +148,6 @@ public class ProductActivityTests
         IsLive = live
     };
 
-    private static EventSubSubscription Subscription(int twitchUserId, string eventType, string status) => new()
-    {
-        TwitchSubscriptionId = Guid.NewGuid().ToString(),
-        TwitchUserId = twitchUserId,
-        EventType = eventType,
-        Status = status,
-        CreatedAt = DateTime.UtcNow
-    };
 
     private static ChannelActivityDay Activity(int twitchUserId, string kind, DateTime seenAt) => new()
     {

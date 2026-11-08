@@ -110,6 +110,20 @@ public class ProductMetricsCalculatorTests
     }
 
     [Fact]
+    public void Tracking_IsUnknownWhenTwitchCouldNotBeRead_NotMissing()
+    {
+        var sessions = new[] { Session(1, Now.AddDays(-1)) };
+
+        var unavailable = ProductMetricsCalculator.Build(sessions, null, [], true, Now, 2);
+        var paused = ProductMetricsCalculator.Build(sessions, null, [], false, Now, 2);
+
+        Assert.False(unavailable.SubscriptionsAvailable);
+        Assert.Equal("unknown", Assert.Single(unavailable.Channels).Tracking);
+        Assert.Equal("paused", Assert.Single(paused.Channels).Tracking);
+        Assert.True(ProductMetricsCalculator.Build(sessions, [], [], true, Now, 2).SubscriptionsAvailable);
+    }
+
+    [Fact]
     public void Tracking_IsPausedWhenCollectionIsDisabled()
     {
         var subscriptions = new[]

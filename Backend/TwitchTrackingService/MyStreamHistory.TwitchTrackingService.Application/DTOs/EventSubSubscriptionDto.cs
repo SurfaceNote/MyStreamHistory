@@ -60,5 +60,14 @@ public class EventSubSubscriptionsDto
 
     [JsonPropertyName("max_total_cost")]
     public int MaxTotalCost { get; set; }
+
+    [JsonPropertyName("pagination")]
+    public EventSubPaginationDto? Pagination { get; set; }
+}
+
+public class EventSubPaginationDto
+{
+    [JsonPropertyName("cursor")]
+    public string? Cursor { get; set; }
 }
 

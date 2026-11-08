@@ -149,6 +149,42 @@ public class TwitchApiClient : ITwitchApiClient
         }
     }
 
+    public async Task<List<EventSubSubscriptionDto>?> GetAllEventSubSubscriptionsAsync(CancellationToken cancellationToken = default)
+    {
+        var subscriptions = new List<EventSubSubscriptionDto>();
+        string? cursor = null;
+        try
+        {
+            // Twitch returns up to 100 subscriptions per page; stop after a generous safety limit.
+            for (var page = 0; page < 50; page++)
+            {
+                var url = cursor == null ? _options.EventSubEndpoint : $"{_options.EventSubEndpoint}?after={Uri.EscapeDataString(cursor)}";
+                using var response = await SendWithTokenRetryAsync(
+                    token => CreateHelixRequest(HttpMethod.Get, url, token),
+                    cancellationToken);
+                if (!response.IsSuccessStatusCode)
+                {
+                    _logger.LogError("Failed to list EventSub subscriptions. Status: {StatusCode}", response.StatusCode);
+                    return null;
+                }
+
+                var result = await response.Content.ReadFromJsonAsync<EventSubSubscriptionsDto>(cancellationToken: cancellationToken);
+                if (result == null) return null;
+                subscriptions.AddRange(result.Data);
+                cursor = result.Pagination?.Cursor;
+                if (string.IsNullOrEmpty(cursor)) return subscriptions;
+            }
+
+            _logger.LogWarning("EventSub subscription listing stopped after 50 pages");
+            return subscriptions;
+        }
+        catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogError(ex, "Error listing EventSub subscriptions");
+            return null;
+        }
+    }
+
     public async Task DeleteSubscriptionAsync(string subscriptionId, CancellationToken cancellationToken = default)
     {
         try

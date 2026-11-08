@@ -9,19 +9,15 @@ public interface IChannelActivityRepository
 
     Task<ChannelCollectionSnapshot> GetCollectionSnapshotAsync(int twitchUserId, CancellationToken cancellationToken = default);
 
-    /// <summary>All rows needed for the admin product overview (small tables: sessions, subscriptions, daily activity).</summary>
+    /// <summary>Sessions and daily activity for the admin product overview. Subscriptions come from the Twitch API.</summary>
     Task<ProductData> GetProductDataAsync(CancellationToken cancellationToken = default);
 }
 
 public sealed record ProductData(
     List<ProductSessionRow> Sessions,
-    List<ProductSubscriptionRow> Subscriptions,
     List<ProductActivityRow> Activity);
 
-public sealed record ChannelSubscriptionState(string EventType, string Status);
-
 public sealed record ChannelCollectionSnapshot(
-    IReadOnlyList<ChannelSubscriptionState> Subscriptions,
     int StreamsCount,
     bool IsLive,
     DateTime? LastStreamStartedAt,

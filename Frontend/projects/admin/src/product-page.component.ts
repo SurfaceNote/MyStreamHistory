@@ -9,16 +9,16 @@ export interface ActivationCohort { weekStart: string; registered: number; strea
 export interface ProductChannel {
   twitchUserId: number; login: string | null; displayName: string | null; avatarUrl: string | null;
   registeredAt: string | null; streamsCount: number; streamsLast28Days: number; lastStreamStartedAt: string | null;
-  isLive: boolean; tracking: 'active' | 'pending' | 'missing' | 'paused';
+  isLive: boolean; tracking: 'active' | 'pending' | 'missing' | 'paused' | 'unknown';
   lastVisitAt: string | null; lastOverlayAt: string | null; lastPanelAt: string | null;
 }
 export interface ProductOverview {
-  generatedAt: string; activityTrackedSince: string | null;
+  generatedAt: string; activityTrackedSince: string | null; subscriptionsAvailable: boolean;
   weeks: ProductWeek[]; activation: ActivationCohort[]; channels: ProductChannel[];
 }
 
 const TRACKING_LABELS: Record<ProductChannel['tracking'], string> = {
-  active: 'работает', pending: 'подключается', missing: 'не подключена', paused: 'сбор на паузе',
+  active: 'работает', pending: 'подключается', missing: 'не подключена', paused: 'сбор на паузе', unknown: 'нет данных',
 };
 
 @Component({
@@ -35,11 +35,14 @@ const TRACKING_LABELS: Record<ProductChannel['tracking'], string> = {
     @if (loading) { <p role="status" class="notice">Загружаем метрики…</p> }
     @if (error) { <p role="alert" class="notice error">{{ error }}</p> <button type="button" (click)="load()">Повторить</button> }
     @if (!loading && !error && data) {
+      @if (!data.subscriptionsAvailable) {
+        <p role="status" class="notice error">Не удалось получить список подписок из Twitch, поэтому состояние записи неизвестно. Обновите страницу позже.</p>
+      }
       <div class="stat-grid">
         <div class="stat"><span class="muted">Вовлечённые каналы, эта неделя</span><strong>{{ current?.engagedChannels ?? 0 }}</strong><small>из {{ current?.channelsStreamed ?? 0 }} стримивших</small></div>
         <div class="stat"><span class="muted">Прошлая неделя</span><strong>{{ previous?.engagedChannels ?? 0 }}</strong><small>из {{ previous?.channelsStreamed ?? 0 }} стримивших</small></div>
         <div class="stat"><span class="muted">Каналы</span><strong>{{ data.channels.length }}</strong><small>{{ activeLast28Days }} стримили за 28 дней</small></div>
-        <div class="stat"><span class="muted">Проблемы с записью</span><strong>{{ problems.length }}</strong><small>подписки Twitch не активны</small></div>
+        <div class="stat"><span class="muted">Проблемы с записью</span><strong>{{ data.subscriptionsAvailable ? problems.length : '—' }}</strong><small>нет активных подписок Twitch на начало и конец эфира</small></div>
       </div>
 
       <section class="block" aria-labelledby="weeks-title">
@@ -124,7 +127,7 @@ export class ProductPageComponent {
   get current(): ProductWeek | undefined { return this.data?.weeks.at(-1); }
   get previous(): ProductWeek | undefined { return this.data?.weeks.at(-2); }
   get weeksNewestFirst(): ProductWeek[] { return [...(this.data?.weeks ?? [])].reverse(); }
-  get problems(): ProductChannel[] { return (this.data?.channels ?? []).filter(c => c.tracking !== 'active'); }
+  get problems(): ProductChannel[] { return (this.data?.channels ?? []).filter(c => c.tracking !== 'active' && c.tracking !== 'unknown'); }
   get activeLast28Days(): number { return (this.data?.channels ?? []).filter(c => c.streamsLast28Days > 0).length; }
 
   get visibleChannels(): ProductChannel[] {

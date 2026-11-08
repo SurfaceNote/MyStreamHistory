@@ -39,17 +39,10 @@ public class GetCollectionStatusRequestContract
 public class GetCollectionStatusResponseContract
 {
     public bool DataCollectionEnabled { get; init; }
-    public List<CollectionSubscriptionDto> Subscriptions { get; init; } = [];
     public int StreamsCount { get; init; }
     public bool IsLive { get; init; }
     public DateTime? LastStreamStartedAt { get; init; }
     public DateTime? LastStreamEndedAt { get; init; }
     public DateTime? LastOverlaySeenAt { get; init; }
     public DateTime? LastPanelSeenAt { get; init; }
-}
-
-public class CollectionSubscriptionDto
-{
-    public string EventType { get; init; } = string.Empty;
-    public string Status { get; init; } = string.Empty;
 }

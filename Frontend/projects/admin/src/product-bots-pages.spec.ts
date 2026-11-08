@@ -23,7 +23,7 @@ describe('Admin product metrics', () => {
   it('shows the weekly engaged channels, activation and channels with recording problems', async () => {
     const fixture = TestBed.createComponent(ProductPageComponent);
     http.expectOne(req => req.url === '/api/admin/product/overview' && req.params.get('weeks') === '12').flush({ success: true, data: {
-      generatedAt: '2026-11-09T10:00:00Z', activityTrackedSince: '2026-11-02',
+      generatedAt: '2026-11-09T10:00:00Z', activityTrackedSince: '2026-11-02', subscriptionsAvailable: true,
       weeks: [{ weekStart: '2026-10-26', channelsStreamed: 4, engagedChannels: 1 }, { weekStart: '2026-11-02', channelsStreamed: 5, engagedChannels: 3 }],
       activation: [{ weekStart: '2026-11-02', registered: 2, streamedWithin14Days: 1, activated: 1 }],
       channels: [channel(1, 'active', { lastVisitAt: '2026-11-08T12:00:00Z' }), channel(2, 'missing'), channel(3, 'paused', { login: 'other' })],
@@ -42,6 +42,21 @@ describe('Admin product metrics', () => {
     page.problemsOnly = true;
     page.query = 'OTHER';
     expect(page.visibleChannels.map(c => c.twitchUserId)).toEqual([3]);
+  });
+
+  it('shows unknown recording state instead of problems when Twitch could not be read', async () => {
+    const fixture = TestBed.createComponent(ProductPageComponent);
+    http.expectOne('/api/admin/product/overview?weeks=12').flush({ success: true, data: {
+      generatedAt: '2026-11-09T10:00:00Z', activityTrackedSince: null, subscriptionsAvailable: false,
+      weeks: [], activation: [], channels: [channel(1, 'unknown'), channel(2, 'unknown')],
+    } });
+    await flushAsync();
+    fixture.detectChanges();
+    const text: string = fixture.nativeElement.textContent;
+    expect(text).toContain('Не удалось получить список подписок из Twitch');
+    expect(text).toContain('нет данных');
+    expect(text).not.toContain('не подключена');
+    expect(fixture.componentInstance.problems).toEqual([]);
   });
 
   it('reports a failure and retries', async () => {

@@ -7,7 +7,9 @@ public sealed record ProductSubscriptionRow(int TwitchUserId, string EventType, 
 public sealed record ProductActivityRow(int TwitchUserId, DateOnly Day, string Kind, DateTime FirstSeenAt, DateTime LastSeenAt);
 
 /// <summary>
-/// Builds the admin product overview. Definitions match docs/product-metrics.md:
+/// Builds the admin product overview. Subscriptions must come from the Twitch API (the source of truth);
+/// pass null when Twitch could not be read, so recording state is reported as unknown instead of missing.
+/// Definitions match docs/product-metrics.md:
 /// weeks start on Monday (UTC); a channel is engaged in a week when it streamed and its owner
 /// visited the site or its overlay/panel was used in the same week.
 /// </summary>
@@ -19,7 +21,7 @@ public static class ProductMetricsCalculator
 
     public static GetProductOverviewResponse Build(
         IReadOnlyCollection<ProductSessionRow> sessions,
-        IReadOnlyCollection<ProductSubscriptionRow> subscriptions,
+        IReadOnlyCollection<ProductSubscriptionRow>? subscriptions,
         IReadOnlyCollection<ProductActivityRow> activity,
         bool dataCollectionEnabled,
         DateTime now,
@@ -51,7 +53,7 @@ public static class ProductMetricsCalculator
 
         var sessionsByChannel = sessions.GroupBy(s => s.TwitchUserId).ToDictionary(g => g.Key, g => g.OrderBy(s => s.StartedAt).ToList());
         var activityByChannel = activity.GroupBy(a => a.TwitchUserId).ToDictionary(g => g.Key, g => g.ToList());
-        var subscriptionsByChannel = subscriptions.GroupBy(s => s.TwitchUserId).ToDictionary(g => g.Key, g => g.ToList());
+        var subscriptionsByChannel = (subscriptions ?? []).GroupBy(s => s.TwitchUserId).ToDictionary(g => g.Key, g => g.ToList());
 
         var registrations = activity
             .Where(a => a.Kind == ChannelActivityKinds.Registered)
@@ -100,7 +102,9 @@ public static class ProductMetricsCalculator
                     StreamsLast28Days = channelSessions.Count(s => s.StartedAt >= since28Days),
                     LastStreamStartedAt = latest?.StartedAt,
                     IsLive = channelSessions.Any(s => s.IsLive),
-                    Tracking = TrackingState(subscriptionsByChannel.GetValueOrDefault(id) ?? [], dataCollectionEnabled),
+                    Tracking = subscriptions == null && dataCollectionEnabled
+                        ? "unknown"
+                        : TrackingState(subscriptionsByChannel.GetValueOrDefault(id) ?? [], dataCollectionEnabled),
                     LastVisitAt = LastSeen(channelActivity, ChannelActivityKinds.Visit),
                     LastOverlayAt = LastSeen(channelActivity, ChannelActivityKinds.Overlay),
                     LastPanelAt = LastSeen(channelActivity, ChannelActivityKinds.Panel)
@@ -114,6 +118,7 @@ public static class ProductMetricsCalculator
         {
             GeneratedAt = now,
             ActivityTrackedSince = activity.Count == 0 ? null : activity.Min(a => a.Day),
+            SubscriptionsAvailable = subscriptions != null,
             Weeks = weekRows,
             Activation = activation,
             Channels = channels

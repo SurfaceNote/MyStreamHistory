@@ -30,13 +30,21 @@ public class ChannelActivityObservedConsumer(
 
 public class GetProductOverviewConsumer(
     IChannelActivityRepository repository,
+    ITwitchApiClient twitchApiClient,
     TwitchDataCollectionFeature dataCollection) : IConsumer<GetProductOverviewRequest>
 {
     public async Task Consume(ConsumeContext<GetProductOverviewRequest> context)
     {
         var data = await repository.GetProductDataAsync(context.CancellationToken);
+        // The Twitch API is the source of truth for subscriptions; the local EventSubSubscriptions table is incomplete.
+        List<ProductSubscriptionRow>? subscriptions = dataCollection.Enabled
+            ? (await twitchApiClient.GetAllEventSubSubscriptionsAsync(context.CancellationToken))?
+                .Where(s => int.TryParse(s.Condition.BroadcasterUserId, out _))
+                .Select(s => new ProductSubscriptionRow(int.Parse(s.Condition.BroadcasterUserId), s.Type, s.Status))
+                .ToList()
+            : [];
         await context.RespondAsync(ProductMetricsCalculator.Build(
-            data.Sessions, data.Subscriptions, data.Activity, dataCollection.Enabled, DateTime.UtcNow, context.Message.Weeks));
+            data.Sessions, subscriptions, data.Activity, dataCollection.Enabled, DateTime.UtcNow, context.Message.Weeks));
     }
 }
 
@@ -51,9 +59,6 @@ public class GetCollectionStatusConsumer(
         await context.RespondAsync(new GetCollectionStatusResponseContract
         {
             DataCollectionEnabled = dataCollection.Enabled,
-            Subscriptions = snapshot.Subscriptions
-                .Select(s => new CollectionSubscriptionDto { EventType = s.EventType, Status = s.Status })
-                .ToList(),
             StreamsCount = snapshot.StreamsCount,
             IsLive = snapshot.IsLive,
             LastStreamStartedAt = snapshot.LastStreamStartedAt,

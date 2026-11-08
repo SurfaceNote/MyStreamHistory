@@ -12,6 +12,9 @@ public class GetProductOverviewResponse
     /// <summary>First day with recorded product activity; weeks before it cannot count engaged channels.</summary>
     public DateOnly? ActivityTrackedSince { get; init; }
 
+    /// <summary>False when the Twitch subscription list could not be read; tracking is then "unknown".</summary>
+    public bool SubscriptionsAvailable { get; init; }
+
     public List<ProductWeekDto> Weeks { get; init; } = [];
     public List<ActivationCohortDto> Activation { get; init; } = [];
     public List<ProductChannelDto> Channels { get; init; } = [];
@@ -44,7 +47,7 @@ public class ProductChannelDto
     public DateTime? LastStreamStartedAt { get; init; }
     public bool IsLive { get; init; }
 
-    /// <summary>active, pending, missing or paused — same meaning as the owner's profile panel.</summary>
+    /// <summary>active, pending, missing, paused, or unknown when Twitch could not be read.</summary>
     public string Tracking { get; init; } = "missing";
 
     public DateTime? LastVisitAt { get; init; }

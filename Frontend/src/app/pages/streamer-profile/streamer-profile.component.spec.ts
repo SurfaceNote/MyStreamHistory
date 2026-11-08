@@ -50,7 +50,6 @@ describe('StreamerProfileComponent', () => {
     ownerId = null;
     collectionStatus = {
       dataCollectionEnabled: true,
-      subscriptions: [{ eventType: 'stream.online', status: 'enabled' }, { eventType: 'stream.offline', status: 'enabled' }],
       streamsCount: 0, isLive: false, lastStreamStartedAt: null, lastStreamEndedAt: null,
       lastOverlaySeenAt: null, lastPanelSeenAt: null,
     };
