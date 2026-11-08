@@ -375,3 +375,13 @@
 .stream-header { padding: 28px; border-radius: 22px; box-shadow: var(--panel-shadow); background: linear-gradient(90deg,#111d36e8,#162b5055),url('/images/profile-landscape.png') center / cover; } .streamer-avatar { border-radius: 50%; } .streamer-name { font-size: clamp(26px,3vw,36px); font-weight: 650; } .audience-section, .viewers-section { padding: 20px; border-radius: 8px; }
 
 .audience-section, .viewers-section { background: var(--panel-fill); border-color: var(--border); border-radius: var(--radius); box-shadow: var(--panel-shadow); }
+
+.viewer-rank.viewer-tag {
+  width: auto;
+  min-width: 2.5rem;
+  padding: 0 0.4rem;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.75;
+}

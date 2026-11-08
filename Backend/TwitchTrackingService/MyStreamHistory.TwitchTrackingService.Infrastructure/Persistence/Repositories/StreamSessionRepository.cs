@@ -191,11 +191,13 @@ public class StreamSessionRepository : IStreamSessionRepository
     public async Task<List<StreamSessionDto>> GetRecentStreamsByTwitchUserIdAsync(
         int twitchUserId,
         int count = 10,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        DateTime? before = null)
     {
         return await _context.StreamSessions
             .AsNoTracking()
             .Where(s => s.TwitchUserId == twitchUserId)
+            .Where(s => before == null || s.StartedAt < before)
             .OrderByDescending(s => s.StartedAt)
             .Take(count)
             .Select(s => new StreamSessionDto

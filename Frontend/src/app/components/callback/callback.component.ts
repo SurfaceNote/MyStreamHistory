@@ -24,6 +24,13 @@ export class CallbackComponent {
       take(1),
       switchMap(params => params['code'] && params['state']
         ? this.authService.handleTwitchCallback(params['code'], params['state']) : of(false))
-    ).subscribe(() => void this.router.navigateByUrl(returnUrl));
+    ).subscribe(() => {
+      const twitchId = this.authService.getTwitchIdFromToken();
+      // A first sign-in has nothing to return to yet: show the new channel its own profile.
+      const destination = this.authService.isNewChannel() && twitchId
+        ? this.locale.path(['/profile', twitchId])
+        : returnUrl;
+      void this.router.navigateByUrl(destination);
+    });
   }
 }

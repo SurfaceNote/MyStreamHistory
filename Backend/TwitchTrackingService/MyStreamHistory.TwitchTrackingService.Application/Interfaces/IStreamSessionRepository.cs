@@ -36,6 +36,7 @@ public interface IStreamSessionRepository
     Task<List<StreamSessionDto>> GetRecentStreamsByTwitchUserIdAsync(
         int twitchUserId,
         int count = 10,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        DateTime? before = null);
 }
 

@@ -7,6 +7,8 @@ using MyStreamHistory.Shared.Api.DTOs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Components.Forms.Mapping;
 using MyStreamHistory.Gateway.Application.Commands;
+using MyStreamHistory.Gateway.Api.ProductActivity;
+using MyStreamHistory.Shared.Base.Contracts.ProductActivity;
 using MyStreamHistory.Shared.Api.Attributes;
 using MyStreamHistory.Shared.Api.Extensions;
 using MyStreamHistory.Shared.Application.Transport;
@@ -18,7 +20,7 @@ namespace MyStreamHistory.Gateway.Api.Controllers
 {
     [ApiController]
     [Route("auth")]
-    public class AuthController(IMapper mapper, IMediator mediator, ITransportBus bus) : ApiControllerBase
+    public class AuthController(IMapper mapper, IMediator mediator, ITransportBus bus, ChannelActivityRecorder activity) : ApiControllerBase
     {
         private const string RefreshTokenCookieName = "__Host-refresh_token";
 
@@ -33,6 +35,12 @@ namespace MyStreamHistory.Gateway.Api.Controllers
             var twitchCallbackResultDto = await mediator.Send(command);
             var twitchCallbackResponse = mapper.Map<TwitchCallbackResponse>(twitchCallbackResultDto);
             SetRefreshTokenCookie(twitchCallbackResultDto.RefreshToken);
+
+            if (twitchCallbackResultDto.IsNewUser)
+            {
+                await activity.RecordAsync(twitchCallbackResultDto.TwitchUserId, ChannelActivityKinds.Registered, HttpContext.RequestAborted);
+            }
+            await activity.RecordAsync(twitchCallbackResultDto.TwitchUserId, ChannelActivityKinds.Visit, HttpContext.RequestAborted);
 
             return this.Success(twitchCallbackResponse);
         }

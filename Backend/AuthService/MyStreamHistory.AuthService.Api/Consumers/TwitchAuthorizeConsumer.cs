@@ -91,7 +91,9 @@ public class TwitchAuthorizeConsumer(
         await context.RespondAsync(new TwitchAuthorizeResponseContract
         {
             AccessToken = jwtTokenService.GenerateAccessToken(user),
-            RefreshToken = refreshTokenValue
+            RefreshToken = refreshTokenValue,
+            IsNewUser = isNewUser,
+            TwitchUserId = user.TwitchId
         });
         
         

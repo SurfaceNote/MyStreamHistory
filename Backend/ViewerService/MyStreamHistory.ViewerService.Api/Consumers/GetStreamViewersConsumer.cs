@@ -116,6 +116,12 @@ public class GetStreamViewersConsumer : IConsumer<GetStreamViewersRequestContrac
                 }
             }
 
+            var excludedLogins = await _db.RankingExcludedAccounts.AsNoTracking().Select(a => a.Login)
+                .ToListAsync(context.CancellationToken);
+            var excluded = excludedLogins.ToHashSet(StringComparer.OrdinalIgnoreCase);
+            foreach (var viewer in viewers)
+                if (viewer.Viewer != null) viewer.Viewer.IsRankingExcluded = excluded.Contains(viewer.Viewer.Login);
+
             await context.RespondAsync(new GetStreamViewersResponseContract
             {
                 Success = true,

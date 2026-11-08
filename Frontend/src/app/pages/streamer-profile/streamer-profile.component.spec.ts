@@ -5,6 +5,9 @@ import { StreamerProfileComponent } from './streamer-profile.component';
 import { StreamerService } from '../../service/streamer.service';
 import { SeoService } from '../../service/seo.service';
 import { AuthService } from '../../auth/auth.service';
+import { SettingsService } from '../../service/settings.service';
+import { Location } from '@angular/common';
+import { provideLocationMocks } from '@angular/common/testing';
 
 type TestAnalyticsWindow = Window & { gtag?: jasmine.Spy };
 
@@ -15,6 +18,9 @@ describe('StreamerProfileComponent', () => {
   let originalGtag: TestAnalyticsWindow['gtag'];
   let gtag: jasmine.Spy;
   let routeParams: BehaviorSubject<ReturnType<typeof convertToParamMap>>;
+  let queryParams: BehaviorSubject<ReturnType<typeof convertToParamMap>>;
+  let ownerId: string | null;
+  let collectionStatus: any;
   const statistics: any = {
     totalStreamsCount: 20,
     totalUniqueGamesCount: 8,
@@ -40,6 +46,15 @@ describe('StreamerProfileComponent', () => {
   }));
   beforeEach(async () => {
     routeParams = new BehaviorSubject(convertToParamMap({ twitchId: '1' }));
+    queryParams = new BehaviorSubject(convertToParamMap({}));
+    ownerId = null;
+    collectionStatus = {
+      dataCollectionEnabled: true,
+      subscriptions: [{ eventType: 'stream.online', status: 'enabled' }, { eventType: 'stream.offline', status: 'enabled' }],
+      streamsCount: 0, isLive: false, lastStreamStartedAt: null, lastStreamEndedAt: null,
+      lastOverlaySeenAt: null, lastPanelSeenAt: null,
+    };
+    localStorage.removeItem('msh.ownerPanel.hidden');
     analyticsWindow = window as TestAnalyticsWindow;
     originalGtag = analyticsWindow.gtag;
     gtag = jasmine.createSpy('gtag');
@@ -48,12 +63,14 @@ describe('StreamerProfileComponent', () => {
       imports: [StreamerProfileComponent],
       providers: [
         provideRouter([]),
+        provideLocationMocks(),
         {
           provide: ActivatedRoute,
-          useValue: { paramMap: routeParams.asObservable() },
+          useValue: { paramMap: routeParams.asObservable(), queryParamMap: queryParams.asObservable() },
         },
         { provide: SeoService, useValue: { update: () => {} } },
-        { provide: AuthService, useValue: { getTwitchIdFromToken: () => null, isAdmin: () => false } },
+        { provide: AuthService, useValue: { getTwitchIdFromToken: () => ownerId, isAdmin: () => false, clearNewChannel: () => {} } },
+        { provide: SettingsService, useValue: { getCollectionStatus: () => of(collectionStatus) } },
         {
           provide: StreamerService,
           useValue: {
@@ -261,7 +278,98 @@ describe('StreamerProfileComponent', () => {
     component.statistics!.dashboard.chatPointsByDay = [];
     expect(values()['Average stream']).toBe('—');
     expect(values()['Active days']).toBe('—');
-    expect(values()['Chat points']).toBe('—');
+    expect(values()['Chat points']).toBeUndefined();
+  });
+
+  it('opens the tab and game status from a shared link and keeps the URL in sync', () => {
+    queryParams.next(convertToParamMap({ tab: 'games', status: 'completed' }));
+    expect(component.activeSection).toBe('Games');
+    expect(component.gameStatus).toBe('Completed');
+    expect(gtag).not.toHaveBeenCalled();
+
+    const location = TestBed.inject(Location);
+    component.selectSection('Viewers');
+    expect(location.path()).toBe('/?tab=viewers');
+    component.selectSection('Games');
+    component.selectGameStatus('Dropped');
+    expect(location.path()).toBe('/?tab=games&status=dropped');
+    component.selectSection('Overview');
+    expect(location.path()).toBe('/');
+
+    queryParams.next(convertToParamMap({ tab: 'unknown', status: 'completed' }));
+    expect(component.activeSection).toBe('Overview');
+    expect(component.gameStatus).toBe('All');
+  });
+
+  it('lists the whole archive by loading older streams before the oldest shown one', () => {
+    const firstPage = Array.from({ length: 10 }, (_, i) => ({
+      ...streams[0], id: 'first-' + i, isLive: false,
+      startedAt: new Date(Date.UTC(2026, 9, 20 - i)).toISOString(),
+    }));
+    const olderPage = Array.from({ length: 20 }, (_, i) => ({
+      ...streams[0], id: 'older-' + i, isLive: false,
+      startedAt: new Date(Date.UTC(2026, 9, 9 - i)).toISOString(),
+    }));
+    const getRecentStreams = spyOn(TestBed.inject(StreamerService), 'getRecentStreams')
+      .and.callFake((_id: number, count?: number) => of(count === 10 ? firstPage : olderPage));
+    component.loadRecentStreams();
+    expect(component.hasOlderStreams).toBeTrue();
+
+    component.selectSection('Streams');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('All streams');
+    fixture.nativeElement.querySelector('.archive-more button').click();
+
+    expect(getRecentStreams).toHaveBeenCalledWith(1, 20, firstPage[9].startedAt);
+    expect(component.recentStreams.length).toBe(30);
+    expect(component.hasOlderStreams).toBeTrue();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelectorAll('.stream-card').length).toBe(30);
+
+    getRecentStreams.and.returnValue(of(olderPage.slice(0, 3).map((stream) => ({ ...stream, id: stream.id + '-last' }))));
+    component.loadOlderStreams();
+    expect(component.recentStreams.length).toBe(33);
+    expect(component.hasOlderStreams).toBeFalse();
+  });
+
+  it('shows a new owner that recording waits for the next stream, with setup steps', () => {
+    ownerId = '1';
+    component.loadOwnerStatus();
+    fixture.detectChanges();
+    const panel: HTMLElement | null = fixture.nativeElement.querySelector('.owner-panel');
+    expect(component.isOwnProfile).toBeTrue();
+    expect(panel!.textContent).toContain('Recording starts with your next stream');
+    expect(panel!.textContent).toContain('Broadcast tracking: active');
+    expect(panel!.querySelectorAll('.owner-checklist li').length).toBe(3);
+    expect(panel!.querySelector('.owner-checklist a')!.getAttribute('href')).toBe('/settings?section=overlay');
+    expect(component.canHideOwnerPanel).toBeFalse();
+  });
+
+  it('lets an owner with recorded streams hide the panel, but never hides a tracking problem', () => {
+    ownerId = '1';
+    collectionStatus = { ...collectionStatus, streamsCount: 4, lastStreamStartedAt: '2026-11-01T18:00:00Z', lastOverlaySeenAt: '2026-11-01T19:00:00Z' };
+    component.loadOwnerStatus();
+    expect(component.isOwnProfile).toBeTrue();
+    expect(component.canHideOwnerPanel).toBeTrue();
+    expect(component.ownerChecklist.find((step) => step.id === 'overlay')!.done).toBeTrue();
+    component.hideOwnerPanel();
+    expect(component.showOwnerPanel).toBeFalse();
+
+    collectionStatus = { ...collectionStatus, subscriptions: [] };
+    component.loadOwnerStatus();
+    expect(component.trackingState).toBe('missing');
+    expect(component.showOwnerPanel).toBeTrue();
+    localStorage.removeItem('msh.ownerPanel.hidden');
+  });
+
+  it('does not show the owner panel or request the status on other channels', () => {
+    const settings = TestBed.inject(SettingsService) as any;
+    spyOn(settings, 'getCollectionStatus').and.callThrough();
+    ownerId = '2';
+    component.loadOwnerStatus();
+    fixture.detectChanges();
+    expect(settings.getCollectionStatus).not.toHaveBeenCalled();
+    expect(fixture.nativeElement.querySelector('.owner-panel')).toBeNull();
   });
 
   it('limits broadcast activity to the latest 35 recorded days without mutating the source', () => {

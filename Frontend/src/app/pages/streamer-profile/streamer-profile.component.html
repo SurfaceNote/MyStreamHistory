@@ -116,6 +116,51 @@
       }}
     </p>
   }
+  @if (showOwnerPanel) {
+    <section class="owner-panel" aria-labelledby="owner-panel-title">
+      <div class="owner-status">
+        <span class="eyebrow">{{ 'owner.kicker' | t }}</span>
+        @if (collectionStatusFailed) {
+          <h2 id="owner-panel-title">{{ 'owner.recordingTitle' | t }}</h2>
+          <p role="status">{{ 'owner.statusUnavailable' | t }}</p>
+        } @else if (collectionStatus) {
+          <h2 id="owner-panel-title">{{ (hasRecordedStreams ? 'owner.recordingTitle' : 'owner.waitingTitle') | t }}</h2>
+          <p>
+            @if (collectionStatus.isLive) {
+              {{ 'owner.liveText' | t }}
+            } @else if (hasRecordedStreams && collectionStatus.lastStreamStartedAt) {
+              {{ 'owner.lastRecorded' | t: { date: (collectionStatus.lastStreamStartedAt | date: 'mediumDate' : 'UTC' : locale.locale())! } }}
+            } @else {
+              {{ 'owner.waitingText' | t }}
+            }
+          </p>
+          <p class="tracking-state" [attr.data-state]="trackingState">
+            <span class="state-dot" aria-hidden="true"></span>
+            {{ 'owner.tracking' | t }}: {{ trackingLabel | t }}
+          </p>
+        }
+      </div>
+      <div class="owner-checklist">
+        <h3>{{ 'owner.checklistTitle' | t }}</h3>
+        <ul>
+          @for (step of ownerChecklist; track step.id) {
+            <li [class.done]="step.done">
+              <span class="step-mark" aria-hidden="true">{{ step.done ? '✓' : '' }}</span>
+              <span class="step-label">{{ step.label | t }}</span>
+              @if (step.done) {
+                <span class="step-done">{{ 'owner.stepDone' | t }}</span>
+              } @else {
+                <a [routerLink]="'/settings' | localPath" [queryParams]="{ section: step.id }">{{ 'owner.stepOpen' | t }}</a>
+              }
+            </li>
+          }
+        </ul>
+        @if (canHideOwnerPanel) {
+          <button type="button" class="text-button" (click)="hideOwnerPanel()">{{ 'owner.hide' | t }}</button>
+        }
+      </div>
+    </section>
+  }
   <nav class="section-nav" [attr.aria-label]="'ui.profileSections' | t">
     @for (section of sections; track section) {
       <button
@@ -229,7 +274,7 @@
         <span class="eyebrow">{{ 'ui.recentActivity' | t }}</span>
         <h2>
           {{
-            activeSection === "Overview" ? ('ui.latestStreams' | t) : ('ui.last10Streams' | t)
+            activeSection === "Overview" ? ('ui.latestStreams' | t) : ('ui.allStreams' | t)
           }}
         </h2>
       </div>
@@ -266,13 +311,21 @@
             ></ng-container>
             <div class="stream-footer">
               <span>{{ formatDuration(stream.startedAt, stream.endedAt) }}</span
-              ><span>{{ stream.uniqueViewersCount ?? '—' }} {{ locale.countLabel('uniqueChatAccounts', stream.uniqueViewersCount || 0) }}</span>
+              >@if (stream.uniqueViewersCount !== undefined) {<span>{{ stream.uniqueViewersCount ?? '—' }} {{ locale.countLabel('uniqueChatAccounts', stream.uniqueViewersCount || 0) }}</span>}
             </div>
           </article>
         } @empty {
           <p class="state">{{ 'ui.noRecentStreamsFound' | t }}</p>
         }
       </div>
+      @if (activeSection === "Streams" && (hasOlderStreams || olderStreamsFailed)) {
+        <div class="archive-more">
+          @if (olderStreamsFailed) { <p class="state" role="alert">{{ 'ui.couldNotLoadOlderStreams' | t }}</p> }
+          <button type="button" class="secondary-button" (click)="loadOlderStreams()" [disabled]="isLoadingOlderStreams" [attr.aria-busy]="isLoadingOlderStreams">
+            {{ 'ui.showOlderStreams' | t }}
+          </button>
+        </div>
+      }
     }
   </section>
   <section class="collection-panel" [hidden]="activeSection !== 'Overview' && activeSection !== 'Games'">
@@ -300,7 +353,7 @@
             type="button"
             [class.active]="gameStatus === status.value"
             [attr.aria-pressed]="gameStatus === status.value"
-            (click)="gameStatus = status.value"
+            (click)="selectGameStatus(status.value)"
           >
             {{ status.label }}
           </button>
@@ -404,8 +457,8 @@
               [src]="viewer.viewer?.profileImageUrl || getDefaultAvatar()"
               alt=""
             /><strong>{{ viewer.viewer?.displayName || ('ui.unknown' | t) }}</strong
-            ><span>{{ formatHours(viewer.minutesWatched) }} {{ 'ui.watched' | t }}</span
-            ><span
+            ><span [title]="'hint.chatPresence' | t">{{ formatHours(viewer.minutesWatched) }} {{ 'ui.watched' | t }}</span
+            ><span [title]="'hint.messagePoints' | t"
               >{{ formatMessagePoints(viewer.earnedMsgPoints) }} {{ 'ui.msgPts' | t }}</span
             ><span class="arrow">↗</span>
           </button>
@@ -425,7 +478,7 @@
           </h2>
           <button
             class="text-button"
-            (click)="gameStatus = section.status; selectSection('Games')"
+            (click)="selectGameStatus(section.status); selectSection('Games')"
           >
             {{ 'ui.viewSection' | t }}
           </button>

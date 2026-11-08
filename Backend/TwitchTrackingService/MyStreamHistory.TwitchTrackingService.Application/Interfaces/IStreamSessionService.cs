@@ -13,7 +13,7 @@ public interface IStreamSessionService
         IReadOnlyCollection<TrackedUserProfileDto> trackedUsers,
         DateTime checkedAt,
         CancellationToken cancellationToken = default);
-    Task<List<StreamSessionDto>> GetRecentStreamsByTwitchUserIdAsync(int twitchUserId, int count = 10, CancellationToken cancellationToken = default);
+    Task<List<StreamSessionDto>> GetRecentStreamsByTwitchUserIdAsync(int twitchUserId, int count = 10, CancellationToken cancellationToken = default, DateTime? before = null);
     Task<StreamSessionDto?> GetStreamSessionByIdAsync(Guid streamSessionId, CancellationToken cancellationToken = default);
 }
 

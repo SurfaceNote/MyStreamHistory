@@ -1,0 +1,27 @@
+:host { display: block; }
+section.block { margin-top: 36px; }
+h2 { font-size: 18px; margin: 0 0 8px; }
+.table-scroll { overflow-x: auto; border: 1px solid #32303d; border-radius: 12px; background: #191921; margin-top: 14px; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { text-align: left; color: #aaa7b6; font-size: 11px; font-weight: 500; background: #20202a; }
+th, td { padding: 12px 14px; vertical-align: middle; }
+td { border-top: 1px solid #32303d; }
+.numeric { font-variant-numeric: tabular-nums; white-space: nowrap; }
+small { display: block; margin-top: 4px; color: #aaa7b6; font-size: 11px; }
+.channel { display: flex; gap: 10px; align-items: center; min-width: 150px; overflow-wrap: anywhere; }
+.channel img, .avatar-placeholder { width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; object-fit: cover; }
+.avatar-placeholder { display: grid; place-items: center; background: #392a4e; color: #e5cbff; text-transform: uppercase; font-size: 12px; }
+.state { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.state::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: #e5b84c; }
+.state[data-state="active"]::before { background: #4cd18a; }
+.state[data-state="missing"]::before, .state[data-state="paused"]::before { background: #ef6b6b; }
+.live { color: #9fe0bc; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; margin-top: 14px; }
+.toolbar label { margin: 0; min-width: 220px; }
+.toolbar .check { display: flex; align-items: center; gap: 8px; }
+.toolbar .check input { width: auto; }
+.secondary { background: transparent; }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.tags span { padding: 4px 8px; border-radius: 5px; background: #292135; white-space: nowrap; }
+.stat-grid { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }

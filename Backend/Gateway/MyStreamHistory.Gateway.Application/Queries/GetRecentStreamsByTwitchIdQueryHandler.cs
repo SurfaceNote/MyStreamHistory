@@ -19,7 +19,8 @@ public class GetRecentStreamsByTwitchIdQueryHandler(ITransportBus bus)
             new GetRecentStreamsRequestContract 
             { 
                 TwitchUserId = request.TwitchUserId, 
-                Count = request.Count 
+                Count = request.Count,
+                Before = request.Before
             }, 
             cancellationToken
         );

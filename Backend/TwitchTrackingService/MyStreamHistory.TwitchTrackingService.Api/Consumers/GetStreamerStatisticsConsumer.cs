@@ -164,7 +164,8 @@ public class GetStreamerStatisticsConsumer : IConsumer<GetStreamerStatisticsRequ
             TotalStreamedHours = Math.Round(streamedHoursByDay.Sum(point => point.Value), 1),
             StreamedHoursByDay = streamedHoursByDay,
             StreamedHoursByWeek = BuildWeeklySeries(streamedHoursByDay),
-            ChatPointsByDay = BuildEmptySeries(chartFrom, periodTo.Date),
+            // Streamer-level chat points are not aggregated yet: report no data instead of zeros.
+            ChatPointsByDay = [],
             ViewerCountByDay = BuildViewerSeries(chartFrom, periodTo.Date, sessions),
             TopCategories = BuildTopCategories(sessions, chartFrom, periodTo)
         };
@@ -191,13 +192,6 @@ public class GetStreamerStatisticsConsumer : IConsumer<GetStreamerStatisticsRequ
                 Date = kvp.Key,
                 Value = Math.Round(kvp.Value, 2)
             })
-            .ToList();
-    }
-
-    private static List<TimeSeriesPointDto> BuildEmptySeries(DateTime from, DateTime to)
-    {
-        return EnumerateDays(from, to)
-            .Select(day => new TimeSeriesPointDto { Date = day, Value = 0 })
             .ToList();
     }
 

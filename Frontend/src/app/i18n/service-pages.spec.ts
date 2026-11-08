@@ -61,6 +61,12 @@ describe('Localized service pages', () => {
     }
     header.destroy();
   });
+  it('opens the section requested by a profile setup link', async () => {
+    const harness = await RouterTestingHarness.create('/settings?section=overlay');
+    harness.detectChanges();
+    expect(harness.routeNativeElement?.querySelector('#overlay-url')).not.toBeNull();
+    expect(harness.routeNativeElement?.querySelector('.badge')).toBeNull();
+  });
   it('restores an explicitly saved English choice instead of the browser language', async () => {
     document.cookie = 'preferred_language=en; Path=/';
     const harness = await RouterTestingHarness.create('/settings');

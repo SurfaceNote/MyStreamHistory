@@ -91,6 +91,9 @@ builder.Services.AddCors(o =>
         .AllowAnyMethod());
 });
 
+builder.Services.AddMemoryCache();
+builder.Services.AddScoped<MyStreamHistory.Gateway.Api.ProductActivity.ChannelActivityRecorder>();
+
 builder.Services.AddAutoMapperProfiles()
     .AddMediatRHandlers();
 
@@ -207,6 +210,12 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("AdminStreamsRead", policy => policy
         .AddAuthenticationSchemes(AdminServiceAuthentication.Scheme).RequireAuthenticatedUser()
         .RequireClaim(AdminServiceAuthentication.PermissionClaim, AdminServiceAuthentication.StreamsRead));
+    options.AddPolicy("AdminProductRead", policy => policy
+        .AddAuthenticationSchemes(AdminServiceAuthentication.Scheme).RequireAuthenticatedUser()
+        .RequireClaim(AdminServiceAuthentication.PermissionClaim, AdminServiceAuthentication.ProductRead));
+    options.AddPolicy("AdminBotsManage", policy => policy
+        .AddAuthenticationSchemes(AdminServiceAuthentication.Scheme).RequireAuthenticatedUser()
+        .RequireClaim(AdminServiceAuthentication.PermissionClaim, AdminServiceAuthentication.BotsManage));
 });
 
 var app = builder.Build();

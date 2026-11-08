@@ -49,9 +49,14 @@ public class ViewerStatsRepository : IViewerStatsRepository
 
     public async Task<List<ViewerStats>> GetTopViewersByStreamerAsync(string streamerTwitchUserId, int limit = 100, CancellationToken cancellationToken = default)
     {
+        // The broadcaster and accounts on the admin-managed bot list are not part of the audience ranking.
+        var excludedLogins = _context.RankingExcludedAccounts.Select(a => a.Login);
+
         return await _context.ViewerStats
             .Include(s => s.Viewer)
             .Where(s => s.StreamerTwitchUserId == streamerTwitchUserId)
+            .Where(s => s.Viewer.TwitchUserId != streamerTwitchUserId)
+            .Where(s => !excludedLogins.Contains(s.Viewer.Login.ToLower()))
             .OrderByDescending(s => s.Experience)
             .Take(limit)
             .ToListAsync(cancellationToken);

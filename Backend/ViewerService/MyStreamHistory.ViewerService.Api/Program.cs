@@ -34,6 +34,8 @@ builder.Services.AddInfrastructure(builder.Configuration)
         configurator.AddConsumer<GetAdminStreamViewerCountsConsumer>();
         configurator.AddConsumer<GetUniqueViewerCountsConsumer>();
         configurator.AddConsumer<GetTopViewersConsumer>();
+        configurator.AddConsumer<GetRankingExclusionsConsumer>();
+        configurator.AddConsumer<ChangeRankingExclusionConsumer>();
         configurator.AddConsumer<GetStreamerViewerStatsConsumer>();
         configurator.AddConsumer<GetChatSubscriptionsConsumer>();
         configurator.AddConsumer<CleanupChatSubscriptionsConsumer>();

@@ -10,6 +10,8 @@ import { TokenResponse } from "../features/auth/models/token-response.model";
 import { ApiResponse } from "../core/api/api-response.model";
 import { unwrapData } from "../core/api/api-operators";
 
+const NEW_CHANNEL_KEY = 'msh.newChannel';
+
 @Injectable({
     providedIn: 'root',
 })
@@ -40,6 +42,7 @@ export class AuthService {
         sessionStorage.removeItem(this.accessTokenKey);
         localStorage.removeItem(this.accessTokenKey);
         localStorage.removeItem('refresh_token');
+        this.clearNewChannel();
         this.tokenSubject.next(null);
         this.usernameSubject.next(null);
     }
@@ -58,6 +61,15 @@ export class AuthService {
         localStorage.setItem('twitchAuthState', state);
         sessionStorage.setItem('twitchReturnUrl', safeReturnUrl(this.router.url) || this.locale.path('/'));
         window.location.href = twitchAuthUrl;
+    }
+
+    /** True after the first sign-in of a channel, until the owner dismisses the welcome panel. */
+    isNewChannel(): boolean {
+        try { return localStorage.getItem(NEW_CHANNEL_KEY) === '1'; } catch { return false; }
+    }
+
+    clearNewChannel(): void {
+        try { localStorage.removeItem(NEW_CHANNEL_KEY); } catch { /* Storage is optional. */ }
     }
 
     consumeReturnUrl(): string {
@@ -83,6 +95,9 @@ export class AuthService {
                 tap((tokens) => {
                     this.setTokens(tokens);
                     localStorage.removeItem('twitchAuthState');
+                    if (tokens.isNewUser) {
+                        try { localStorage.setItem(NEW_CHANNEL_KEY, '1'); } catch { /* Storage is optional. */ }
+                    }
                 }),
                 map(() => true),
                 catchError((error) => {

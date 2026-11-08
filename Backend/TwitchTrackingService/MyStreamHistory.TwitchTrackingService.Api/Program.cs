@@ -49,6 +49,9 @@ builder.Services.AddInfrastructure(builder.Configuration)
         configurator.AddConsumer<GetPlaythroughSettingsConsumer>();
         configurator.AddConsumer<UpsertPlaythroughConsumer>();
         configurator.AddConsumer<DeletePlaythroughConsumer>();
+        configurator.AddConsumer<ChannelActivityObservedConsumer>();
+        configurator.AddConsumer<GetCollectionStatusConsumer>();
+        configurator.AddConsumer<GetProductOverviewConsumer>();
     })
     .AddTransportBus();
 

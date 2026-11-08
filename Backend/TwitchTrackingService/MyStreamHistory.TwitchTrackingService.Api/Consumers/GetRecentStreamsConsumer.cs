@@ -27,7 +27,8 @@ public class GetRecentStreamsConsumer : IConsumer<GetRecentStreamsRequestContrac
             var streams = await _streamSessionService.GetRecentStreamsByTwitchUserIdAsync(
                 context.Message.TwitchUserId, 
                 context.Message.Count, 
-                context.CancellationToken);
+                context.CancellationToken,
+                context.Message.Before);
 
             var response = new GetRecentStreamsResponseContract
             {

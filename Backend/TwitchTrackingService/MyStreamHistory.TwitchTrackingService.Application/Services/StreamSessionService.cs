@@ -448,14 +448,15 @@ public class StreamSessionService : IStreamSessionService
         };
     }
 
-    public async Task<List<StreamSessionDto>> GetRecentStreamsByTwitchUserIdAsync(int twitchUserId, int count = 10, CancellationToken cancellationToken = default)
+    public async Task<List<StreamSessionDto>> GetRecentStreamsByTwitchUserIdAsync(int twitchUserId, int count = 10, CancellationToken cancellationToken = default, DateTime? before = null)
     {
         _logger.LogInformation("Getting recent {Count} streams for TwitchUserId {TwitchUserId}", count, twitchUserId);
 
         var sessionDtos = await _repository.GetRecentStreamsByTwitchUserIdAsync(
             twitchUserId,
             count,
-            cancellationToken);
+            cancellationToken,
+            before);
 
         if (sessionDtos.Count > 0)
         {

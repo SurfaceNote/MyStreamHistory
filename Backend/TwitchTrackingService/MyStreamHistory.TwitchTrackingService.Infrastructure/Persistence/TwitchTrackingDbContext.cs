@@ -17,12 +17,20 @@ public class TwitchTrackingDbContext : DbContext
     public DbSet<StreamCategory> StreamCategories => Set<StreamCategory>();
     public DbSet<Playthrough> Playthroughs => Set<Playthrough>();
     public DbSet<PlaythroughStreamCategory> PlaythroughStreamCategories => Set<PlaythroughStreamCategory>();
+    public DbSet<ChannelActivityDay> ChannelActivityDays => Set<ChannelActivityDay>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
         modelBuilder.Entity<ViewerCountSample>().HasKey(x => new { x.StreamSessionId, x.Minute });
         modelBuilder.Entity<ViewerCountSample>().HasOne<StreamSession>().WithMany().HasForeignKey(x => x.StreamSessionId).OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<ChannelActivityDay>(entity =>
+        {
+            entity.HasKey(e => new { e.TwitchUserId, e.Day, e.Kind });
+            entity.HasIndex(e => new { e.Day, e.Kind });
+            entity.Property(e => e.Kind).HasMaxLength(32).IsRequired();
+        });
 
         modelBuilder.AddInboxStateEntity();
         modelBuilder.AddOutboxMessageEntity();

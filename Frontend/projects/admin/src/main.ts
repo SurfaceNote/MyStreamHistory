@@ -14,6 +14,8 @@ const routes: Routes = [
   { path: '', canActivateChild: [sessionGuard], children: [
     { path: 'overview', loadComponent: () => import('./overview.component').then(m => m.OverviewComponent) },
     { path: 'streams', loadComponent: () => import('./streams-page.component').then(m => m.StreamsPageComponent) },
+    { path: 'product', loadComponent: () => import('./product-page.component').then(m => m.ProductPageComponent) },
+    { path: 'bots', loadComponent: () => import('./bots-page.component').then(m => m.BotsPageComponent) },
     { path: 'admin', loadComponent: () => import('../../../src/app/pages/admin/admin.component').then(m => m.AdminComponent) },
     { path: 'admin/publications', loadComponent: () => import('../../../src/app/features/content/publications-admin.component').then(m => m.PublicationsAdminComponent) },
     { path: 'admin/publications/:id/preview', loadComponent: () => import('../../../src/app/features/content/article-preview.component').then(m => m.ArticlePreviewComponent) },

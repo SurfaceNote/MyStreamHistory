@@ -20,10 +20,17 @@ public class ViewerServiceDbContext : DbContext
     public DbSet<CommunityMessageAggregate> CommunityMessageAggregates => Set<CommunityMessageAggregate>();
     public DbSet<CommunityExclusion> CommunityExclusions => Set<CommunityExclusion>();
     public DbSet<CommunityDailyState> CommunityDailyStates => Set<CommunityDailyState>();
+    public DbSet<RankingExcludedAccount> RankingExcludedAccounts => Set<RankingExcludedAccount>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        modelBuilder.Entity<RankingExcludedAccount>(entity =>
+        {
+            entity.HasKey(x => x.Login);
+            entity.Property(x => x.Login).HasMaxLength(25);
+            entity.Property(x => x.AddedBy).HasMaxLength(100).IsRequired();
+        });
         modelBuilder.Entity<CommunitySettings>().HasKey(x => x.StreamerTwitchUserId);
         modelBuilder.Entity<CommunitySettings>().Property(x => x.ReportJson).HasColumnType("jsonb");
         modelBuilder.Entity<CommunitySettings>().Property(x => x.MembersJson).HasColumnType("jsonb");

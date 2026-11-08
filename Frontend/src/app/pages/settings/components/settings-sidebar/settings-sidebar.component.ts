@@ -26,9 +26,7 @@ export class SettingsSidebarComponent {
   sections: SidebarSection[] = [
     { id: 'profile', label: 'ui.profile', icon: 'fa-user' },
     { id: 'playthroughs', label: 'settings.playthroughs', icon: 'fa-folder-open' },
-    { id: 'overlay', label: 'settings.overlay', icon: 'fa-trophy' },
-    { id: 'content', label: 'settings.content', icon: 'fa-video', disabled: true },
-    { id: 'streams', label: 'ui.streamsLabel', icon: 'fa-broadcast-tower', disabled: true }
+    { id: 'overlay', label: 'settings.overlay', icon: 'fa-trophy' }
   ];
 
   selectSection(sectionId: string, disabled?: boolean): void {

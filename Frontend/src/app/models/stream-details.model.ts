@@ -42,5 +42,7 @@ export interface StreamViewer {
   minutesWatched: number;
   chatPoints: number;
   viewerPoints: number;
+  isBroadcaster?: boolean;
+  isBot?: boolean;
 }
 

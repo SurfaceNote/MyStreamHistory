@@ -6,6 +6,7 @@ using MyStreamHistory.Gateway.Application.DTOs;
 using MyStreamHistory.Gateway.Application.Queries;
 using MyStreamHistory.Shared.Api.Extensions;
 using MyStreamHistory.Shared.Api.Wrappers;
+using MyStreamHistory.Shared.Base.Contracts.ProductActivity;
 
 namespace MyStreamHistory.Gateway.Api.Controllers;
 
@@ -47,6 +48,15 @@ public class SettingsController(IMediator mediator) : ApiControllerBase
             });
         }
         
+        return this.Success(result);
+    }
+
+    [HttpGet("collection-status")]
+    [ProducesResponseType(typeof(ApiResultContainer<GetCollectionStatusResponseContract>), 200)]
+    [ProducesResponseType(typeof(ApiResultContainer), 401)]
+    public async Task<ActionResult<ApiResultContainer<GetCollectionStatusResponseContract>>> GetCollectionStatus(CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(new GetCollectionStatusQuery(TwitchUserId), cancellationToken);
         return this.Success(result);
     }
 

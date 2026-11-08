@@ -45,5 +45,7 @@ public class StreamViewerDto
     public int MinutesWatched { get; set; }
     public decimal ChatPoints { get; set; }
     public decimal ViewerPoints { get; set; }
+    public bool IsBroadcaster { get; set; }
+    public bool IsBot { get; set; }
 }
 

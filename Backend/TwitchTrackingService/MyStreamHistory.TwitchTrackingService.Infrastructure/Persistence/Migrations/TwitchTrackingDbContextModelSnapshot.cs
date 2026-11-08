@@ -190,6 +190,31 @@ namespace MyStreamHistory.TwitchTrackingService.Infrastructure.Persistence.Migra
                     b.ToTable("OutboxState");
                 });
 
+            modelBuilder.Entity("MyStreamHistory.TwitchTrackingService.Domain.Entities.ChannelActivityDay", b =>
+                {
+                    b.Property<int>("TwitchUserId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateOnly>("Day")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Kind")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<DateTime>("FirstSeenAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("LastSeenAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("TwitchUserId", "Day", "Kind");
+
+                    b.HasIndex("Day", "Kind");
+
+                    b.ToTable("ChannelActivityDays");
+                });
+
             modelBuilder.Entity("MyStreamHistory.TwitchTrackingService.Domain.Entities.EventSubSubscription", b =>
                 {
                     b.Property<Guid>("Id")

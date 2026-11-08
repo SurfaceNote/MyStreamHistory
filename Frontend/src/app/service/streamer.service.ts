@@ -48,8 +48,8 @@ export class StreamerService {
             .pipe(unwrapData<StreamerShortDTO>());
     }
 
-    getRecentStreams(twitchId: number, count: number = 10): Observable<StreamSession[]> {
-        const url = API_ENDPOINTS.RECENT_STREAMS(twitchId, count);
+    getRecentStreams(twitchId: number, count: number = 10, before?: string): Observable<StreamSession[]> {
+        const url = API_ENDPOINTS.RECENT_STREAMS(twitchId, count, before);
         return this.http.get<ApiResponse<StreamSession[]>>(this.endpoint(url), { context: new HttpContext().set(ANONYMOUS_REQUEST, true) })
             .pipe(unwrapData<StreamSession[]>());
     }
@@ -60,8 +60,8 @@ export class StreamerService {
             .pipe(unwrapData<StreamDetails>());
     }
 
-    getTopViewers(twitchId: number, limit: number = 100): Observable<ViewerStats[]> {
-        const url = API_ENDPOINTS.TOP_VIEWERS(twitchId, limit);
+    getTopViewers(twitchId: number, limit: number = 100, source?: 'overlay'): Observable<ViewerStats[]> {
+        const url = API_ENDPOINTS.TOP_VIEWERS(twitchId, limit, source);
         return this.http.get<ApiResponse<ViewerStats[]>>(this.endpoint(url), { context: new HttpContext().set(ANONYMOUS_REQUEST, true) })
             .pipe(unwrapData<ViewerStats[]>());
     }

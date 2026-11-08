@@ -75,7 +75,7 @@ export class TopViewersOverlayComponent implements OnDestroy {
   private showCycle(): void {
     if (!this.twitchId || this.fetching) return;
     this.fetching = true;
-    this.request = this.streamerService.getTopViewers(this.twitchId, 100).subscribe({
+    this.request = this.streamerService.getTopViewers(this.twitchId, 100, 'overlay').subscribe({
       next: (latest) => {
         this.fetching = false;
         const nextTop = latest.slice(0, 10);

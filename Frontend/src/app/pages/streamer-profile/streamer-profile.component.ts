@@ -31,7 +31,7 @@ import {
 } from 'rxjs';
 import { StreamSession } from '../../models/stream-session.model';
 import { ViewerStats } from '../../models/viewer-stats.model';
-import { isPlatformBrowser, CommonModule } from '@angular/common';
+import { isPlatformBrowser, CommonModule, Location } from '@angular/common';
 import { SocialLink } from '../../models/social-link.model';
 import {
   StreamerDashboardPeriod,
@@ -42,6 +42,8 @@ import { PlaythroughStatistics } from '../../models/playthrough-statistics.model
 import { Chart, registerables } from 'chart.js';
 import { SeoService } from '../../service/seo.service';
 import { AnalyticsService } from '../../service/analytics.service';
+import { SettingsService } from '../../service/settings.service';
+import { CollectionStatus, TrackingState, trackingState } from '../../models/collection-status.model';
 
 Chart.register(...registerables);
 
@@ -50,6 +52,18 @@ interface PlaythroughStatusSection {
   title: string;
   items: PlaythroughStatistics[];
 }
+
+interface OwnerChecklistStep {
+  id: 'overlay' | 'playthroughs' | 'profile';
+  label: TranslationKey;
+  done: boolean;
+}
+
+const PROFILE_TABS: Record<string, string> = { streams: 'Streams', games: 'Games', viewers: 'Viewers' };
+const GAME_STATUSES: Record<string, string> = { playing: 'Playing', completed: 'Completed', planned: 'Planned', dropped: 'Dropped' };
+const OWNER_PANEL_HIDDEN_KEY = 'msh.ownerPanel.hidden';
+const FIRST_STREAMS_PAGE = 10;
+const OLDER_STREAMS_PAGE = 20;
 
 interface DashboardSummaryCard {
   icon: string;
@@ -117,9 +131,37 @@ export class StreamerProfileComponent
   selectSection(section: string): void {
     this.activeSection = section;
     if (section === 'Overview') this.scheduleDashboardRender();
+    this.syncTabUrl();
     this.analytics.trackEvent('profile_tab_select', {
       tab_name: section.toLowerCase(),
     });
+  }
+
+  selectGameStatus(status: string): void {
+    this.gameStatus = status;
+    this.syncTabUrl();
+  }
+
+  /** Keeps the open tab shareable (?tab=games&status=completed) without a router navigation. */
+  private syncTabUrl(): void {
+    if (!this.browser) return;
+    const tree = this.router.parseUrl(this.location.path(true));
+    const params = { ...tree.queryParams };
+    delete params['tab'];
+    delete params['status'];
+    if (this.activeSection !== 'Overview') params['tab'] = this.activeSection.toLowerCase();
+    if (this.activeSection === 'Games' && this.gameStatus !== 'All') params['status'] = this.gameStatus.toLowerCase();
+    tree.queryParams = params;
+    this.location.replaceState(this.router.serializeUrl(tree));
+  }
+
+  private applyTabFromUrl(tab: string | null, status: string | null): void {
+    const section = PROFILE_TABS[(tab ?? '').toLowerCase()] ?? 'Overview';
+    this.gameStatus = section === 'Games' ? GAME_STATUSES[(status ?? '').toLowerCase()] ?? 'All' : 'All';
+    if (section !== this.activeSection) {
+      this.activeSection = section;
+      if (section === 'Overview') this.scheduleDashboardRender();
+    }
   }
 
   gameShare(hours: number): number {
@@ -149,6 +191,14 @@ export class StreamerProfileComponent
   isLoadingSocialLinks: boolean = false;
   isLoadingStatistics: boolean = false;
   private routeSub: Subscription | null = null;
+  private queryParamsSub: Subscription | null = null;
+  private ownerStatusSub: Subscription | null = null;
+  hasOlderStreams = false;
+  isLoadingOlderStreams = false;
+  olderStreamsFailed = false;
+  collectionStatus: CollectionStatus | null = null;
+  collectionStatusFailed = false;
+  ownerPanelHidden = false;
   private recentStreamsSub: Subscription | null = null;
   private charts: Chart[] = [];
 
@@ -159,9 +209,18 @@ export class StreamerProfileComponent
   private seo = inject(SeoService);
   private analytics = inject(AnalyticsService);
   private auth = inject(AuthService);
+  private settings = inject(SettingsService);
+  private location = inject(Location);
   private readonly browser = isPlatformBrowser(inject(PLATFORM_ID));
   private authReady = false;
-  constructor() { afterNextRender(() => { this.authReady = true; this.changeDetector.markForCheck(); }); }
+  constructor() {
+    afterNextRender(() => {
+      this.authReady = true;
+      this.ownerPanelHidden = this.readOwnerPanelHidden();
+      this.loadOwnerStatus();
+      this.changeDetector.markForCheck();
+    });
+  }
   readonly sectionLabels: Record<string, TranslationKey> = { Overview: 'ui.overview', Streams: 'ui.streamsLabel', Games: 'ui.gamesLabel', Viewers: 'ui.viewers' };
   readonly statusLabels: Record<string, TranslationKey> = { Playing: 'ui.playing', Completed: 'ui.completed', Planned: 'ui.planned', Dropped: 'ui.dropped' };
   get isOwnProfile(): boolean { return this.authReady && this.auth.getTwitchIdFromToken() === String(this.twitchId); }
@@ -177,8 +236,97 @@ export class StreamerProfileComponent
         this.loadTopViewers();
         this.loadSocialLinks();
         this.loadStatistics();
+        if (this.authReady) this.loadOwnerStatus();
       }
     });
+    this.queryParamsSub = this.route.queryParamMap.subscribe((query) =>
+      this.applyTabFromUrl(query.get('tab'), query.get('status')),
+    );
+  }
+
+  // ---- Owner panel: recording status and first steps, only on the owner's own profile.
+
+  get trackingState(): TrackingState | null {
+    return this.collectionStatus ? trackingState(this.collectionStatus) : null;
+  }
+
+  get trackingLabel(): TranslationKey {
+    return `owner.tracking.${this.trackingState ?? 'pending'}` as TranslationKey;
+  }
+
+  get hasRecordedStreams(): boolean {
+    return (this.collectionStatus?.streamsCount ?? 0) > 0;
+  }
+
+  get ownerChecklist(): OwnerChecklistStep[] {
+    return [
+      { id: 'overlay', label: 'owner.stepOverlay', done: !!this.collectionStatus?.lastOverlaySeenAt },
+      { id: 'playthroughs', label: 'owner.stepPlaythrough', done: (this.statistics?.playthroughs?.length ?? 0) > 0 },
+      { id: 'profile', label: 'owner.stepSocial', done: this.socialLinks.length > 0 },
+    ];
+  }
+
+  get showOwnerPanel(): boolean {
+    if (!this.isOwnProfile || (!this.collectionStatus && !this.collectionStatusFailed)) return false;
+    return !this.ownerPanelHidden || !this.canHideOwnerPanel;
+  }
+
+  /** A channel without recordings or with broken tracking always sees its status. */
+  get canHideOwnerPanel(): boolean {
+    return this.hasRecordedStreams && this.trackingState === 'active';
+  }
+
+  hideOwnerPanel(): void {
+    this.ownerPanelHidden = true;
+    this.auth.clearNewChannel();
+    try { localStorage.setItem(OWNER_PANEL_HIDDEN_KEY, '1'); } catch { /* Storage is optional. */ }
+  }
+
+  private readOwnerPanelHidden(): boolean {
+    if (!this.browser) return false;
+    try { return localStorage.getItem(OWNER_PANEL_HIDDEN_KEY) === '1'; } catch { return false; }
+  }
+
+  loadOwnerStatus(): void {
+    this.ownerStatusSub?.unsubscribe();
+    this.collectionStatus = null;
+    this.collectionStatusFailed = false;
+    if (!this.browser || !this.isOwnProfile) return;
+    this.ownerStatusSub = this.settings.getCollectionStatus().subscribe({
+      next: (status) => {
+        this.collectionStatus = status;
+        if (status.streamsCount > 0) this.auth.clearNewChannel();
+        this.changeDetector.markForCheck();
+      },
+      error: (err) => {
+        console.error('Error loading recording status', err);
+        this.collectionStatusFailed = true;
+        this.changeDetector.markForCheck();
+      },
+    });
+  }
+
+  // ---- Stream archive: the first page includes chat account counts, older pages are listed without them.
+
+  loadOlderStreams(): void {
+    const oldest = this.recentStreams[this.recentStreams.length - 1];
+    if (!oldest || this.isLoadingOlderStreams) return;
+    this.isLoadingOlderStreams = true;
+    this.olderStreamsFailed = false;
+    this.streamerService
+      .getRecentStreams(this.twitchId, OLDER_STREAMS_PAGE, oldest.startedAt)
+      .pipe(finalize(() => { this.isLoadingOlderStreams = false; }))
+      .subscribe({
+        next: (streams) => {
+          const known = new Set(this.recentStreams.map((stream) => stream.id));
+          this.recentStreams = [...this.recentStreams, ...streams.filter((stream) => !known.has(stream.id))];
+          this.hasOlderStreams = streams.length === OLDER_STREAMS_PAGE;
+        },
+        error: (err) => {
+          console.error('Error loading older streams', err);
+          this.olderStreamsFailed = true;
+        },
+      });
   }
 
   get overviewPlaythroughSections(): PlaythroughStatusSection[] {
@@ -264,12 +412,13 @@ export class StreamerProfileComponent
         value: dashboard?.totalStreamsCount ? `${this.formatNumber(dashboard.totalStreamedHours / dashboard.totalStreamsCount)} ${this.locale.t('unit.hours')}` : '—',
         hint: this.locale.t('ui.hoursPerBroadcast'),
       },
-      {
+      // Shown only when the server reports chat activity; a missing series is not a zero.
+      ...(dashboard?.chatPointsByDay?.length ? [{
         icon: 'M4 4h16v12H9l-5 4V4Zm4 5h8m-8 3h5',
         label: this.locale.t('ui.chatPoints'),
-        value: dashboard?.chatPointsByDay?.length ? this.formatNumber(dashboard.chatPointsByDay.reduce((sum, point) => sum + point.value, 0)) : '—',
+        value: this.formatNumber(dashboard.chatPointsByDay.reduce((sum, point) => sum + point.value, 0)),
         hint: this.locale.t('ui.recordedChatActivity'),
-      },
+      }] : []),
     ];
   }
 
@@ -317,6 +466,8 @@ export class StreamerProfileComponent
     if (this.routeSub) {
       this.routeSub.unsubscribe();
     }
+    this.queryParamsSub?.unsubscribe();
+    this.ownerStatusSub?.unsubscribe();
 
     this.recentStreamsSub?.unsubscribe();
 
@@ -350,13 +501,16 @@ export class StreamerProfileComponent
     // before resetting loading state (unsubscribe also runs finalize).
     this.recentStreamsSub?.unsubscribe();
     this.recentStreams = [];
+    this.hasOlderStreams = false;
+    this.olderStreamsFailed = false;
     this.isLoadingStreams = true;
     this.recentStreamsSub = this.streamerService
-      .getRecentStreams(this.twitchId, 10)
+      .getRecentStreams(this.twitchId, FIRST_STREAMS_PAGE)
       .pipe(
         tap((streams) => {
           // The featured broadcast must not wait for every viewer request.
           this.recentStreams = streams;
+          this.hasOlderStreams = streams.length === FIRST_STREAMS_PAGE;
           this.isLoadingStreams = false;
         }),
         switchMap((streams: StreamSession[]) => {
@@ -388,7 +542,9 @@ export class StreamerProfileComponent
       )
       .subscribe({
         next: (data: StreamSession[]) => {
-          this.recentStreams = data;
+          // Older pages may have been appended while chat account counts were loading.
+          const counted = new Map(data.map((stream) => [stream.id, stream]));
+          this.recentStreams = this.recentStreams.map((stream) => counted.get(stream.id) ?? stream);
         },
         error: (err) => {
           console.error('Error loading recent streams', err);

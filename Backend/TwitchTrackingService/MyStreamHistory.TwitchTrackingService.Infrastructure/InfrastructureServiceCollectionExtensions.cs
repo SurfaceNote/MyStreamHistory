@@ -50,6 +50,7 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<IStreamCategoryRepository, StreamCategoryRepository>();
         services.AddScoped<IPlaythroughRepository, PlaythroughRepository>();
         services.AddScoped<IPlaythroughStreamCategoryRepository, PlaythroughStreamCategoryRepository>();
+        services.AddScoped<IChannelActivityRepository, ChannelActivityRepository>();
 
         // Add Application Services
         services.AddScoped<IStreamSessionService, StreamSessionService>();

@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MyStreamHistory.Gateway.Application.DTOs;
 using MyStreamHistory.Gateway.Application.Queries;
+using MyStreamHistory.Gateway.Api.ProductActivity;
+using MyStreamHistory.Shared.Base.Contracts.ProductActivity;
 using MyStreamHistory.Shared.Api.Extensions;
 using MyStreamHistory.Shared.Api.Wrappers;
 using MyStreamHistory.Shared.Base.Contracts.Users;
@@ -14,7 +16,7 @@ namespace MyStreamHistory.Gateway.Api.Controllers;
 
 [ApiController]
 [Route("user")]
-public class UsersController(IMapper mapper, IMediator mediator) : ApiControllerBase
+public class UsersController(IMapper mapper, IMediator mediator, ChannelActivityRecorder activity) : ApiControllerBase
 {
     [HttpGet("all")]
     [AllowAnonymous]
@@ -55,12 +57,14 @@ public class UsersController(IMapper mapper, IMediator mediator) : ApiController
     [ProducesResponseType(typeof(ApiResultContainer), 400)]
     public async Task<ActionResult<ApiResultContainer<List<StreamSessionDto>>>> GetRecentStreams(
         [FromRoute] int twitchId,
-        [FromQuery] int count = 10)
+        [FromQuery] int count = 10,
+        [FromQuery] DateTime? before = null)
     {
         var query = new GetRecentStreamsByTwitchIdQuery 
         { 
             TwitchUserId = twitchId, 
-            Count = count 
+            Count = Math.Clamp(count, 1, 100),
+            Before = before?.ToUniversalTime()
         };
         var streams = await mediator.Send(query);
 
@@ -74,8 +78,14 @@ public class UsersController(IMapper mapper, IMediator mediator) : ApiController
     [ProducesResponseType(typeof(ApiResultContainer), 400)]
     public async Task<ActionResult<ApiResultContainer<List<ViewerStatsDto>>>> GetTopViewers(
         [FromRoute] int twitchId,
-        [FromQuery] int limit = 100)
+        [FromQuery] int limit = 100,
+        [FromQuery] string? source = null)
     {
+        if (string.Equals(source, "overlay", StringComparison.OrdinalIgnoreCase))
+        {
+            await activity.RecordAsync(twitchId, ChannelActivityKinds.Overlay, HttpContext.RequestAborted);
+        }
+
         var query = new GetTopViewersQuery 
         { 
             StreamerTwitchUserId = twitchId.ToString(), 
@@ -123,6 +133,11 @@ public class UsersController(IMapper mapper, IMediator mediator) : ApiController
         [FromRoute] int twitchId,
         [FromQuery] string period = "30d")
     {
+        if (ChannelActivityRecorder.IsTwitchExtensionRequest(Request))
+        {
+            await activity.RecordAsync(twitchId, ChannelActivityKinds.Panel, HttpContext.RequestAborted);
+        }
+
         var query = new GetStreamerStatisticsQuery { TwitchUserId = twitchId, Period = period };
         var result = await mediator.Send(query);
         return this.Success(result);

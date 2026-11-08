@@ -34,7 +34,9 @@ namespace MyStreamHistory.Gateway.Application.Commands
                 return new TwitchCallbackResultDto
                 {
                     AccessToken = response.Success!.AccessToken,
-                    RefreshToken = response.Success!.RefreshToken
+                    RefreshToken = response.Success!.RefreshToken,
+                    IsNewUser = response.Success!.IsNewUser,
+                    TwitchUserId = response.Success!.TwitchUserId
                 };
             }
 

@@ -3,7 +3,9 @@ import { isServicePath, unlocalizedPath } from './i18n/languages';
 import { LocaleService } from './i18n/locale.service';
 import { LanguageSuggestionComponent } from './i18n/language-suggestion.component';
 import { TranslatePipe } from './i18n/translate.pipe';
-import { Component, OnInit, effect, inject, untracked } from '@angular/core';
+import { Component, OnInit, afterNextRender, effect, inject, untracked } from '@angular/core';
+import { AuthService } from './auth/auth.service';
+import { ActivityService } from './service/activity.service';
 import { ActivatedRoute, NavigationStart, NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { HeaderComponent } from "./components/header/header.component";
 import { filter } from 'rxjs/operators';
@@ -31,7 +33,14 @@ export class AppComponent implements OnInit {
     return this.router.url.split('#')[0] + '#main-content';
   }
 
+  private auth = inject(AuthService);
+  private activity = inject(ActivityService);
+
   constructor() {
+    afterNextRender(() => {
+      // OBS browser sources are not owner visits; the overlay reports its own usage.
+      if (this.auth.isLoggedIn() && !this.isOverlayRoute) this.activity.recordVisit();
+    });
     effect(() => {
       this.locale.language();
       if (isServicePath(this.router.url)) untracked(() => this.updateRouteSeo());

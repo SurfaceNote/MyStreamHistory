@@ -4,6 +4,7 @@ using MyStreamHistory.Shared.Application.Transport;
 using MyStreamHistory.Shared.Base.Contracts;
 using MyStreamHistory.Shared.Base.Contracts.StreamSessions.Requests;
 using MyStreamHistory.Shared.Base.Contracts.StreamSessions.Responses;
+using MyStreamHistory.Shared.Base.Contracts.Viewers;
 using MyStreamHistory.Shared.Base.Contracts.Viewers.Requests;
 using MyStreamHistory.Shared.Base.Contracts.Viewers.Responses;
 using MyStreamHistory.Shared.Base.Exceptions;
@@ -75,8 +76,15 @@ public class GetStreamDetailsByIdQueryHandler : IRequestHandler<GetStreamDetails
                 ProfileImageUrl = v.Viewer?.ProfileImageUrl,
                 MinutesWatched = v.MinutesWatched,
                 ChatPoints = v.ChatPoints,
-                ViewerPoints = v.MinutesWatched // 1 minute = 1 viewer point for simplicity
+                ViewerPoints = v.MinutesWatched, // 1 minute = 1 viewer point for simplicity
+                IsBroadcaster = RankingExclusions.IsBroadcaster(v.Viewer?.TwitchUserId, streamSession.TwitchUserId.ToString()),
+                IsBot = v.Viewer?.IsRankingExcluded == true
             }).ToList();
+
+            // Keep the broadcaster and bots visible as chat accounts, but after the audience.
+            viewers = viewers
+                .OrderBy(v => v.IsBroadcaster || v.IsBot)
+                .ToList();
         }
 
         // Calculate unique viewers per category

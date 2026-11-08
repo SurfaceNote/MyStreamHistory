@@ -71,7 +71,11 @@
         <button type="button" class="viewer-card" *ngFor="let viewer of streamDetails.viewers; let i = index"
                 (click)="navigateToViewerStats(viewer)"
                 [attr.aria-label]="'viewer.link' | t: { name: viewer.displayName }">
-          <div class="viewer-rank">{{ i + 1 }}</div>
+          @if (viewer.isBroadcaster || viewer.isBot) {
+            <div class="viewer-rank viewer-tag">{{ (viewer.isBroadcaster ? 'ui.broadcasterTag' : 'ui.botTag') | t }}</div>
+          } @else {
+            <div class="viewer-rank">{{ i + 1 }}</div>
+          }
           <img 
             [src]="viewer.profileImageUrl || getTwitchProfileImage(viewer.twitchUserId)" 
             alt="{{ viewer.displayName }}"
@@ -80,8 +84,8 @@
           <div class="viewer-details">
             <div class="viewer-name">{{ viewer.displayName }}</div>
             <div class="viewer-stats">
-              <span class="viewer-stat-item">{{ formatHours(viewer.minutesWatched) }} {{ 'unit.hours' | t }}</span>
-              <span class="viewer-stat-item">{{ formatPoints(viewer.chatPoints) }} {{ 'ui.msgPts' | t }}</span>
+              <span class="viewer-stat-item" [title]="'hint.chatPresence' | t">{{ formatHours(viewer.minutesWatched) }} {{ 'unit.hours' | t }}</span>
+              <span class="viewer-stat-item" [title]="'hint.messagePoints' | t">{{ formatPoints(viewer.chatPoints) }} {{ 'ui.msgPts' | t }}</span>
             </div>
           </div>
         </button>

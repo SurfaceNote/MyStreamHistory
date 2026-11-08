@@ -7,5 +7,6 @@ public class GetRecentStreamsByTwitchIdQuery : IRequest<List<StreamSessionDto>>
 {
     public int TwitchUserId { get; set; }
     public int Count { get; set; } = 10;
+    public DateTime? Before { get; set; }
 }
 

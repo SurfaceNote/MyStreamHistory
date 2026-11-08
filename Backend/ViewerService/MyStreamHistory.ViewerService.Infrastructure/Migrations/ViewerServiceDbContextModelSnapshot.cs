@@ -219,6 +219,25 @@ namespace MyStreamHistory.ViewerService.Infrastructure.Migrations
                     b.ToTable("ProcessedEventSubMessages");
                 });
 
+            modelBuilder.Entity("MyStreamHistory.ViewerService.Domain.Entities.RankingExcludedAccount", b =>
+                {
+                    b.Property<string>("Login")
+                        .HasMaxLength(25)
+                        .HasColumnType("character varying(25)");
+
+                    b.Property<DateTime>("AddedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("AddedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Login");
+
+                    b.ToTable("RankingExcludedAccounts");
+                });
+
             modelBuilder.Entity("MyStreamHistory.ViewerService.Domain.Entities.Viewer", b =>
                 {
                     b.Property<Guid>("Id")

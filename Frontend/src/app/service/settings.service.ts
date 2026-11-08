@@ -5,6 +5,7 @@ import { API_ENDPOINTS } from '../constants/api-endpoints';
 import { GetSocialLinksResponse, UpdateSocialLinksRequest, UpdateSocialLinksResponse } from '../models/social-link.model';
 import { Playthrough, PlaythroughSettings, UpsertPlaythroughRequest } from '../models/playthrough.model';
 import { ApiResponse } from '../core/api/api-response.model';
+import { CollectionStatus } from '../models/collection-status.model';
 import { unwrapData } from '../core/api/api-operators';
 
 @Injectable({
@@ -27,6 +28,11 @@ export class SettingsService {
     ).pipe(
       unwrapData<UpdateSocialLinksResponse>()
     );
+  }
+
+  getCollectionStatus(): Observable<CollectionStatus> {
+    return this.http.get<ApiResponse<CollectionStatus>>(API_ENDPOINTS.SETTINGS.COLLECTION_STATUS)
+      .pipe(unwrapData<CollectionStatus>());
   }
 
   getPlaythroughs(): Observable<PlaythroughSettings> {

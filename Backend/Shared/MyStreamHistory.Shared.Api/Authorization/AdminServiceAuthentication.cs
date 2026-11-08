@@ -20,6 +20,8 @@ public static class AdminServiceAuthentication
     public const string Content = "content";
     public const string CommunityRead = "community.read";
     public const string StreamsRead = "streams.read";
+    public const string ProductRead = "product.read";
+    public const string BotsManage = "bots.manage";
 
     public static void AddAdminServiceAuthentication(this IServiceCollection services, IConfiguration configuration)
     {
