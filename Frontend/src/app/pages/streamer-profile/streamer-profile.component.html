@@ -117,31 +117,20 @@
     </p>
   }
   @if (showOwnerPanel) {
-    <section class="owner-panel" aria-labelledby="owner-panel-title">
-      <div class="owner-status">
-        <span class="eyebrow">{{ 'owner.kicker' | t }}</span>
-        @if (collectionStatusFailed) {
-          <h2 id="owner-panel-title">{{ 'owner.recordingTitle' | t }}</h2>
-          <p role="status">{{ 'owner.statusUnavailable' | t }}</p>
-        } @else if (collectionStatus) {
-          <h2 id="owner-panel-title">{{ (hasRecordedStreams ? 'owner.recordingTitle' : 'owner.waitingTitle') | t }}</h2>
-          <p>
-            @if (collectionStatus.isLive) {
-              {{ 'owner.liveText' | t }}
-            } @else if (hasRecordedStreams && collectionStatus.lastStreamStartedAt) {
-              {{ 'owner.lastRecorded' | t: { date: (collectionStatus.lastStreamStartedAt | date: 'mediumDate' : 'UTC' : locale.locale())! } }}
-            } @else {
-              {{ 'owner.waitingText' | t }}
-            }
-          </p>
-          <p class="tracking-state" [attr.data-state]="trackingState">
-            <span class="state-dot" aria-hidden="true"></span>
-            {{ 'owner.tracking' | t }}: {{ trackingLabel | t }}
-          </p>
-        }
-      </div>
+    <section class="owner-panel" [class.with-intro]="showWaitingIntro" aria-labelledby="owner-panel-title">
+      @if (showWaitingIntro) {
+        <div class="owner-intro">
+          <h2 id="owner-panel-title">{{ 'owner.waitingTitle' | t }}</h2>
+          <p>{{ 'owner.waitingText' | t }}</p>
+        </div>
+      }
       <div class="owner-checklist">
-        <h3>{{ 'owner.checklistTitle' | t }}</h3>
+        <div class="checklist-head">
+          <h3 [attr.id]="showWaitingIntro ? null : 'owner-panel-title'">{{ 'owner.checklistTitle' | t }}</h3>
+          @if (canHideOwnerPanel) {
+            <button type="button" class="text-button" (click)="hideOwnerPanel()">{{ 'owner.hide' | t }}</button>
+          }
+        </div>
         <ul>
           @for (step of ownerChecklist; track step.id) {
             <li [class.done]="step.done">
@@ -155,9 +144,6 @@
             </li>
           }
         </ul>
-        @if (canHideOwnerPanel) {
-          <button type="button" class="text-button" (click)="hideOwnerPanel()">{{ 'owner.hide' | t }}</button>
-        }
       </div>
     </section>
   }

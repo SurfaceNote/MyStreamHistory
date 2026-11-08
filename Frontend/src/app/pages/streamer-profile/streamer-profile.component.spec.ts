@@ -339,27 +339,37 @@ describe('StreamerProfileComponent', () => {
     const panel: HTMLElement | null = fixture.nativeElement.querySelector('.owner-panel');
     expect(component.isOwnProfile).toBeTrue();
     expect(panel!.textContent).toContain('Recording starts with your next stream');
-    expect(panel!.textContent).toContain('Broadcast tracking: active');
-    expect(panel!.querySelectorAll('.owner-checklist li').length).toBe(3);
-    expect(panel!.querySelector('.owner-checklist a')!.getAttribute('href')).toBe('/settings?section=overlay');
+    expect(panel!.textContent).not.toContain('Broadcast tracking');
+    expect(panel!.textContent).not.toContain('overlay');
+    expect(panel!.querySelectorAll('.owner-checklist li').length).toBe(2);
+    expect(panel!.querySelector('.owner-checklist a')!.getAttribute('href')).toBe('/settings?section=playthroughs');
     expect(component.canHideOwnerPanel).toBeFalse();
+    // The overview grid must give the panel the full page width.
+    fixture.componentInstance.activeSection = 'Overview';
+    fixture.detectChanges();
+    expect(getComputedStyle(panel!).gridColumnStart).toBe('1');
+    expect(getComputedStyle(panel!).gridColumnEnd).toBe('-1');
   });
 
-  it('lets an owner with recorded streams hide the panel, but never hides a tracking problem', () => {
+  it('shows only unfinished setup steps to an owner with recordings, and lets them hide it', () => {
     ownerId = '1';
-    collectionStatus = { ...collectionStatus, streamsCount: 4, lastStreamStartedAt: '2026-11-01T18:00:00Z', lastOverlaySeenAt: '2026-11-01T19:00:00Z' };
+    collectionStatus = { ...collectionStatus, streamsCount: 4, lastStreamStartedAt: '2026-11-01T18:00:00Z' };
     component.loadOwnerStatus();
+    fixture.detectChanges();
     expect(component.isOwnProfile).toBeTrue();
+    const panel: HTMLElement = fixture.nativeElement.querySelector('.owner-panel');
+    expect(panel.textContent).not.toContain('Recording starts');
     expect(component.canHideOwnerPanel).toBeTrue();
-    expect(component.ownerChecklist.find((step) => step.id === 'overlay')!.done).toBeTrue();
     component.hideOwnerPanel();
     expect(component.showOwnerPanel).toBeFalse();
-
-    collectionStatus = { ...collectionStatus, subscriptions: [] };
-    component.loadOwnerStatus();
-    expect(component.trackingState).toBe('missing');
-    expect(component.showOwnerPanel).toBeTrue();
     localStorage.removeItem('msh.ownerPanel.hidden');
+    component.ownerPanelHidden = false;
+
+    // Everything set up: nothing left to show.
+    component.socialLinks = [{ socialNetworkType: 'YouTube', fullUrl: 'https://youtube.com/@example' } as any];
+    component.statistics = { ...statistics, playthroughs: [{ playthroughId: '1' } as any] };
+    expect(component.ownerChecklist.every((step) => step.done)).toBeTrue();
+    expect(component.showOwnerPanel).toBeFalse();
   });
 
   it('does not show the owner panel or request the status on other channels', () => {

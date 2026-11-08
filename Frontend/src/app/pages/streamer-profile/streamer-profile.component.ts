@@ -43,7 +43,7 @@ import { Chart, registerables } from 'chart.js';
 import { SeoService } from '../../service/seo.service';
 import { AnalyticsService } from '../../service/analytics.service';
 import { SettingsService } from '../../service/settings.service';
-import { CollectionStatus, TrackingState, trackingState } from '../../models/collection-status.model';
+import { CollectionStatus } from '../../models/collection-status.model';
 
 Chart.register(...registerables);
 
@@ -54,7 +54,7 @@ interface PlaythroughStatusSection {
 }
 
 interface OwnerChecklistStep {
-  id: 'overlay' | 'playthroughs' | 'profile';
+  id: 'playthroughs' | 'profile';
   label: TranslationKey;
   done: boolean;
 }
@@ -244,23 +244,19 @@ export class StreamerProfileComponent
     );
   }
 
-  // ---- Owner panel: recording status and first steps, only on the owner's own profile.
-
-  get trackingState(): TrackingState | null {
-    return this.collectionStatus ? trackingState(this.collectionStatus) : null;
-  }
-
-  get trackingLabel(): TranslationKey {
-    return `owner.tracking.${this.trackingState ?? 'pending'}` as TranslationKey;
-  }
+  // ---- Owner panel: first-stream notice and setup steps, only on the owner's own profile.
 
   get hasRecordedStreams(): boolean {
     return (this.collectionStatus?.streamsCount ?? 0) > 0;
   }
 
+  /** A new channel learns that recording starts with its next stream. */
+  get showWaitingIntro(): boolean {
+    return !!this.collectionStatus && !this.hasRecordedStreams;
+  }
+
   get ownerChecklist(): OwnerChecklistStep[] {
     return [
-      { id: 'overlay', label: 'owner.stepOverlay', done: !!this.collectionStatus?.lastOverlaySeenAt },
       { id: 'playthroughs', label: 'owner.stepPlaythrough', done: (this.statistics?.playthroughs?.length ?? 0) > 0 },
       { id: 'profile', label: 'owner.stepSocial', done: this.socialLinks.length > 0 },
     ];
@@ -268,12 +264,12 @@ export class StreamerProfileComponent
 
   get showOwnerPanel(): boolean {
     if (!this.isOwnProfile || (!this.collectionStatus && !this.collectionStatusFailed)) return false;
-    return !this.ownerPanelHidden || !this.canHideOwnerPanel;
+    if (this.showWaitingIntro) return true;
+    return !this.ownerPanelHidden && this.ownerChecklist.some((step) => !step.done);
   }
 
-  /** A channel without recordings or with broken tracking always sees its status. */
   get canHideOwnerPanel(): boolean {
-    return this.hasRecordedStreams && this.trackingState === 'active';
+    return !this.showWaitingIntro;
   }
 
   hideOwnerPanel(): void {
