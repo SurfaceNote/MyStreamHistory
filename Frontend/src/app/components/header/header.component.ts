@@ -23,7 +23,6 @@ export class HeaderComponent implements OnDestroy {
   private changeDetector = inject(ChangeDetectorRef);
   username: string | null = null;
   twitchId: string | null = null;
-  isAdmin: boolean = false;
   private subscriptions: Subscription = new Subscription();
 
   constructor() {
@@ -38,11 +37,9 @@ export class HeaderComponent implements OnDestroy {
         if (this.isLoggedIn) {
           this.username = this.authService.getUsernameFromToken();
           this.twitchId = this.authService.getTwitchIdFromToken();
-          this.isAdmin = this.authService.isAdmin();
         } else {
           this.username = null;
           this.twitchId = null;
-          this.isAdmin = false;
         }
         this.changeDetector.markForCheck();
       })
@@ -69,7 +66,4 @@ export class HeaderComponent implements OnDestroy {
     this.router.navigate(['/settings']);
   }
 
-  navigateToAdmin() {
-    this.router.navigate(['/admin/publications']);
-  }
 }

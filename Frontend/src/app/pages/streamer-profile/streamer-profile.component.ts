@@ -165,7 +165,7 @@ export class StreamerProfileComponent
   readonly sectionLabels: Record<string, TranslationKey> = { Overview: 'ui.overview', Streams: 'ui.streamsLabel', Games: 'ui.gamesLabel', Viewers: 'ui.viewers' };
   readonly statusLabels: Record<string, TranslationKey> = { Playing: 'ui.playing', Completed: 'ui.completed', Planned: 'ui.planned', Dropped: 'ui.dropped' };
   get isOwnProfile(): boolean { return this.authReady && this.auth.getTwitchIdFromToken() === String(this.twitchId); }
-  get canViewCommunity(): boolean { return this.authReady && (this.isOwnProfile || this.auth.isAdmin()); }
+  get canViewCommunity(): boolean { return this.authReady && (this.isOwnProfile); }
 
   ngOnInit(): void {
     this.routeSub = this.route.paramMap.subscribe((params) => {

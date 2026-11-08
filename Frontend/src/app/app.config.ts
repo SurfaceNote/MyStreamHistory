@@ -11,6 +11,7 @@ import { createErrorHandler, TraceService } from '@sentry/angular';
 import { routes } from './app.routes';
 import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
 import { authIntercerptor } from './auth/auth.interceptor';
+import { ssrTraceInterceptor } from './core/api/ssr-trace';
 import { provideClientHydration, withEventReplay, withHttpTransferCacheOptions } from '@angular/platform-browser';
 
 export const appConfig: ApplicationConfig = {
@@ -23,7 +24,7 @@ export const appConfig: ApplicationConfig = {
         anchorScrolling: 'enabled'
       })
     ),
-    provideHttpClient(withFetch(), withInterceptors([authIntercerptor])),
+    provideHttpClient(withFetch(), withInterceptors([ssrTraceInterceptor, authIntercerptor])),
     {
       provide: ErrorHandler,
       useValue: createErrorHandler({

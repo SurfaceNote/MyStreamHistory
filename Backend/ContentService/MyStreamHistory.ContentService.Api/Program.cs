@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using MyStreamHistory.ContentService.Api;
 using MyStreamHistory.Shared.Api.Extensions;
+using MyStreamHistory.Shared.Api.Authorization;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddSentryObservability();
@@ -44,13 +45,14 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
     };
 });
-var authorTwitchId = builder.Configuration["ContentAuthor:TwitchId"]
-    ?? throw new InvalidOperationException("ContentAuthor:TwitchId is required.");
+builder.Services.AddAdminServiceAuthentication(builder.Configuration);
 builder.Services.AddAuthorization(options => options.AddPolicy("ContentAuthor", policy =>
-    policy.RequireAuthenticatedUser().RequireRole("admin")
-        .RequireClaim("TwitchId", authorTwitchId)));
+    policy.AddAuthenticationSchemes(AdminServiceAuthentication.Scheme).RequireAuthenticatedUser()
+        .RequireClaim(AdminServiceAuthentication.PermissionClaim, AdminServiceAuthentication.Content)));
 
 var app = builder.Build();
+app.UseRouting();
+app.UseServiceMetrics("content");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();

@@ -5,7 +5,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { forkJoin, Observable } from 'rxjs';
-import { AuthService } from '../../auth/auth.service';
+import { ADMIN_IDENTITY } from '../../auth/admin-identity';
 import {
   ChatSubscriptionsResponse,
   CleanupChatSubscriptionsResponse,
@@ -44,9 +44,9 @@ export class AdminComponent implements OnInit {
   cleanupChatInput = '';
 
   constructor(
-    private authService: AuthService,
     private diagnosticsService: DiagnosticsService
   ) {}
+  private readonly authService = inject(ADMIN_IDENTITY);
 
   ngOnInit(): void {
     this.isAdmin = this.authService.isAdmin();

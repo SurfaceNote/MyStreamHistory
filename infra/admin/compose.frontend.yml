@@ -1,0 +1,13 @@
+# Merge with Frontend/docker-compose.yml only after issuing the admin certificate.
+services:
+  mystreamhistoryweb:
+    volumes:
+      - ../infra/admin/nginx.docker.conf:/etc/nginx/conf.d/admin.conf:ro
+      - /etc/letsencrypt/live/admin.mystreamhistory.com:/etc/letsencrypt/live/admin.mystreamhistory.com:ro
+      - /etc/letsencrypt/archive/admin.mystreamhistory.com:/etc/letsencrypt/archive/admin.mystreamhistory.com:ro
+    networks:
+      - admin
+networks:
+  admin:
+    external: true
+    name: mystreamhistory-admin

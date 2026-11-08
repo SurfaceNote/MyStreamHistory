@@ -39,21 +39,20 @@ public class CommunityController(ITransportBus bus, IConfiguration configuration
         if (!int.TryParse(User.FindFirst("TwitchId")?.Value, out var owner) || owner <= 0) return Forbid();
         var target = owner;
         if (channelId != null && (!int.TryParse(channelId, out target) || target <= 0)) return BadRequest(new ApiResultContainer { Success = false, Errors = ["invalidChannel"] });
-        var admin = User.IsInRole("admin");
-        if (target != owner && !admin) return Forbid();
+        if (target != owner) return Forbid();
         // Cross-channel access is read only, including callers attempting to attach a target to a write.
         if (request.Operation is "settings" or "exclude" or "restore"
             && Request.Query.TryGetValue("channelId", out var writeTarget)
             && writeTarget.ToString() != owner.ToString()) return Forbid();
         request.StreamerTwitchUserId = target.ToString();
         var pilots = configuration.GetSection("Features:CommunityAnalytics:PilotTwitchIds").Get<string[]>();
-        if (!admin && pilots is { Length: > 0 } && !pilots.Contains(request.StreamerTwitchUserId)) return NotFound();
+        if (pilots is { Length: > 0 } && !pilots.Contains(request.StreamerTwitchUserId)) return NotFound();
         var response = await bus.SendRequestAsync<CommunityRequest, CommunityResponse>(request, ct);
         if (response.Success == null) return StatusCode(503, new ApiResultContainer { Success = false, Errors = ["communityUnavailable"] });
         if (response.Success.Error != null) return BadRequest(new ApiResultContainer { Success = false, Errors = [response.Success.Error] });
         response.Success.ChannelTwitchUserId = request.StreamerTwitchUserId;
-        response.Success.CanViewOtherChannels = admin;
-        response.Success.ReadOnly = target != owner;
+        response.Success.CanViewOtherChannels = false;
+        response.Success.ReadOnly = false;
         Response.Headers.CacheControl = "no-store";
         return this.Success(response.Success);
     }

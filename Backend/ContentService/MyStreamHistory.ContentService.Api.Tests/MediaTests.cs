@@ -6,6 +6,9 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using MyStreamHistory.Shared.Api.Authorization;
 using MyStreamHistory.ContentService.Api;
 using MyStreamHistory.ContentService.Api.Controllers;
 using Xunit;
@@ -14,6 +17,34 @@ namespace MyStreamHistory.ContentService.Api.Tests;
 
 public sealed class MediaTests
 {
+    [Theory]
+    [InlineData("content", true)]
+    [InlineData("diagnostics", false)]
+    [InlineData("legacy", false)]
+    public async Task UnpublishedMediaRequiresTheNewContentServicePermission(string permission, bool allowed)
+    {
+        await using var fixture = await Fixture.Create();
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> {
+            ["AdminServiceAuth:Key"] = new string('k', 64)
+        }).Build();
+        var services = new ServiceCollection(); services.AddLogging(); services.AddAdminServiceAuthentication(configuration);
+        await using var provider = services.BuildServiceProvider();
+        fixture.Controller.HttpContext.RequestServices = provider;
+        var credentials = AdminServiceCredentials.Read(configuration);
+        var token = permission == "legacy" ? (credentials with { Issuer = "old-twitch", Key = new string('x', 64) }).Issue("123", "content")
+            : credentials.Issue("operator", permission);
+        fixture.Controller.Request.Headers.Authorization = "Bearer " + token;
+        var output = new MemoryStream(); fixture.Controller.Response.Body = output;
+        var result = await fixture.Controller.GetMedia(fixture.Asset.Id, default);
+        if (allowed)
+        {
+            Assert.IsType<EmptyResult>(result);
+            Assert.Equal(new byte[] { 1, 2, 3 }, output.ToArray());
+            Assert.Equal("private, no-store", fixture.Controller.Response.Headers.CacheControl.ToString());
+        }
+        else { Assert.IsType<NotFoundResult>(result); Assert.Empty(output.ToArray()); }
+    }
+
     [Fact]
     public async Task PublicResponsesUseCdnForCoverAndInlineImagesWithoutChangingStoredBody()
     {
@@ -163,6 +194,8 @@ public sealed class MediaTests
         public Exception? Failure { get; set; }
         protected override object? Invoke(MethodInfo? method, object?[]? args)
         {
+            if (method?.Name == "GetObjectAsync")
+                return Task.FromResult(new GetObjectResponse { ResponseStream = new MemoryStream(new byte[] { 1, 2, 3 }) });
             if (method?.Name != "DeleteObjectAsync") throw new NotSupportedException(method?.Name);
             if (Failure is not null) return Task.FromException<DeleteObjectResponse>(Failure);
             Deleted.Add(((string)args![0]!, (string)args[1]!));

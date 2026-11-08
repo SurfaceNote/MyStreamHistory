@@ -314,12 +314,19 @@ public sealed class ContentController(ContentDbContext db, MediaStorage storage,
         var asset = await db.Media.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
         if (asset is null) return NotFound();
         var published = await db.PublishedMedia.AnyAsync(x => x.MediaId == id && x.Article.PublishedAt != null);
-        if (!published && !(User.Identity?.IsAuthenticated == true && User.IsInRole("admin")
-            && User.HasClaim("TwitchId", HttpContext.RequestServices.GetRequiredService<IConfiguration>()["ContentAuthor:TwitchId"] ?? "")))
+        var administrator = false;
+        if (Request.Headers.Authorization.ToString().StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+        {
+            var authentication = await Microsoft.AspNetCore.Authentication.AuthenticationHttpContextExtensions.AuthenticateAsync(
+                HttpContext, MyStreamHistory.Shared.Api.Authorization.AdminServiceAuthentication.Scheme);
+            administrator = authentication.Succeeded && MyStreamHistory.Shared.Api.Authorization.AdminServiceAuthentication.HasPermission(
+                authentication.Principal!, MyStreamHistory.Shared.Api.Authorization.AdminServiceAuthentication.Content);
+        }
+        if (!published && !administrator)
             return NotFound();
         Response.Headers.CacheControl = published ? "public, max-age=300" : "private, no-store";
         // Authenticated editor requests stay on the API to avoid requiring CDN CORS for Blob previews.
-        if (published && delivery.Enabled && User.Identity?.IsAuthenticated != true)
+        if (published && delivery.Enabled && !administrator)
             return Redirect(delivery.Url(asset));
         Response.ContentType = asset.ContentType;
         using var objectResponse = await storage.OpenAsync(asset, cancellationToken);

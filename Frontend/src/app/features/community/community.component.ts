@@ -10,7 +10,7 @@ import { distinctUntilChanged, map, Subscription } from 'rxjs';
 import { CommunityService } from './community.service';
 import { CommunityMember, CommunityReport, CommunityResponse } from './community.models';
 import { AnalyticsService } from '../../service/analytics.service';
-import { AuthService } from '../../auth/auth.service';
+import { ADMIN_IDENTITY } from '../../auth/admin-identity';
 import { StreamerService } from '../../service/streamer.service';
 import { StreamerShortDTO } from '../../models/streamer-short.dto';
 
@@ -25,7 +25,7 @@ export class CommunityComponent implements OnDestroy {
   @ViewChild('trend') trend?: ElementRef<HTMLCanvasElement>;
   private api = inject(CommunityService);
   private analytics = inject(AnalyticsService);
-  private auth = inject(AuthService);
+  private auth = inject(ADMIN_IDENTITY);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private streamers = inject(StreamerService);
@@ -44,10 +44,10 @@ export class CommunityComponent implements OnDestroy {
   private responseReadOnly = false;
   channelId: string | null = null;
   channels: StreamerShortDTO[] = [];
-  canViewOtherChannels = false;
+  canViewOtherChannels = this.auth.isAdmin();
   get ownerId(): string { return this.auth.getTwitchIdFromToken() || ''; }
   get selectedChannelId(): string { return this.channelId || this.ownerId; }
-  get readOnly(): boolean { return this.responseReadOnly || !!this.channelId; }
+  get readOnly(): boolean { return this.auth.isAdmin() || this.responseReadOnly || !!this.channelId; }
   get otherChannels() { return this.channels.filter(c => String(c.twitchId) !== this.ownerId); }
   get missingChannel(): boolean { return !!this.channelId && !this.channels.some(c => String(c.twitchId) === this.channelId); }
   report: CommunityReport | null = null;

@@ -3,13 +3,14 @@ import ru from '@angular/common/locales/ru';
 import cs from '@angular/common/locales/cs';
 import de from '@angular/common/locales/de';
 import es from '@angular/common/locales/es';
-import { Injectable, PLATFORM_ID, inject, signal, computed, afterNextRender } from '@angular/core';
+import { Injectable, InjectionToken, PLATFORM_ID, inject, signal, computed, afterNextRender } from '@angular/core';
 import { NavigationStart, NavigationEnd, Router, UrlTree } from '@angular/router';
 import { LANGUAGES, Language, isLanguage, languageFromUrl, localizedPath, isPublicPath, isServicePath, unlocalizedPath } from './languages';
 import { DICTIONARIES, TranslationKey } from './translations';
 import { LANGUAGE_PREFERENCE_KEY, browserLanguages, languageCookie } from './language-preference';
 [ru, cs, de, es].forEach(data => registerLocaleData(data));
 export interface LanguageAlternative { language: Language; path: string; }
+export const UI_LANGUAGE = new InjectionToken<Language>('UI_LANGUAGE');
 export type LocalizedMessage = TranslationKey | '' | {
   key: TranslationKey;
   params?: Record<string, string | number> | (() => Record<string, string | number>);
@@ -19,6 +20,7 @@ export class LocaleService {
   private readonly document = inject(DOCUMENT);
   private readonly browser = isPlatformBrowser(inject(PLATFORM_ID));
   private readonly router = inject(Router);
+  private readonly languageOverride = inject(UI_LANGUAGE, { optional: true });
   readonly language = signal<Language>('en');
   readonly locale = computed(() => LANGUAGES.find(item => item.code === this.language())!.locale);
   readonly alternatives = signal<LanguageAlternative[] | null>(null);
@@ -54,9 +56,9 @@ export class LocaleService {
   private setUrl(url: string): void {
     this.currentUrl.set(url);
     const overlayLanguage = /^\/overlay\//.test(url) ? new URL(url, 'https://local.invalid').searchParams.get('language') : null;
-    this.language.set(isServicePath(url) && this.browser && this.hydrated
+    this.language.set(this.languageOverride || (isServicePath(url) && this.browser && this.hydrated
       ? isLanguage(overlayLanguage) ? overlayLanguage : this.savedLanguage() || this.lastPublicLanguage || this.preferredLanguage()
-      : languageFromUrl(url));
+      : languageFromUrl(url)));
     this.document.documentElement.lang = this.language();
     this.alternatives.set(null);
     if (this.browser && isPublicPath(url)) {

@@ -1,0 +1,48 @@
+services:
+  admin:
+    image: ${TWC_REGISTRY_HOST}/mystreamhistoryadmin:${ADMIN_IMAGE_TAG:-latest}
+    restart: unless-stopped
+    env_file:
+      - admin.env
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_HTTP_PORTS: "8080"
+      AdminAuth__DataProtectionKeysPath: /var/lib/msh-admin/keys
+      Monitoring__PrometheusUrl: http://prometheus:9090
+      ReverseProxy__KnownNetworks__0: ${ADMIN_NETWORK_SUBNET:-172.30.53.0/24}
+    ports:
+      - "127.0.0.1:4080:8080"
+    volumes:
+      - admin-keys:/var/lib/msh-admin/keys
+    networks:
+      - admin
+
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=14d
+      - --storage.tsdb.retention.size=2GB
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./secrets/metrics-token:/etc/prometheus/metrics-token:ro
+      - prometheus-data:/prometheus
+    networks:
+      - admin
+      - frontend
+
+networks:
+  admin:
+    name: mystreamhistory-admin
+    ipam:
+      config:
+        - subnet: ${ADMIN_NETWORK_SUBNET:-172.30.53.0/24}
+  frontend:
+    external: true
+    name: ${FRONTEND_NETWORK:-frontend_internalnet}
+
+volumes:
+  admin-keys:
+  prometheus-data:

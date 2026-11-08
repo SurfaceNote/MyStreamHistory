@@ -3,17 +3,21 @@
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
-    "start": "node --use-system-ca ./node_modules/@angular/cli/bin/ng.js serve",
-    "build": "ng build",
+    "start": "node --use-system-ca ./node_modules/@angular/cli/bin/ng.js serve MyStreamHistory.Web",
+    "build": "ng build MyStreamHistory.Web",
     "configure:sentry": "node scripts/write-sentry-config.mjs",
-    "watch": "ng build --watch --configuration development",
-    "test": "ng test",
-    "test:content": "ng test --watch=false --browsers=ChromeHeadless --ts-config=tsconfig.content-test.json --include=src/app/features/content/**/*.spec.ts",
+    "watch": "ng build MyStreamHistory.Web --watch --configuration development",
+    "test": "ng test MyStreamHistory.Web",
+    "test:content": "ng test MyStreamHistory.Web --watch=false --browsers=ChromeHeadless --ts-config=tsconfig.content-test.json --include=src/app/features/content/**/*.spec.ts",
     "serve:ssr:MyStreamHistory.Web": "node dist/my-stream-history.web/server/server.mjs",
-    "test:localization": "ng test --watch=false --browsers=ChromeHeadless --ts-config=tsconfig.localization-test.json --include=src/app/i18n/**/*.spec.ts --include=src/app/service/seo.service.spec.ts --include=src/app/pages/streamer-profile/**/*.spec.ts --include=src/app/pages/stream-detail/**/*.spec.ts --include=src/app/pages/viewer-stats/**/*.spec.ts --include=src/app/features/content/**/*.spec.ts --include=src/app/pages/home/**/*.spec.ts --include=src/app/features/community/**/*.spec.ts --include=src/app/components/header/**/*.spec.ts",
+    "test:localization": "ng test MyStreamHistory.Web --watch=false --browsers=ChromeHeadless --ts-config=tsconfig.localization-test.json --include=src/app/i18n/**/*.spec.ts --include=src/app/service/seo.service.spec.ts --include=src/app/pages/streamer-profile/**/*.spec.ts --include=src/app/pages/stream-detail/**/*.spec.ts --include=src/app/pages/viewer-stats/**/*.spec.ts --include=src/app/features/content/**/*.spec.ts --include=src/app/pages/home/**/*.spec.ts --include=src/app/features/community/**/*.spec.ts --include=src/app/components/header/**/*.spec.ts",
     "smoke:localization": "node scripts/smoke-localization.mjs",
     "smoke:localization:browser": "node scripts/smoke-localization-browser.mjs",
-    "smoke:localization:nginx": "node scripts/smoke-localization-nginx.mjs"
+    "smoke:localization:nginx": "node scripts/smoke-localization-nginx.mjs",
+    "build:admin": "ng build MyStreamHistory.Admin",
+    "start:admin": "ng serve MyStreamHistory.Admin",
+    "test:ssr-metrics": "node --experimental-strip-types scripts/test-ssr-metrics.mjs",
+    "test:admin": "ng test MyStreamHistory.Admin --watch=false --browsers=ChromeHeadless"
   },
   "private": true,
   "dependencies": {

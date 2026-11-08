@@ -1,0 +1,21 @@
+import assert from 'node:assert/strict';
+import { apiRoute, authorizedMetrics, pageRoute, SsrMetrics } from '../src/ssr-observability.ts';
+
+assert.deepEqual(pageRoute('/ru/profile/123'), { route: '/profile/:id', language: 'ru' });
+assert.deepEqual(pageRoute('/de/'), { route: '/', language: 'de' });
+assert.equal(pageRoute('/unknown/private-value').route, '/other');
+assert.equal(apiRoute('https://api.example/user/123/recent-streams?count=10'), '/user/:id/recent-streams');
+assert.equal(apiRoute('https://api.example/content/news/private-slug?language=ru'), '/content/:type/:slug');
+assert.equal(authorizedMetrics('Bearer value', undefined), false);
+assert.equal(authorizedMetrics('Bearer value', 'value'), true);
+assert.equal(authorizedMetrics('Bearer valuE', 'value'), false);
+assert.equal(authorizedMetrics('Bearer value-too-long', 'value'), false);
+const metrics = new SsrMetrics();
+metrics.render('/ru/profile/private-id', 200, 200, 1024);
+metrics.api('https://api.example/streams/private-stream', 200, 100);
+const text = metrics.text();
+assert.match(text, /msh_ssr_render_duration_seconds_bucket\{route="\/profile\/:id",language="ru",status_class="2xx",le="0.25"\} 1/);
+assert.match(text, /msh_ssr_render_duration_seconds_count\{route="\/profile\/:id",language="ru",status_class="2xx"\} 1/);
+assert.match(text, /msh_ssr_html_bytes_total 1024/);
+assert.ok(!text.includes('private-id') && !text.includes('private-stream'));
+console.log('SSR metrics checks passed: route cardinality, authentication, histogram buckets and HTML size.');

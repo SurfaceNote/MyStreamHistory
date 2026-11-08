@@ -61,7 +61,11 @@
                 }
               ],
               "outputHashing": "all",
-              "optimization": { "scripts": true, "styles": true, "fonts": false },
+              "optimization": {
+                "scripts": true,
+                "styles": true,
+                "fonts": false
+              },
               "sourceMap": {
                 "scripts": true,
                 "styles": false,
@@ -122,9 +126,98 @@
               "src/styles.scss"
             ],
             "stylePreprocessorOptions": {
-                "includePaths": ["src/styles"]
-              },
+              "includePaths": [
+                "src/styles"
+              ]
+            },
             "scripts": []
+          }
+        }
+      }
+    },
+    "MyStreamHistory.Admin": {
+      "projectType": "application",
+      "root": "projects/admin",
+      "sourceRoot": "projects/admin/src",
+      "prefix": "admin",
+      "architect": {
+        "build": {
+          "builder": "@angular-devkit/build-angular:application",
+          "options": {
+            "outputPath": "dist/my-stream-history.admin",
+            "index": "projects/admin/src/index.html",
+            "browser": "projects/admin/src/main.ts",
+            "polyfills": [
+              "zone.js"
+            ],
+            "tsConfig": "projects/admin/tsconfig.app.json",
+            "inlineStyleLanguage": "scss",
+            "styles": [
+              "projects/admin/src/styles.scss"
+            ],
+            "stylePreprocessorOptions": {
+              "includePaths": [
+                "src/styles"
+              ]
+            },
+            "assets": [
+              {
+                "glob": "logo.png",
+                "input": "public"
+              },
+              {
+                "glob": "**/*",
+                "input": "public/images/flags",
+                "output": "images/flags"
+              }
+            ]
+          },
+          "configurations": {
+            "production": {
+              "outputHashing": "all",
+              "optimization": {
+                "scripts": true,
+                "styles": true,
+                "fonts": false
+              },
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "1mb",
+                  "maximumError": "2mb"
+                }
+              ]
+            },
+            "development": {
+              "optimization": false,
+              "sourceMap": true
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "@angular-devkit/build-angular:dev-server",
+          "configurations": {
+            "development": {
+              "buildTarget": "MyStreamHistory.Admin:build:development",
+              "proxyConfig": "projects/admin/proxy.conf.json",
+              "ssl": true
+            }
+          },
+          "defaultConfiguration": "development"
+        },
+        "test": {
+          "builder": "@angular-devkit/build-angular:karma",
+          "options": {
+            "polyfills": [
+              "zone.js",
+              "zone.js/testing"
+            ],
+            "tsConfig": "projects/admin/tsconfig.spec.json",
+            "include": [
+              "projects/admin/src/**/*.spec.ts"
+            ],
+            "inlineStyleLanguage": "scss"
           }
         }
       }

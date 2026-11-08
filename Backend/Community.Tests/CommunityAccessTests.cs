@@ -12,6 +12,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MyStreamHistory.Gateway.Api.Controllers;
 using MyStreamHistory.Shared.Application.Transport;
+using MyStreamHistory.Shared.Api.Authorization;
 using Xunit;
 
 namespace MyStreamHistory.Community.Tests;
@@ -69,10 +70,10 @@ public class CommunityAccessTests
         var bus = new FakeBus();
         await using var app = await CreateApp(bus);
         using var client = app.GetTestClient();
-        client.DefaultRequestHeaders.Authorization = new("Bearer", "admin");
+        client.DefaultRequestHeaders.Authorization = new("Bearer", Credentials.Issue("operator", AdminServiceAuthentication.CommunityRead));
         foreach (var suffix in new[] { "", "/members", "/exclusions" })
         {
-            var response = await client.GetAsync("/analytics/community" + suffix + "?channelId=999");
+            var response = await client.GetAsync("/admin/community" + suffix + "?channelId=999");
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             Assert.Equal("999", bus.LastRequest!.StreamerTwitchUserId);
             using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
@@ -80,8 +81,7 @@ public class CommunityAccessTests
             Assert.True(body.RootElement.GetProperty("data").GetProperty("readOnly").GetBoolean());
             Assert.True(response.Headers.CacheControl!.NoStore);
         }
-        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/analytics/community")).StatusCode);
-        Assert.Equal("123", bus.LastRequest!.StreamerTwitchUserId);
+        Assert.Equal(HttpStatusCode.BadRequest, (await client.GetAsync("/admin/community")).StatusCode);
     }
 
     [Fact]
@@ -97,6 +97,18 @@ public class CommunityAccessTests
             if (method == "PUT") request.Content = new StringContent("{\"timeZoneId\":\"UTC\"}", System.Text.Encoding.UTF8, "application/json");
             Assert.Equal(HttpStatusCode.Forbidden, (await client.SendAsync(request)).StatusCode);
         }
+        Assert.Null(bus.LastRequest);
+    }
+
+    [Fact]
+    public async Task OldTwitchAdminCannotReadAnotherChannelOrUseTheNewAdminApi()
+    {
+        var bus = new FakeBus();
+        await using var app = await CreateApp(bus);
+        using var client = app.GetTestClient();
+        client.DefaultRequestHeaders.Authorization = new("Bearer", "admin");
+        Assert.Equal(HttpStatusCode.Forbidden, (await client.GetAsync("/analytics/community?channelId=999")).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/admin/community?channelId=999")).StatusCode);
         Assert.Null(bus.LastRequest);
     }
 
@@ -124,6 +136,8 @@ public class CommunityAccessTests
         Assert.Equal(HttpStatusCode.Forbidden, (await client.GetAsync("/analytics/community")).StatusCode);
     }
 
+    private static readonly AdminServiceCredentials Credentials = new(new string('k', 64), "mystreamhistory-admin", "mystreamhistory-internal-admin");
+
     private static async Task<WebApplication> CreateApp(FakeBus bus)
     {
         var builder = WebApplication.CreateBuilder();
@@ -132,7 +146,11 @@ public class CommunityAccessTests
         builder.Services.AddSingleton<ITransportBus>(bus);
         builder.Services.AddControllers().AddApplicationPart(typeof(CommunityController).Assembly);
         builder.Services.AddAuthentication("Tests").AddScheme<AuthenticationSchemeOptions, OwnerHandler>("Tests", _ => { });
-        builder.Services.AddAuthorization();
+        builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?> { ["AdminServiceAuth:Key"] = Credentials.Key });
+        builder.Services.AddAdminServiceAuthentication(builder.Configuration);
+        builder.Services.AddAuthorization(options => options.AddPolicy("AdminCommunityRead", policy => policy
+            .AddAuthenticationSchemes(AdminServiceAuthentication.Scheme).RequireAuthenticatedUser()
+            .RequireClaim(AdminServiceAuthentication.PermissionClaim, AdminServiceAuthentication.CommunityRead)));
         var app = builder.Build();
         app.UseAuthentication(); app.UseAuthorization(); app.MapControllers();
         await app.StartAsync();

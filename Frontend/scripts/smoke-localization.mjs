@@ -7,9 +7,9 @@ export async function startSsr() {
   const api = await startFixtureApi();
   const reserve = createServer(); await new Promise(resolve => reserve.listen(0, '127.0.0.1', resolve));
   const port = reserve.address().port; await new Promise(resolve => reserve.close(resolve));
-  const child = spawn(process.execPath, ['dist/my-stream-history.web/server/server.mjs'], {
+  const child = spawn(process.execPath, [process.env.SSR_BUNDLE || 'dist/my-stream-history.web/server/server.mjs'], {
     cwd: fileURLToPath(new URL('../', import.meta.url)), windowsHide: true,
-    env: { ...process.env, API_BASE_URL: api.url, PORT: String(port) }, stdio: ['ignore', 'pipe', 'pipe']
+    env: { ...process.env, API_BASE_URL: api.url, PORT: String(port), METRICS_TOKEN: 'local-ssr-smoke-only' }, stdio: ['ignore', 'pipe', 'pipe']
   });
   let log = ''; child.stdout.on('data', value => log = (log + value).slice(-6000)); child.stderr.on('data', value => log = (log + value).slice(-6000));
   const origin = 'http://127.0.0.1:' + port;
@@ -48,6 +48,8 @@ export async function smokeSsr(runtime) {
   await Promise.all(requests.map(async ({ language, path }) => {
     const response = await request(runtime.origin + path, { headers: { Cookie: 'private-test-cookie=secret', Authorization: 'Bearer test-private' } });
     const html = await response.text(); assert.equal(response.status, 200, path + '\n' + runtime.log());
+    assert.match(response.headers.get('server-timing') || '', /ssr;dur=\d/);
+    assert.ok(response.headers.get('x-request-id'), path + ': missing SSR request ID');
     assert.match(html, new RegExp('<html[^>]*lang="' + language + '"'), path);
     assert.ok(html.includes('rel="canonical" href="https://mystreamhistory.com' + path + '"'), path + ': canonical');
     assert.ok(html.includes('rel="alternate" hreflang="' + language + '"'), path + ': self hreflang');
@@ -71,6 +73,13 @@ export async function smokeSsr(runtime) {
   }
   const redirect = await request(runtime.origin + '/ru?x=1', { redirect: 'manual' }); assert.equal(redirect.status,301); assert.equal(redirect.headers.get('location'),'/ru/?x=1');
   assert.ok(runtime.requests.every(request => !request.authorization && !request.cookie), 'SSR forwarded private credentials');
+  assert.equal((await request(runtime.origin + '/internal/metrics')).status, 404);
+  const metrics = await request(runtime.origin + '/internal/metrics', { headers: { Authorization: 'Bearer local-ssr-smoke-only' } });
+  assert.equal(metrics.status, 200);
+  const exposition = await metrics.text();
+  assert.match(exposition, /msh_ssr_render_duration_seconds_count/);
+  assert.match(exposition, /msh_ssr_api_duration_seconds_count/);
+  assert.ok(!exposition.includes(streamId), 'Raw stream ID leaked into metric labels');
   console.log('SSR localization smoke passed: 25 concurrent pages, status codes, alternatives, homepage negotiation, redirects and anonymous requests.');
 }
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

@@ -25,6 +25,7 @@ builder.Services.AddInfrastructure(builder.Configuration)
     .AddTransportBus();
 
 builder.Services.AddControllers();
+builder.Services.AddAdminServiceAuthentication(builder.Configuration);
 var contentServiceUrl = builder.Configuration["ContentService:BaseUrl"]
     ?? throw new InvalidOperationException("ContentService:BaseUrl is required.");
 if (!Uri.TryCreate(contentServiceUrl, UriKind.Absolute, out var contentServiceUri)
@@ -193,12 +194,16 @@ builder.Services.AddAuthorization(options =>
 
     options.AddPolicy(PolicyNames.DiagnosticsAdmin, policy =>
     {
+        policy.AddAuthenticationSchemes(AdminServiceAuthentication.Scheme);
         policy.RequireAuthenticatedUser();
-        policy.RequireRole("admin");
+        policy.RequireClaim(AdminServiceAuthentication.PermissionClaim, AdminServiceAuthentication.Diagnostics);
         policy.RequireAssertion(context =>
             !builder.Environment.IsProduction()
             || builder.Configuration.GetValue<bool>("Diagnostics:EnableInProduction"));
     });
+    options.AddPolicy("AdminCommunityRead", policy => policy
+        .AddAuthenticationSchemes(AdminServiceAuthentication.Scheme).RequireAuthenticatedUser()
+        .RequireClaim(AdminServiceAuthentication.PermissionClaim, AdminServiceAuthentication.CommunityRead));
 });
 
 var app = builder.Build();
@@ -212,6 +217,7 @@ app.UseCors("Frontend");
 app.UseCors("ExtDev");
 
 app.UseRouting();
+app.UseServiceMetrics("gateway");
 
 app.UseAuthentication();
 app.UseRateLimiter();
