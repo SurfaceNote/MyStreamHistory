@@ -131,6 +131,7 @@ public class CommunityService(ViewerServiceDbContext db, ITransportBus bus, ICon
 
     public async Task<CommunityResponse> HandleAsync(CommunityRequest request, CancellationToken ct)
     {
+        if (request.Operation == "overview") return await OverviewAsync(ct);
         var channel = request.StreamerTwitchUserId;
         if (!int.TryParse(channel, out _)) return new() { Error = "invalidChannel" };
         await EnsureSettings(channel, null, ct);
@@ -216,6 +217,29 @@ public class CommunityService(ViewerServiceDbContext db, ITransportBus bus, ICon
             response.Exclusions = excluded.Select(id => new CommunityExcludedAccount { TwitchUserId = id, DisplayName = profiles.GetValueOrDefault(id)?.DisplayName ?? id }).ToList();
         }
         return response;
+    }
+
+    /// <summary>Read-only summary of every channel's published report, for the admin panel. Creates nothing.</summary>
+    private async Task<CommunityResponse> OverviewAsync(CancellationToken ct)
+    {
+        var rows = await db.CommunitySettings.AsNoTracking()
+            .Select(s => new { s.StreamerTwitchUserId, s.Pending, s.CalculatedAt, s.LastActivityAt, s.ReportJson })
+            .ToListAsync(ct);
+        return new CommunityResponse
+        {
+            Channels = rows.Select(row =>
+            {
+                var report = row.ReportJson == null ? null : JsonSerializer.Deserialize<CommunityReport>(row.ReportJson, Json);
+                // A report from an older method version has a different shape; show it as recalculating.
+                if (report?.MethodVersion != CommunityReport.CurrentMethodVersion) report = null;
+                return new CommunityChannelSummary
+                {
+                    TwitchUserId = row.StreamerTwitchUserId, Recalculating = Enabled && (row.Pending || report == null),
+                    Quality = report?.Quality ?? "insufficient", TotalBroadcasts = report?.TotalBroadcasts ?? 0,
+                    Segments = report?.Segments ?? [], AsOf = report?.AsOf, CalculatedAt = row.CalculatedAt, LastActivityAt = row.LastActivityAt
+                };
+            }).OrderByDescending(c => c.TotalBroadcasts).ThenBy(c => c.TwitchUserId, StringComparer.Ordinal).ToList()
+        };
     }
 
     public async Task RecalculatePendingAsync(CancellationToken ct)

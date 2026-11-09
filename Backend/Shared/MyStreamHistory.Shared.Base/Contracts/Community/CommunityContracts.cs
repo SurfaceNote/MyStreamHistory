@@ -25,6 +25,20 @@ public class CommunityResponse
     public int? MembersTotal { get; set; }
     public string? NextCursor { get; set; }
     public List<CommunityExcludedAccount> Exclusions { get; set; } = [];
+    /// <summary>Admin overview: one row per channel that has community data.</summary>
+    public List<CommunityChannelSummary> Channels { get; set; } = [];
+}
+
+public class CommunityChannelSummary
+{
+    public string TwitchUserId { get; set; } = "";
+    public string Quality { get; set; } = "insufficient";
+    public bool Recalculating { get; set; }
+    public int TotalBroadcasts { get; set; }
+    public Dictionary<string, int> Segments { get; set; } = [];
+    public DateOnly? AsOf { get; set; }
+    public DateTime? CalculatedAt { get; set; }
+    public DateTime? LastActivityAt { get; set; }
 }
 
 public static class CommunitySegments

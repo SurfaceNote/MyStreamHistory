@@ -22,6 +22,19 @@ public class AdminCommunityController(ITransportBus bus, ILogger<AdminCommunityC
     public Task<ActionResult<ApiResultContainer<CommunityResponse>>> Exclusions([FromQuery] string? channelId, CancellationToken ct) =>
         Send(new() { Operation = "exclusions" }, channelId, ct);
 
+    /// <summary>All channels with community data and the size of their segments.</summary>
+    [HttpGet("overview")]
+    public async Task<ActionResult<ApiResultContainer<CommunityResponse>>> Overview(CancellationToken ct)
+    {
+        var response = await bus.SendRequestAsync<CommunityRequest, CommunityResponse>(new() { Operation = "overview" }, ct);
+        if (response.Success == null) return StatusCode(503, new ApiResultContainer { Success = false, Errors = ["communityUnavailable"] });
+        if (response.Success.Error != null) return BadRequest(new ApiResultContainer { Success = false, Errors = [response.Success.Error] });
+        response.Success.CanViewOtherChannels = true; response.Success.ReadOnly = true;
+        Response.Headers.CacheControl = "no-store";
+        logger.LogInformation("AUDIT Admin {Actor} read Community overview; RequestId {RequestId}", User.Identity?.Name, HttpContext.TraceIdentifier);
+        return this.Success(response.Success);
+    }
+
     private async Task<ActionResult<ApiResultContainer<CommunityResponse>>> Send(CommunityRequest request, string? channelId, CancellationToken ct)
     {
         if (!int.TryParse(channelId, out var target) || target <= 0)

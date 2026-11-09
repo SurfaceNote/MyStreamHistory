@@ -17,7 +17,7 @@ public static partial class AdminProxy
         if (method == "GET" && path == "admin/product/overview") return ("gateway", AdminServiceAuthentication.ProductRead);
         if (path == "admin/bots" && method is "GET" or "POST" || method == "DELETE" && BotPath().IsMatch(path))
             return ("gateway", AdminServiceAuthentication.BotsManage);
-        if (method == "GET" && path is "analytics/community" or "analytics/community/members" or "analytics/community/exclusions")
+        if (method == "GET" && path is "analytics/community" or "analytics/community/members" or "analytics/community/exclusions" or "analytics/community/overview")
             return ("gateway", AdminServiceAuthentication.CommunityRead);
         if (method == "GET" && MediaPath().IsMatch(path)) return ("content", AdminServiceAuthentication.Content);
         if (path == "content/admin/articles" && method is "GET" or "POST"

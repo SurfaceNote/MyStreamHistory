@@ -1,0 +1,20 @@
+.dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+th, td { padding: 10px; }
+th.numeric, td.numeric { text-align: right; }
+td:last-child { white-space: nowrap; }
+.channel { min-width: 130px; }
+tbody tr { cursor: pointer; }
+tbody tr:hover td { background: #22212c; }
+tbody tr:focus-visible { outline: 2px solid #8e6cbb; outline-offset: -2px; }
+tr.empty-row td { color: #8d8999; }
+.state[data-state="pending"]::before { background: #e5b84c; }
+.hint { font-size: 13px; margin-top: 14px; }
+
+.panel-page.channel-view { padding-bottom: 0; }
+.channel-head { display: flex; align-items: flex-end; gap: 18px; flex-wrap: wrap; }
+.channel-head .title { flex: 1 1 260px; min-width: 0; }
+.channel-head h1 { margin: 6px 0 0; overflow-wrap: anywhere; }
+.channel-head .back { padding: 8px 12px; align-self: flex-start; }
+.channel-head .switch { margin: 0; min-width: 240px; flex: 0 1 320px; font-size: 13px; color: #aaa7b6; }
+.embedded-report { max-width: 1400px; margin: 0 auto; padding: 20px clamp(24px, 4vw, 64px) clamp(24px, 4vw, 64px); }
+@media (max-width: 600px) { .channel-head .switch { flex: 1 1 100%; } }

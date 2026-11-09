@@ -1,10 +1,10 @@
 import { TranslationKey } from '../../i18n/translations';
 import { TranslatePipe } from '../../i18n/translate.pipe';
 import { LocaleService, LocalizedMessage } from '../../i18n/locale.service';
-import { afterNextRender, ChangeDetectorRef, Component, effect, ElementRef, inject, NgZone, OnDestroy, untracked, ViewChild } from '@angular/core';
+import { afterNextRender, ChangeDetectorRef, Component, effect, ElementRef, inject, Input, NgZone, OnDestroy, untracked, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 import { Chart, ChartDataset, registerables } from 'chart.js';
 import { debounceTime, distinctUntilChanged, map, Subject, Subscription } from 'rxjs';
 import { CommunityService } from './community.service';
@@ -13,8 +13,6 @@ import {
 } from './community.models';
 import { AnalyticsService } from '../../service/analytics.service';
 import { ADMIN_IDENTITY } from '../../auth/admin-identity';
-import { StreamerService } from '../../service/streamer.service';
-import { StreamerShortDTO } from '../../models/streamer-short.dto';
 
 Chart.register(...registerables);
 
@@ -35,7 +33,7 @@ const DEFAULT_SERIES: CommunitySegment[] = ['core', 'regular', 'occasional', 'fa
 type ChartMode = 'segments' | 'flow' | 'visitors';
 
 @Component({
-  selector: 'app-community', imports: [TranslatePipe, CommonModule, FormsModule],
+  selector: 'app-community', imports: [TranslatePipe, CommonModule, FormsModule], host: { '[class.embedded]': 'embedded' },
   templateUrl: './community.component.html', styleUrl: './community.component.scss'
 })
 export class CommunityComponent implements OnDestroy {
@@ -46,8 +44,6 @@ export class CommunityComponent implements OnDestroy {
   private analytics = inject(AnalyticsService);
   private auth = inject(ADMIN_IDENTITY);
   private route = inject(ActivatedRoute);
-  private router = inject(Router);
-  private streamers = inject(StreamerService);
   private cdr = inject(ChangeDetectorRef);
   private zone = inject(NgZone);
   private subscriptions = new Subscription();
@@ -61,18 +57,14 @@ export class CommunityComponent implements OnDestroy {
   private reportRequest?: Subscription;
   private exclusionsRequest?: Subscription;
   private timeZoneSynced = false;
-  private channelsRequested = false;
   private responseReadOnly = false;
   readonly segments = SEGMENTS;
   readonly segmentInfo = Object.fromEntries(SEGMENTS.map(s => [s.id, s])) as Record<CommunitySegment, SegmentInfo>;
+  /** Inside the admin panel: the host page owns the heading and the channel picker. */
+  @Input() embedded = false;
   channelId: string | null = null;
-  channels: StreamerShortDTO[] = [];
-  canViewOtherChannels = this.auth.isAdmin();
   get ownerId(): string { return this.auth.getTwitchIdFromToken() || ''; }
-  get selectedChannelId(): string { return this.channelId || this.ownerId; }
   get readOnly(): boolean { return this.auth.isAdmin() || this.responseReadOnly || !!this.channelId; }
-  get otherChannels() { return this.channels.filter(c => String(c.twitchId) !== this.ownerId); }
-  get missingChannel(): boolean { return !!this.channelId && !this.channels.some(c => String(c.twitchId) === this.channelId); }
   report: CommunityReport | null = null;
   members: CommunityMember[] = [];
   membersTotal: number | null = null;
@@ -120,21 +112,8 @@ export class CommunityComponent implements OnDestroy {
     this.load(); this.loadExclusions();
   }
 
-  viewChannel(id: string): void {
-    if (id === this.selectedChannelId) return;
-    void this.router.navigate([], { relativeTo: this.route, queryParams: { channelId: id === this.ownerId ? null : id }, queryParamsHandling: 'merge' });
-  }
-
   private applyResponse(response: CommunityResponse): void {
-    this.canViewOtherChannels = response.canViewOtherChannels ?? false;
     this.responseReadOnly = response.readOnly ?? false;
-    if (this.canViewOtherChannels && !this.channelsRequested) {
-      this.channelsRequested = true;
-      this.subscriptions.add(this.streamers.getAllStreamers().subscribe({
-        next: channels => { this.channels = [...channels].sort((a, b) => a.displayName.localeCompare(b.displayName)); this.cdr.markForCheck(); },
-        error: () => { this.channelsRequested = false; this.settingsError = 'community.loadChannelsFailed'; this.cdr.markForCheck(); }
-      }));
-    }
     this.apply(response.report);
   }
 

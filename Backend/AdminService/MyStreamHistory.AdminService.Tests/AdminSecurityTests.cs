@@ -52,6 +52,8 @@ public class AdminSecurityTests
     [InlineData("GET", "admin/bots/nightbot", false)]
     [InlineData("GET", "content/media/00000000-0000-0000-0000-000000000001", true)]
     [InlineData("DELETE", "diagnostics/eventsub-subscriptions", true)]
+    [InlineData("GET", "analytics/community/overview", true)]
+    [InlineData("POST", "analytics/community/overview", false)]
     [InlineData("POST", "analytics/community/settings", false)]
     [InlineData("PUT", "analytics/community/settings", false)]
     [InlineData("GET", "auth/refresh-token", false)]

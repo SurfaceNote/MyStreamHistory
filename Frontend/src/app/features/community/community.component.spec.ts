@@ -10,7 +10,6 @@ import { CommunityService } from './community.service';
 import { CommunityMember, CommunityMemberFilter, CommunityReport, CommunityResponse } from './community.models';
 import { AnalyticsService } from '../../service/analytics.service';
 import { AuthService } from '../../auth/auth.service';
-import { StreamerService } from '../../service/streamer.service';
 
 describe('Community analytics', () => {
   const browserZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
@@ -55,8 +54,7 @@ describe('Community analytics', () => {
       { provide: CommunityService, useValue: api }, { provide: AnalyticsService, useValue: analytics },
       { provide: AuthService, useValue: { getTwitchIdFromToken: () => '123' } },
       { provide: ActivatedRoute, useValue: { queryParamMap: query } },
-      { provide: Router, useValue: { url: '/analytics/community', navigated: true, events: new Subject(), navigate: jasmine.createSpy('navigate') } },
-      { provide: StreamerService, useValue: { getAllStreamers: () => of([{ twitchId: 999, displayName: 'Other channel', avatar: '' }]) } }
+      { provide: Router, useValue: { url: '/analytics/community', navigated: true, events: new Subject(), navigate: jasmine.createSpy('navigate') } }
     ] });
   });
   afterEach(() => {
@@ -272,11 +270,26 @@ describe('Community analytics', () => {
     expect(api.members).toHaveBeenCalledWith(noFilter, null, '999');
     expect(api.exclusions).toHaveBeenCalledWith('999');
     expect(api.settings).not.toHaveBeenCalled();
-    expect(f.nativeElement.querySelector('#community-channel')).not.toBeNull();
+    expect(f.nativeElement.querySelector('select#community-channel')).toBeNull();
+    expect(f.nativeElement.querySelector('h1')).not.toBeNull();
     expect(f.nativeElement.textContent).toContain('Read only');
     expect(f.nativeElement.textContent).not.toContain('Exclude account');
     f.componentInstance.exclusion('1', false);
     expect(api.exclude).not.toHaveBeenCalled();
+    f.destroy();
+  });
+  it('leaves the heading to the host page when embedded in the admin panel', () => {
+    query.next(convertToParamMap({ channelId: '999' }));
+    api.report.and.returnValue(of({ ...response(), readOnly: true }));
+    const f = TestBed.createComponent(CommunityComponent);
+    f.componentRef.setInput('embedded', true);
+    f.detectChanges(); f.detectChanges();
+    expect(f.nativeElement.classList).toContain('embedded');
+    expect(f.nativeElement.querySelector('h1')).toBeNull();
+    const status = f.nativeElement.querySelector('.report-status').textContent;
+    expect(status).toContain('Read only');
+    expect(status).toContain('last 3 streams');
+    expect(card(f).querySelector('strong')!.textContent).toBe('38');
     f.destroy();
   });
   it('discards an earlier member request when switching channels', () => {

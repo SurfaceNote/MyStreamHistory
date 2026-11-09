@@ -246,6 +246,9 @@ public class CommunityPostgresTests
         Assert.Equal("Quiet", Assert.Single(members.Members).DisplayName);
         Assert.Equal("1111111111", members.Members[0].Attendance);
         Assert.Equal("invalidLevel", (await service.HandleAsync(new() { StreamerTwitchUserId = "10", Operation = "members", Level = "declining" }, default)).Error);
+        var overview = Assert.Single((await service.HandleAsync(new() { Operation = "overview" }, default)).Channels);
+        Assert.Equal(("10", 10, 1, false), (overview.TwitchUserId, overview.TotalBroadcasts, overview.Segments[CommunitySegments.Core], overview.Recalculating));
+        Assert.Equal(1, await db.CommunitySettings.CountAsync());
         var excluded = await service.HandleAsync(new() { StreamerTwitchUserId = "10", Operation = "exclude", ViewerTwitchUserId = "1" }, default);
         Assert.True(excluded.Report!.Recalculating);
         Assert.Empty(excluded.Report.Segments);

@@ -100,6 +100,22 @@ public class CommunityAccessTests
             Assert.True(response.Headers.CacheControl!.NoStore);
         }
         Assert.Equal(HttpStatusCode.BadRequest, (await client.GetAsync("/admin/community")).StatusCode);
+        var overview = await client.GetAsync("/admin/community/overview");
+        Assert.Equal(HttpStatusCode.OK, overview.StatusCode);
+        Assert.Equal("overview", bus.LastRequest!.Operation);
+        Assert.True(overview.Headers.CacheControl!.NoStore);
+    }
+
+    [Fact]
+    public async Task ChannelOwnersCannotReadTheAdminOverview()
+    {
+        var bus = new FakeBus();
+        await using var app = await CreateApp(bus);
+        using var client = app.GetTestClient();
+        client.DefaultRequestHeaders.Authorization = new("Bearer", "admin");
+        Assert.NotEqual(HttpStatusCode.OK, (await client.GetAsync("/admin/community/overview")).StatusCode);
+        Assert.NotEqual(HttpStatusCode.OK, (await client.GetAsync("/analytics/community/overview")).StatusCode);
+        Assert.Null(bus.LastRequest);
     }
 
     [Fact]

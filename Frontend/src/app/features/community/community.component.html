@@ -1,27 +1,23 @@
 <main class="community-page" [attr.lang]="locale.language()">
-  <header class="page-heading">
-    <div>
-      <span class="eyebrow">{{ 'community.analytics' | t }}</span>
-      <h1>{{ 'ui.community' | t }}</h1>
-      <p class="subtitle">{{ 'community.subtitle' | t }}</p>
-    </div>
-    @if (report?.from) {
-      <span class="period">{{ 'community.window' | t: { from: date(report!.from), to: date(report!.asOf), broadcasts: locale.plural('broadcastCount', report!.windowDates.length) } }}</span>
-    }
-  </header>
-
-  @if (canViewOtherChannels) {
-    <div class="channel-picker"><label for="community-channel">{{ 'ui.channel' | t }}</label><select id="community-channel" [ngModel]="selectedChannelId" (ngModelChange)="viewChannel($event)">
-      <option [ngValue]="ownerId">{{ 'community.yourChannel' | t }}</option>
-      @if (missingChannel) { <option [ngValue]="channelId">{{ 'community.channelId' | t: { id: channelId! } }}</option> }
-      @for (channel of otherChannels; track channel.twitchId) { <option [ngValue]="channel.twitchId.toString()">{{ channel.displayName }}</option> }
-    </select>@if (readOnly) { <span class="status-badge">{{ 'community.readOnly' | t }}</span> }</div>
+  @if (!embedded) {
+    <header class="page-heading">
+      <div>
+        <span class="eyebrow">{{ 'community.analytics' | t }}</span>
+        <h1>{{ 'ui.community' | t }}</h1>
+        <p class="subtitle">{{ 'community.subtitle' | t }}</p>
+      </div>
+      @if (report?.from) {
+        <span class="period">{{ 'community.window' | t: { from: date(report!.from), to: date(report!.asOf), broadcasts: locale.plural('broadcastCount', report!.windowDates.length) } }}</span>
+      }
+    </header>
   }
   @if (loading) { <p role="status" class="caption">{{ 'community.loading' | t }}</p> }
   @if (error) { <div class="notice error" role="alert">{{ error }} <button type="button" (click)="load()">{{ 'ui.retry' | t }}</button></div> }
 
   @if (report; as r) {
     <div class="report-status" role="status">
+      @if (embedded && r.from) { <span class="status-badge">{{ 'community.window' | t: { from: date(r.from), to: date(r.asOf), broadcasts: locale.plural('broadcastCount', r.windowDates.length) } }}</span> }
+      @if (readOnly) { <span class="status-badge">{{ 'community.readOnly' | t }}</span> }
       @if (!r.collectionEnabled) { <span class="status-badge">{{ 'community.paused' | t }}</span> }
       @if (r.recalculating) { <span class="status-badge live">{{ 'community.updating' | t }}</span> }
       @if (!r.recalculating && r.quality === 'insufficient') { <span class="status-badge">{{ 'community.warmingUp' | t: { broadcasts: locale.plural('broadcastCount', broadcastsUntilReady()) } }}</span> }
