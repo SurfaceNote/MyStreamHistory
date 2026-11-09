@@ -17,7 +17,7 @@
         <div class="table-scroll">
           <table>
             <caption class="sr-only">Стримы за {{ group.day }}</caption>
-            <thead><tr><th scope="col">Стример</th><th scope="col">Категории</th><th scope="col">Дата и время</th><th scope="col">Длительность</th><th scope="col">Уникальные зрители</th><th scope="col"><span class="sr-only">Профиль стрима</span></th></tr></thead>
+            <thead><tr><th scope="col">Стример</th><th scope="col">Категории</th><th scope="col">Дата и время</th><th scope="col">Длительность</th><th scope="col">Уникальные зрители</th><th scope="col"><span class="sr-only">Итоги и профиль стрима</span></th></tr></thead>
             <tbody>
               @for (stream of group.streams; track stream.id) {
                 <tr>
@@ -31,8 +31,15 @@
                   <td><time [attr.datetime]="stream.startedAt">{{ group.day }}<small>{{ time(stream.startedAt) }}</small></time></td>
                   <td class="numeric">{{ duration(stream.durationHours) }} @if (stream.isLive) { <small class="live">В эфире</small> }</td>
                   <td class="numeric">{{ viewers(stream.uniqueViewers) }}</td>
-                  <td><a class="profile-link" [href]="streamUrl(stream.id)" target="_blank" rel="noopener" [attr.aria-label]="'Открыть стрим ' + stream.streamerDisplayName + ' за ' + group.day">Открыть стрим ↗</a></td>
+                  <td><div class="actions">
+                    <button type="button" class="recap-toggle" (click)="toggleRecap(stream.id)" [attr.aria-expanded]="expandedId === stream.id"
+                      [attr.aria-controls]="'recap-' + stream.id">{{ expandedId === stream.id ? 'Скрыть итоги' : 'Итоги' }}</button>
+                    <a class="profile-link" [href]="streamUrl(stream.id)" target="_blank" rel="noopener" [attr.aria-label]="'Открыть стрим ' + stream.streamerDisplayName + ' за ' + group.day">Открыть стрим ↗</a>
+                  </div></td>
                 </tr>
+                @if (expandedId === stream.id) {
+                  <tr class="recap-row" [id]="'recap-' + stream.id"><td colspan="6"><admin-stream-recap [streamId]="stream.id" /></td></tr>
+                }
               }
             </tbody>
           </table>

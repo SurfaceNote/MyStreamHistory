@@ -33,6 +33,7 @@ builder.Services.AddInfrastructure(builder.Configuration)
         configurator.AddConsumer<GetStreamViewersConsumer>();
         configurator.AddConsumer<GetAdminStreamViewerCountsConsumer>();
         configurator.AddConsumer<GetUniqueViewerCountsConsumer>();
+        configurator.AddConsumer<GetViewerAppearancesConsumer>();
         configurator.AddConsumer<GetTopViewersConsumer>();
         configurator.AddConsumer<GetRankingExclusionsConsumer>();
         configurator.AddConsumer<ChangeRankingExclusionConsumer>();

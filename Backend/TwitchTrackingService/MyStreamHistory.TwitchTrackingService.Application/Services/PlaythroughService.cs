@@ -22,6 +22,7 @@ public class PlaythroughService(
         var availableStreamCategories = availableGames
             .Where(sc => !assignedStreamCategoryIds.Contains(sc.Id))
             .ToList();
+        var now = DateTime.UtcNow;
 
         return new PlaythroughSettingsDto
         {
@@ -31,6 +32,8 @@ public class PlaythroughService(
                 .Select(group =>
                 {
                     var category = group.First().TwitchCategory;
+                    var segments = group.ToList();
+                    var gamePlaythroughs = playthroughs.Where(p => p.TwitchCategoryId == category.Id).ToList();
 
                     return new PlaythroughGameOptionDto
                     {
@@ -38,7 +41,9 @@ public class PlaythroughService(
                         TwitchCategoryTwitchId = category.TwitchId,
                         Name = category.Name,
                         BoxArtUrl = category.BoxArtUrl,
-                        StreamCategories = group
+                        StreamsCount = segments.Select(sc => sc.StreamSessionId).Distinct().Count(),
+                        Suggested = PlaythroughRules.ShouldSuggest(category, segments, gamePlaythroughs, now),
+                        StreamCategories = segments
                             .OrderByDescending(sc => sc.StartedAt)
                             .Select(MapStreamCategory)
                             .ToList()
@@ -62,6 +67,9 @@ public class PlaythroughService(
             throw new AppException("Game was not found.");
         }
 
+        // A finished game no longer collects new streams; replaying it later starts a new playthrough.
+        var autoAddNewStreams = PlaythroughRules.CollectsNewStreams(status, request.AutoAddNewStreams);
+
         var selectedStreamCategories = await LoadAndValidateStreamCategoriesAsync(
             twitchUserId,
             request.TwitchCategoryId,
@@ -72,7 +80,7 @@ public class PlaythroughService(
             twitchUserId,
             request.TwitchCategoryId,
             request.Id,
-            request.AutoAddNewStreams,
+            autoAddNewStreams,
             cancellationToken);
 
         Playthrough playthrough;
@@ -90,7 +98,7 @@ public class PlaythroughService(
             playthrough.TwitchCategoryId = request.TwitchCategoryId;
             playthrough.Title = BuildTitle(request.Title, twitchCategory.Name);
             playthrough.Status = status;
-            playthrough.AutoAddNewStreams = request.AutoAddNewStreams;
+            playthrough.AutoAddNewStreams = autoAddNewStreams;
             playthrough.UpdatedAt = DateTime.UtcNow;
 
             await SyncPlaythroughStreamCategoriesAsync(playthrough.Id, selectedStreamCategories, cancellationToken);
@@ -104,7 +112,7 @@ public class PlaythroughService(
                 TwitchCategoryId = request.TwitchCategoryId,
                 Title = BuildTitle(request.Title, twitchCategory.Name),
                 Status = status,
-                AutoAddNewStreams = request.AutoAddNewStreams,
+                AutoAddNewStreams = autoAddNewStreams,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
@@ -163,6 +171,14 @@ public class PlaythroughService(
         if (alreadyLinked)
         {
             return;
+        }
+
+        // Streaming a planned game means the playthrough has started.
+        var playthrough = await playthroughRepository.GetByIdAsync(activeAutoPlaythrough.Value, cancellationToken);
+        if (playthrough is { Status: PlaythroughStatus.Planned })
+        {
+            playthrough.Status = PlaythroughStatus.Playing;
+            playthrough.UpdatedAt = DateTime.UtcNow;
         }
 
         await playthroughStreamCategoryRepository.AddRangeAsync(new List<PlaythroughStreamCategory>
@@ -273,7 +289,7 @@ public class PlaythroughService(
             BoxArtUrl = playthrough.TwitchCategory.BoxArtUrl,
             Title = playthrough.Title,
             Status = playthrough.Status.ToString(),
-            AutoAddNewStreams = playthrough.AutoAddNewStreams,
+            AutoAddNewStreams = PlaythroughRules.CollectsNewStreams(playthrough.Status, playthrough.AutoAddNewStreams),
             CreatedAt = playthrough.CreatedAt,
             UpdatedAt = playthrough.UpdatedAt,
             StreamCategories = playthrough.PlaythroughStreamCategories
@@ -299,10 +315,10 @@ public class PlaythroughService(
         };
     }
 
-    private static string BuildTitle(string title, string gameName)
+    // Playthroughs are labelled by game and run number on the shelf; the stored title is only a fallback.
+    private static string BuildTitle(string? title, string gameName)
     {
-        return string.IsNullOrWhiteSpace(title)
-            ? $"{gameName} {DateTime.UtcNow:yyyy-MM-dd}"
-            : title.Trim();
+        var value = string.IsNullOrWhiteSpace(title) ? gameName : title.Trim();
+        return value.Length > 200 ? value[..200] : value;
     }
 }

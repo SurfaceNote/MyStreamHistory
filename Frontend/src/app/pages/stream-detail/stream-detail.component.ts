@@ -1,17 +1,22 @@
 import { ResponseStatusService } from '../../core/api/response-status.service';
 import { LocaleService } from '../../i18n/locale.service';
-import { TranslatePipe } from '../../i18n/translate.pipe';
+import { TranslatePipe, LocalPathPipe } from '../../i18n/translate.pipe';
 import { GameArtComponent } from '../../components/game-art/game-art.component';
 import { Component, ElementRef, inject, OnDestroy, OnInit, PLATFORM_ID, ViewChild } from '@angular/core';
 import { Chart, registerables } from 'chart.js';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { StreamerService } from '../../service/streamer.service';
 import { StreamDetails, CategoryDetails, StreamViewer } from '../../models/stream-details.model';
+import { RecapViewer, StreamRecap } from '../../models/stream-recap.model';
+import { TranslationKey } from '../../i18n/translations';
 import { SeoService } from '../../service/seo.service';
+import { AuthService } from '../../auth/auth.service';
 
 Chart.register(...registerables);
+
+const NEWLINE = '\n';
 
 interface CategorySegment {
   id: string;
@@ -24,7 +29,7 @@ interface CategorySegment {
 
 @Component({
   selector: 'app-stream-detail',
-  imports: [TranslatePipe, GameArtComponent, CommonModule],
+  imports: [TranslatePipe, LocalPathPipe, RouterLink, GameArtComponent, CommonModule],
   templateUrl: './stream-detail.component.html',
   styleUrl: './stream-detail.component.scss'
 })
@@ -35,11 +40,16 @@ export class StreamDetailComponent implements OnInit, OnDestroy {
   streamDetails: StreamDetails | null = null;
   isLoading: boolean = false;
   error: string | null = null;
+  recap: StreamRecap | null = null;
+  copyState: { kind: 'text' | 'link'; ok: boolean } | null = null;
+  private copyTimer?: ReturnType<typeof setTimeout>;
   private routeSub: Subscription | null = null;
   private detailsSub?: Subscription;
+  private recapSub?: Subscription;
   private chart?: Chart<'line', { x: number; y: number | null }[]>;
   private audienceCanvas?: HTMLCanvasElement;
   private platform = inject(PLATFORM_ID);
+  private auth = inject(AuthService);
   @ViewChild('audienceChart') set audienceChart(element: ElementRef<HTMLCanvasElement> | undefined) {
     this.audienceCanvas = element?.nativeElement;
     this.drawAudience();
@@ -156,6 +166,8 @@ export class StreamDetailComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.detailsSub?.unsubscribe();
+    this.recapSub?.unsubscribe();
+    clearTimeout(this.copyTimer);
     this.chart?.destroy();
     if (this.routeSub) {
       this.routeSub.unsubscribe();
@@ -178,6 +190,7 @@ export class StreamDetailComponent implements OnInit, OnDestroy {
           type: 'article'
         });
         this.isLoading = false;
+        this.loadRecap();
       },
       error: (err) => {
         this.responseStatus.fail(err);
@@ -187,6 +200,96 @@ export class StreamDetailComponent implements OnInit, OnDestroy {
         this.isLoading = false;
       }
     });
+  }
+
+  // ---- Stream recap: only the streamer sees it (and the admin panel). Loaded in the browser only,
+  // because the session lives in the browser and the page is complete without it.
+
+  loadRecap(): void {
+    this.recapSub?.unsubscribe();
+    this.recap = null;
+    if (!isPlatformBrowser(this.platform) || !this.isOwnStream) return;
+    this.recapSub = this.streamerService.getStreamRecap(this.streamId).subscribe({
+      next: (recap) => { this.recap = recap; },
+      error: (err) => console.error('Error loading stream recap', err),
+    });
+  }
+
+  get isOwnStream(): boolean {
+    return !!this.streamDetails && this.auth.getTwitchIdFromToken() === String(this.streamDetails.twitchUserId);
+  }
+
+  get hasComparison(): boolean {
+    return (this.recap?.comparisonStreamsCount ?? 0) > 0;
+  }
+
+  /** "35 min longer than usual"; small differences read as usual. */
+  durationDelta(recap: StreamRecap): string {
+    if (recap.averageDurationMinutes == null || recap.isLive) return '';
+    const delta = recap.durationMinutes - recap.averageDurationMinutes;
+    if (Math.abs(delta) < Math.max(10, recap.averageDurationMinutes * 0.1)) return this.locale.t('recap.asUsual');
+    return this.locale.t(delta > 0 ? 'recap.longer' : 'recap.shorter', { value: this.locale.duration(Math.abs(delta)) });
+  }
+
+  countDelta(value: number, average: number | null): string {
+    if (average == null) return '';
+    const delta = Math.round((value - average) * 10) / 10;
+    if (Math.abs(delta) < 1) return this.locale.t('recap.asUsual');
+    return this.locale.t(delta > 0 ? 'recap.moreThanUsual' : 'recap.fewerThanUsual', { value: this.locale.number(Math.abs(delta), 0) });
+  }
+
+  deltaTone(value: number, average: number | null): 'up' | 'down' | '' {
+    if (average == null || Math.abs(value - average) < Math.max(1, average * 0.1)) return '';
+    return value > average ? 'up' : 'down';
+  }
+
+  viewerNote(viewer: RecapViewer, kind: 'new' | 'returning' | 'streak' | 'chat'): string {
+    if (kind === 'returning' && viewer.missedStreams) return this.locale.plural('missedCount', viewer.missedStreams);
+    if (kind === 'streak' && viewer.streak) return this.locale.plural('streakCount', viewer.streak);
+    if (kind === 'chat') return `${this.formatPoints(viewer.chatPoints)} ${this.locale.t('ui.msgPts')}`;
+    return this.locale.duration(viewer.minutesWatched);
+  }
+
+  readonly playthroughStatusLabels: Record<string, TranslationKey> = { Playing: 'ui.playing', Completed: 'ui.completed', Planned: 'ui.planned', Dropped: 'ui.dropped' };
+
+  /** Plain text for Discord or a social post. */
+  recapText(recap: StreamRecap, details: StreamDetails): string {
+    const names = (viewers: RecapViewer[], total: number) => {
+      const shown = viewers.slice(0, 8).map((viewer) => viewer.displayName).join(', ');
+      return total > 8 ? `${shown} ${this.locale.t('recap.moreCount', { count: total - 8 })}` : shown;
+    };
+    const lines = [
+      this.locale.t('recap.shareTitle', { name: details.streamerDisplayName, date: this.formatDateShort(details.startedAt) }),
+      details.streamTitle ? `“${details.streamTitle}”` : '',
+      '',
+      '⏱ ' + this.locale.t('recap.shareDuration', { value: this.locale.duration(recap.durationMinutes) }),
+      recap.peakViewers != null ? '📈 ' + this.locale.t('recap.sharePeak', { value: recap.peakViewers }) : '',
+      recap.viewerDataAvailable ? '💬 ' + this.locale.t('recap.shareChat', { value: recap.chatAccounts }) : '',
+      ...recap.playthroughs.map((item) => '🎮 ' + this.locale.t('recap.sharePlaythrough', { game: item.gameName, number: item.streamNumber })),
+      recap.newCount ? '✨ ' + this.locale.t('recap.shareNew', { names: names(recap.newViewers, recap.newCount) }) : '',
+      recap.returningCount ? '🔁 ' + this.locale.t('recap.shareReturning', { names: names(recap.returningViewers, recap.returningCount) }) : '',
+      '',
+      this.shareUrl,
+    ];
+    return lines.filter((line, index) => line !== '' || (index > 0 && lines[index - 1] !== '')).join(NEWLINE).trim();
+  }
+
+  get shareUrl(): string {
+    return isPlatformBrowser(this.platform) ? window.location.origin + window.location.pathname : '';
+  }
+
+  async copy(kind: 'text' | 'link'): Promise<void> {
+    if (!this.recap || !this.streamDetails) return;
+    const value = kind === 'text' ? this.recapText(this.recap, this.streamDetails) : this.shareUrl;
+    let ok = true;
+    try { await navigator.clipboard.writeText(value); } catch { ok = false; }
+    this.copyState = { kind, ok };
+    clearTimeout(this.copyTimer);
+    this.copyTimer = setTimeout(() => { this.copyState = null; }, 2500);
+  }
+
+  viewerLink(viewer: RecapViewer): (string | number)[] {
+    return ['/profile', this.streamDetails!.twitchUserId, 'viewer', viewer.twitchUserId];
   }
 
   navigateToStreamerProfile(): void {

@@ -40,7 +40,9 @@ public class PlaythroughRepository(TwitchTrackingDbContext context) : IPlaythrou
         return await context.Playthroughs
             .Where(p => p.TwitchUserId == twitchUserId
                 && p.TwitchCategoryId == twitchCategoryId
-                && p.AutoAddNewStreams)
+                && p.AutoAddNewStreams
+                && p.Status != PlaythroughStatus.Completed)
+            .OrderByDescending(p => p.UpdatedAt)
             .Select(p => (Guid?)p.Id)
             .FirstOrDefaultAsync(cancellationToken);
     }
@@ -51,6 +53,7 @@ public class PlaythroughRepository(TwitchTrackingDbContext context) : IPlaythrou
             .Where(p => p.TwitchUserId == twitchUserId
                 && p.TwitchCategoryId == twitchCategoryId
                 && p.AutoAddNewStreams
+                && p.Status != PlaythroughStatus.Completed
                 && (!excludedPlaythroughId.HasValue || p.Id != excludedPlaythroughId.Value))
             .AnyAsync(cancellationToken);
     }

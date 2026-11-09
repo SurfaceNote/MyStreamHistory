@@ -44,6 +44,7 @@ import { SeoService } from '../../service/seo.service';
 import { AnalyticsService } from '../../service/analytics.service';
 import { SettingsService } from '../../service/settings.service';
 import { CollectionStatus } from '../../models/collection-status.model';
+import { Playthrough, PlaythroughGameOption, PlaythroughSettings, PlaythroughStatus } from '../../models/playthrough.model';
 
 Chart.register(...registerables);
 
@@ -51,6 +52,7 @@ interface PlaythroughStatusSection {
   status: string;
   title: string;
   items: PlaythroughStatistics[];
+  total?: number;
 }
 
 interface OwnerChecklistStep {
@@ -62,6 +64,8 @@ interface OwnerChecklistStep {
 const PROFILE_TABS: Record<string, string> = { streams: 'Streams', games: 'Games', viewers: 'Viewers' };
 const GAME_STATUSES: Record<string, string> = { playing: 'Playing', completed: 'Completed', planned: 'Planned', dropped: 'Dropped' };
 const OWNER_PANEL_HIDDEN_KEY = 'msh.ownerPanel.hidden';
+const DISMISSED_SUGGESTIONS_KEY = 'msh.playthroughSuggestions.dismissed';
+const OVERVIEW_SHELF_LIMIT = 8;
 const FIRST_STREAMS_PAGE = 10;
 const OLDER_STREAMS_PAGE = 20;
 
@@ -199,6 +203,13 @@ export class StreamerProfileComponent
   collectionStatus: CollectionStatus | null = null;
   collectionStatusFailed = false;
   ownerPanelHidden = false;
+  ownerPlaythroughs: PlaythroughSettings | null = null;
+  private ownerPlaythroughsSub: Subscription | null = null;
+  private dismissedSuggestions = new Set<string>();
+  /** Suggestion or playthrough currently being saved. */
+  savingId: string | null = null;
+  shelfMessage: { key: TranslationKey; params?: Record<string, string | number>; error?: boolean } | null = null;
+  readonly shelfStatuses: PlaythroughStatus[] = ['Playing', 'Planned', 'Completed', 'Dropped'];
   private recentStreamsSub: Subscription | null = null;
   private charts: Chart[] = [];
 
@@ -217,7 +228,9 @@ export class StreamerProfileComponent
     afterNextRender(() => {
       this.authReady = true;
       this.ownerPanelHidden = this.readOwnerPanelHidden();
+      this.dismissedSuggestions = this.readDismissedSuggestions();
       this.loadOwnerStatus();
+      this.loadOwnerPlaythroughs();
       this.changeDetector.markForCheck();
     });
   }
@@ -236,7 +249,7 @@ export class StreamerProfileComponent
         this.loadTopViewers();
         this.loadSocialLinks();
         this.loadStatistics();
-        if (this.authReady) this.loadOwnerStatus();
+        if (this.authReady) { this.loadOwnerStatus(); this.loadOwnerPlaythroughs(); }
       }
     });
     this.queryParamsSub = this.route.queryParamMap.subscribe((query) =>
@@ -326,10 +339,135 @@ export class StreamerProfileComponent
   }
 
   get overviewPlaythroughSections(): PlaythroughStatusSection[] {
-    return this.playthroughSections.filter((section) =>
-      ['Playing', 'Completed'].includes(section.status),
-    );
+    return this.playthroughSections
+      .filter((section) => ['Playing', 'Completed'].includes(section.status))
+      .map((section) => ({ ...section, total: section.items.length, items: section.items.slice(0, OVERVIEW_SHELF_LIMIT) }));
   }
+
+  // ---- Shelf: playthrough posters. The owner can change a status in place and add suggested games.
+
+  /** "Since Aug 24", "Finished Oct 15"… The last stream of a finished game is its finish date. */
+  shelfPeriod(game: PlaythroughStatistics): string {
+    const first = game.firstStreamStartedAt;
+    const last = game.lastStreamStartedAt;
+    if (!first || !last) return this.locale.t('shelf.notStarted');
+    const date = (value: string) => this.formatShelfDate(value);
+    switch (game.status) {
+      case 'Completed': return this.locale.t('shelf.finishedOn', { date: date(last) });
+      case 'Dropped': return this.locale.t('shelf.droppedOn', { date: date(last) });
+      case 'Playing': return this.locale.t('shelf.since', { date: date(first) });
+      default: return `${date(first)} – ${date(last)}`;
+    }
+  }
+
+  private formatShelfDate(value: string): string {
+    const date = new Date(value);
+    const sameYear = date.getUTCFullYear() === new Date().getUTCFullYear();
+    return date.toLocaleDateString(this.locale.locale(), sameYear
+      ? { timeZone: 'UTC', month: 'short', day: 'numeric' }
+      : { timeZone: 'UTC', month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  ownerPlaythrough(game: PlaythroughStatistics): Playthrough | undefined {
+    return this.isOwnProfile ? this.ownerPlaythroughs?.playthroughs.find((item) => item.id === game.playthroughId) : undefined;
+  }
+
+  get playthroughSuggestions(): PlaythroughGameOption[] {
+    if (!this.isOwnProfile) return [];
+    return (this.ownerPlaythroughs?.availableGames ?? [])
+      .filter((game) => game.suggested && !this.dismissedSuggestions.has(game.twitchCategoryId))
+      .slice(0, 4);
+  }
+
+  loadOwnerPlaythroughs(): void {
+    this.ownerPlaythroughsSub?.unsubscribe();
+    this.ownerPlaythroughs = null;
+    if (!this.browser || !this.isOwnProfile) return;
+    this.ownerPlaythroughsSub = this.settings.getPlaythroughs().subscribe({
+      next: (settings) => {
+        this.ownerPlaythroughs = settings;
+        this.changeDetector.markForCheck();
+      },
+      error: (err) => console.error('Error loading playthrough settings', err),
+    });
+  }
+
+  changeShelfStatus(game: PlaythroughStatistics, status: string): void {
+    const playthrough = this.ownerPlaythrough(game);
+    if (!playthrough || playthrough.status === status || this.savingId) return;
+    const previous = game.status;
+    game.status = status;
+    this.savingId = playthrough.id;
+    this.shelfMessage = null;
+    this.settings.savePlaythrough({
+      id: playthrough.id,
+      twitchCategoryId: playthrough.twitchCategoryId,
+      title: playthrough.title,
+      status: status as PlaythroughStatus,
+      autoAddNewStreams: playthrough.autoAddNewStreams,
+      streamCategoryIds: playthrough.streamCategories.map((segment) => segment.streamCategoryId),
+    }).pipe(finalize(() => { this.savingId = null; })).subscribe({
+      next: () => {
+        this.shelfMessage = { key: status === 'Completed' ? 'shelf.completedSaved' : 'shelf.statusSaved', params: { game: game.gameName } };
+        this.analytics.trackEvent('playthrough_status_changed', { status: status.toLowerCase(), source: 'profile' });
+        this.refreshShelf();
+      },
+      error: (err) => {
+        console.error('Error changing playthrough status', err);
+        game.status = previous;
+        this.shelfMessage = { key: 'shelf.statusFailed', error: true };
+      },
+    });
+  }
+
+  addSuggestedPlaythrough(game: PlaythroughGameOption, status: PlaythroughStatus): void {
+    if (this.savingId) return;
+    this.savingId = game.twitchCategoryId;
+    this.shelfMessage = null;
+    this.settings.savePlaythrough({
+      twitchCategoryId: game.twitchCategoryId,
+      status,
+      autoAddNewStreams: status !== 'Completed',
+      streamCategoryIds: game.streamCategories.map((segment) => segment.streamCategoryId),
+    }).pipe(finalize(() => { this.savingId = null; })).subscribe({
+      next: () => {
+        this.shelfMessage = { key: status === 'Completed' ? 'suggest.addedCompleted' : 'suggest.added', params: { game: game.name } };
+        this.analytics.trackEvent('playthrough_created', { source: 'suggested', status: status.toLowerCase() });
+        this.refreshShelf();
+      },
+      error: (err) => {
+        console.error('Error adding suggested playthrough', err);
+        this.shelfMessage = { key: 'suggest.failed', error: true };
+      },
+    });
+  }
+
+  dismissSuggestion(game: PlaythroughGameOption): void {
+    this.dismissedSuggestions.add(game.twitchCategoryId);
+    try { localStorage.setItem(DISMISSED_SUGGESTIONS_KEY, JSON.stringify([...this.dismissedSuggestions])); } catch { /* Storage is optional. */ }
+  }
+
+  private readDismissedSuggestions(): Set<string> {
+    if (!this.browser) return new Set();
+    try {
+      const value: unknown = JSON.parse(localStorage.getItem(DISMISSED_SUGGESTIONS_KEY) ?? '[]');
+      return new Set(Array.isArray(value) ? value.filter((id): id is string => typeof id === 'string') : []);
+    } catch { return new Set(); }
+  }
+
+  /** Reloads the shelf without the loading state, so the page does not jump. */
+  private refreshShelf(): void {
+    this.loadOwnerPlaythroughs();
+    this.streamerService.getStreamerStatistics(this.twitchId, this.selectedDashboardPeriod).subscribe({
+      next: (data) => {
+        this.statistics = data;
+        this.changeDetector.markForCheck();
+        this.scheduleDashboardRender();
+      },
+      error: (err) => console.error('Error refreshing statistics', err),
+    });
+  }
+
 
   get selectedPlaythroughs(): PlaythroughStatistics[] {
     const query = this.gameQuery.trim().toLowerCase();
@@ -464,6 +602,7 @@ export class StreamerProfileComponent
     }
     this.queryParamsSub?.unsubscribe();
     this.ownerStatusSub?.unsubscribe();
+    this.ownerPlaythroughsSub?.unsubscribe();
 
     this.recentStreamsSub?.unsubscribe();
 

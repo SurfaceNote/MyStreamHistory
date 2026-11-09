@@ -181,3 +181,72 @@ h3 { font-size: 15px; font-weight: 600; }
 .archive-more { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-top: 18px; }
 .secondary-button { border: 1px solid #9caeff60; border-radius: 10px; padding: 10px 18px; background: #151b24d9; color: #eef1f8; font-size: 14px; font-weight: 600; &:hover:not([disabled]) { border-color: #6282bd; } &[disabled] { opacity: .6; cursor: progress; } }
 @media (max-width: 760px) { .owner-panel, .owner-panel.with-intro { grid-template-columns: 1fr; padding: 16px; } }
+
+// ---- Game shelf: playthroughs as covers, the way games stand on a shelf.
+.shelf { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 24px 18px; margin: 0; padding: 4px 0 0; list-style: none; }
+.shelf > .state { grid-column: 1 / -1; }
+.shelf-item { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.shelf-cover {
+  position: relative; border-radius: 12px; overflow: hidden; background: #1a2336;
+  box-shadow: 0 14px 26px #0008, 0 0 0 1px #ffffff14; transition: transform .2s ease, box-shadow .2s ease;
+  --game-art-width: 100%;
+  app-game-art { border-radius: 0; }
+  &::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, #0000 58%, #050a14d9); pointer-events: none; }
+}
+.shelf-item:hover .shelf-cover { transform: translateY(-3px); box-shadow: 0 18px 32px #000a, 0 0 0 1px #9caeff40; }
+.shelf-item[data-status='Dropped'] app-game-art { filter: grayscale(.8) brightness(.75); }
+.shelf-item[data-status='Planned'] .shelf-cover { box-shadow: 0 10px 20px #0006, 0 0 0 1px #9caeff40; app-game-art { opacity: .7; } }
+.shelf-badge {
+  position: absolute; left: 8px; bottom: 8px; z-index: 1; display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 9px; border: 1px solid #ffffff26; border-radius: 20px; background: #0b1220d9; color: #dfe6f5;
+  font-size: 11px; font-weight: 650; line-height: 1.4; backdrop-filter: blur(6px);
+  &[data-status='Playing'] { background: #4b5ff5e6; border-color: #b4c0ff80; color: white;
+    &::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 3px #ffffff33; } }
+  &[data-status='Completed'] { background: #17634ce6; border-color: #6fd6a580; color: #e6fff4; &::before { content: '✓'; } }
+  &[data-status='Dropped'] { background: #5b3f36e6; border-color: #cfac9c66; color: #f5dfd5; }
+}
+.shelf-run { position: absolute; right: 8px; top: 8px; z-index: 1; padding: 2px 8px; border-radius: 20px; background: #0b1220d9; border: 1px solid #ffffff26; color: #dfe6f5; font-size: 11px; font-weight: 650; }
+.shelf-copy { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.shelf-name { margin: 0; font-size: 14px; font-weight: 600; line-height: 1.35; color: #eef1f8; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.shelf-period { margin: 0; color: var(--muted); font-size: 12px; }
+.shelf-run-label { color: #d7c8ff; }
+.shelf-facts { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 4px 0 0; font-variant-numeric: tabular-nums;
+  > div { display: flex; flex-direction: column; min-width: 0; }
+  dt { color: #7f8da7; font-size: 11px; }
+  dd { margin: 0; color: #e7e7ed; font-size: 13px; font-weight: 600; }
+}
+.shelf-status-control { margin-top: 6px;
+  select { width: 100%; padding: 6px 8px; border: 1px solid #34435d; border-radius: 8px; background: #101722; color: #dbe4f5; font-size: 12px; cursor: pointer;
+    &:hover:not([disabled]) { border-color: #6282bd; } &[disabled] { opacity: .6; cursor: progress; } }
+}
+.overview-playthroughs .shelf { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+
+// ---- Owner-only: games that look like a playthrough, added in one click.
+.overview-layout > .shelf-suggestions { grid-column: 1 / -1; order: 6; }
+.shelf-suggestions { padding: 18px 20px; border: 1px dashed #9caeff55; border-radius: 16px; background: linear-gradient(135deg, #1d2a45b3, #0f1626d9);
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .suggestions-head p { color: #b7c3da; font-size: 13px; line-height: 1.5; max-width: 80ch; }
+}
+.shelf-message { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px; margin-bottom: 12px; border-radius: 10px; background: #17634c55; border: 1px solid #6fd6a555; color: #dff7ec; font-size: 13px;
+  &.error { background: #6b2a3655; border-color: #ef8db355; color: #ffe1ea; }
+  &:only-child { margin-bottom: 0; }
+  .text-button { color: inherit; padding: 0 4px; }
+}
+.suggestion-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 10px; margin: 14px 0 0; padding: 0; list-style: none; }
+.suggestion { position: relative; display: flex; align-items: flex-start; gap: 12px; min-width: 0; padding: 10px 34px 10px 10px; border: 1px solid var(--border); border-radius: 12px; background: #111b2acc; --game-art-width: 54px;
+  app-game-art { border-radius: 6px; }
+}
+.suggestion-copy { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1;
+  strong { font-size: 14px; overflow-wrap: anywhere; }
+  > span { color: var(--muted); font-size: 12px; }
+}
+.suggestion-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px;
+  button { border-radius: 8px; padding: 6px 10px; font-size: 12px; font-weight: 600; &[disabled] { opacity: .6; cursor: progress; } }
+}
+.suggestion-add { border: 1px solid #9caeff60; background: var(--action-fill); color: white; &:hover:not([disabled]) { filter: brightness(1.12); } }
+.suggestion-secondary { border: 1px solid #34435d; background: #182130; color: #c9d4ea; &:hover:not([disabled]) { border-color: #6282bd; } }
+.suggestion-dismiss { position: absolute; top: 4px; right: 4px; border: 0; background: none; color: var(--muted); padding: 6px 8px !important; &:hover { color: white; } }
+@media (max-width: 700px) {
+  .shelf, .overview-playthroughs .shelf { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 18px 12px; }
+  .shelf-suggestions { padding: 16px; }
+}

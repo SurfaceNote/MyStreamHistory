@@ -25,10 +25,14 @@ import { Component, Input, OnChanges } from '@angular/core';
 export class GameArtComponent implements OnChanges {
   @Input() src: string | null | undefined = '';
   @Input() fit: 'cover' | 'contain' = 'cover';
+  /** Large covers (shelf posters) request a sharper Twitch image. */
+  @Input() large = false;
   failed = false;
 
   get imageUrl(): string {
-    return (this.src || '').replace(/\{width\}/g, '144').replace(/\{height\}/g, '192');
+    const url = (this.src || '').replace(/\{width\}/g, '144').replace(/\{height\}/g, '192');
+    // Twitch box art is a size template; some callers pass it already resolved to 144x192.
+    return this.large ? url.replace(/-144x192(\.\w+)$/, '-288x384$1') : url;
   }
 
   ngOnChanges(): void { this.failed = false; }

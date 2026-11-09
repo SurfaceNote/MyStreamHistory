@@ -18,16 +18,11 @@
       <h3>{{ form.id ? ('settings.editPlaythrough' | t) : ('settings.createPlaythrough' | t) }}</h3>
 
       <label class="field">
-        <span>{{ 'settings.folderName' | t }}</span>
-        <input type="text" [(ngModel)]="form.title" [placeholder]="'settings.optionalTitle' | t" maxlength="200">
-      </label>
-
-      <label class="field">
         <span>{{ 'settings.game' | t }}</span>
         <select [(ngModel)]="form.twitchCategoryId">
           <option value="" disabled>{{ 'settings.selectGame' | t }}</option>
           <option *ngFor="let game of gameOptions; trackBy: trackByGame" [value]="game.twitchCategoryId">
-            {{ game.name }} ({{ locale.plural('segmentCount', game.streamCategories.length) }})
+            {{ game.name }} ({{ locale.plural('segmentCount', game.streamCategories.length) }}){{ game.suggested ? ' · ' + ('settings.suggestedGame' | t) : '' }}
           </option>
         </select>
       </label>
@@ -40,9 +35,10 @@
       </label>
 
       <label class="checkbox-field">
-        <input type="checkbox" [(ngModel)]="form.autoAddNewStreams">
+        <input type="checkbox" [ngModel]="form.status !== 'Completed' && form.autoAddNewStreams" (ngModelChange)="form.autoAddNewStreams = $event" [disabled]="form.status === 'Completed'">
         <span>{{ 'settings.autoAdd' | t }}</span>
       </label>
+      @if (form.status === 'Completed') { <p class="field-hint">{{ 'settings.autoAddCompletedHint' | t }}</p> }
 
       <div class="segment-picker" *ngIf="selectedGame; else noGameSelected">
         <div class="segment-picker-header">
@@ -91,14 +87,14 @@
             <app-game-art [src]="playthrough.boxArtUrl" />
             <div>
               <h4>{{ playthrough.gameName }}</h4>
-              <p *ngIf="playthrough.title && playthrough.title !== playthrough.gameName">{{ playthrough.title }}</p>
+              <p *ngIf="playthroughPeriod(playthrough) as period">{{ period }}</p>
               <span class="game-status" [attr.data-status]="playthrough.status">{{ statusLabel(playthrough.status) }}</span>
             </div>
           </div>
 
           <div class="playthrough-actions">
-            <button type="button" class="secondary-btn small" (click)="startEdit(playthrough)" [attr.aria-label]="'common.editNamed' | t: { name: playthrough.title || playthrough.gameName }">{{ 'common.edit' | t }}</button>
-            <button type="button" class="danger-btn small" (click)="delete(playthrough)" [attr.aria-label]="'common.deleteNamed' | t: { name: playthrough.title || playthrough.gameName }">{{ 'common.delete' | t }}</button>
+            <button type="button" class="secondary-btn small" (click)="startEdit(playthrough)" [attr.aria-label]="'common.editNamed' | t: { name: playthrough.gameName }">{{ 'common.edit' | t }}</button>
+            <button type="button" class="danger-btn small" (click)="delete(playthrough)" [attr.aria-label]="'common.deleteNamed' | t: { name: playthrough.gameName }">{{ 'common.delete' | t }}</button>
           </div>
         </div>
 

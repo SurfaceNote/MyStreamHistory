@@ -10,4 +10,9 @@ export interface PlaythroughStatistics {
   lastStreamStartedAt?: string | null;
   uniqueViewersCount: number;
   totalHours: number;
+  /** Distinct streams in the playthrough. */
+  streamsCount?: number;
+  /** 1 for the first playthrough of a game, 2 for a replay, and so on. */
+  runNumber?: number;
+  runsCount?: number;
 }

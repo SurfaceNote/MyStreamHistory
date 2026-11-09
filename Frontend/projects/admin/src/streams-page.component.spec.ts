@@ -35,6 +35,33 @@ describe('Admin streams list', () => {
     fixture.componentInstance.goToPage(3);
     expect(router.navigate).toHaveBeenCalledWith([], jasmine.objectContaining({ queryParams: { page: 3 } }));
   });
+  it('loads the recap of a stream only when it is opened', () => {
+    const fixture = TestBed.createComponent(StreamsPageComponent);
+    request(2).flush({ success: true, data: { items: [stream('a', '2026-11-08T10:00:00')], page: 2, pageSize: 25, totalCount: 1 } });
+    fixture.detectChanges();
+    http.expectNone(req => req.url.includes('/recap'));
+    const toggle: HTMLButtonElement = fixture.nativeElement.querySelector('.recap-toggle');
+    toggle.click();
+    fixture.detectChanges();
+    const viewer = { twitchUserId: '7', displayName: 'Newcomer', login: 'newcomer', profileImageUrl: null, minutesWatched: 80, chatPoints: 3 };
+    http.expectOne('/api/admin/streams/a/recap').flush({ success: true, data: {
+      streamSessionId: 'a', isLive: false, viewerDataAvailable: true, previousStreamsCount: 5, comparisonStreamsCount: 5,
+      durationMinutes: 200, averageDurationMinutes: 120, peakViewers: 30, averageViewers: 21, chatAccounts: 12, averageChatAccounts: 10,
+      newCount: 1, returningCount: 1, newViewers: [viewer], returningViewers: [{ ...viewer, twitchUserId: '8', displayName: 'Back', login: 'back', missedStreams: 4 }],
+      streakViewers: [], topChatters: [], playthroughs: [{ playthroughId: 'p', gameName: 'Game', boxArtUrl: '', status: 'Playing', streamNumber: 3, streamsCount: 3 }] } });
+    fixture.detectChanges();
+    const text: string = fixture.nativeElement.querySelector('.recap-row').textContent;
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    expect(text).toContain('на 1 ч 20 мин дольше обычного');
+    expect(text).toContain('на 2 больше обычного');
+    expect(text).toContain('Newcomer');
+    expect(text).toContain('после 4 пропущенных стримов');
+    expect(text).toContain('Game — стрим 3 из 3 в прохождении');
+    expect(text).toContain('Сравнение с 5 предыдущими стримами');
+    toggle.click();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.recap-row')).toBeNull();
+  });
   it('cancels stale page requests, retries failures and distinguishes unavailable counts from zero', () => {
     const fixture = TestBed.createComponent(StreamsPageComponent);
     const stale = request(2);

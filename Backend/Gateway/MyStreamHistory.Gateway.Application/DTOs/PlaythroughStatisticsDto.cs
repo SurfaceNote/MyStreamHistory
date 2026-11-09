@@ -13,4 +13,9 @@ public class PlaythroughStatisticsDto
     public DateTime? LastStreamStartedAt { get; set; }
     public int UniqueViewersCount { get; set; }
     public double TotalHours { get; set; }
+    /// <summary>Distinct streams that belong to the playthrough.</summary>
+    public int StreamsCount { get; set; }
+    /// <summary>1 for the first playthrough of a game, 2 for a replay, and so on.</summary>
+    public int RunNumber { get; set; } = 1;
+    public int RunsCount { get; set; } = 1;
 }

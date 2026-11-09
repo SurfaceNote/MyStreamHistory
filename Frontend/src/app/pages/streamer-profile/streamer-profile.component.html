@@ -314,6 +314,42 @@
       }
     }
   </section>
+  @if ((activeSection === "Overview" || activeSection === "Games") && (playthroughSuggestions.length || shelfMessage)) {
+    <section class="shelf-suggestions" [attr.aria-labelledby]="playthroughSuggestions.length ? 'shelf-suggestions-title' : null">
+      @if (shelfMessage; as message) {
+        <p class="shelf-message" [class.error]="message.error" role="status">
+          {{ message.key | t: (message.params ?? {}) }}
+          <button type="button" class="text-button" (click)="shelfMessage = null" [attr.aria-label]="'owner.hide' | t">✕</button>
+        </p>
+      }
+      @if (playthroughSuggestions.length) {
+        <div class="suggestions-head">
+          <div>
+            <h2 id="shelf-suggestions-title">{{ 'suggest.title' | t }}</h2>
+            <p>{{ 'suggest.text' | t }}</p>
+          </div>
+        </div>
+        <ul class="suggestion-list">
+          @for (game of playthroughSuggestions; track game.twitchCategoryId) {
+            <li class="suggestion">
+              <app-game-art [src]="game.boxArtUrl" />
+              <div class="suggestion-copy">
+                <strong>{{ game.name }}</strong>
+                <span>{{ locale.plural('onStreamsCount', game.streamsCount ?? game.streamCategories.length) }}</span>
+                <div class="suggestion-actions">
+                  <button type="button" class="suggestion-add" [disabled]="savingId !== null" (click)="addSuggestedPlaythrough(game, 'Playing')">
+                    {{ savingId === game.twitchCategoryId ? ('suggest.adding' | t) : ('suggest.addPlaying' | t) }}
+                  </button>
+                  <button type="button" class="suggestion-secondary" [disabled]="savingId !== null" (click)="addSuggestedPlaythrough(game, 'Completed')">{{ 'suggest.addCompleted' | t }}</button>
+                  <button type="button" class="suggestion-dismiss" (click)="dismissSuggestion(game)" [attr.aria-label]="'suggest.dismissNamed' | t: { game: game.name }" [title]="'suggest.dismiss' | t">✕</button>
+                </div>
+              </div>
+            </li>
+          }
+        </ul>
+      }
+    </section>
+  }
   <section class="collection-panel" [hidden]="activeSection !== 'Overview' && activeSection !== 'Games'">
     <div class="section-heading">
       <div>
@@ -460,7 +496,7 @@
         <div class="section-heading">
           <h2>
             {{ section.title }}
-            <span class="count">{{ section.items.length }}</span>
+            <span class="count">{{ section.total ?? section.items.length }}</span>
           </h2>
           <button
             class="text-button"
@@ -499,56 +535,48 @@
 </ng-template>
 
 <ng-template #playthroughCards let-games>
-  <div class="game-library game-library--playthroughs" role="list" [attr.aria-label]="'ui.gamePlaythroughs' | t">
+  <ul class="shelf" [attr.aria-label]="'ui.gamePlaythroughs' | t">
     @for (game of games; track game.playthroughId) {
-      <article class="playthrough-card game-entry" role="listitem">
-        <app-game-art [src]="game.boxArtUrl" />
-        <div class="game-copy">
-          <div class="game-title-line">
-            <h3 class="game-name">{{ game.gameName }}</h3>
-            <span class="game-status" [attr.data-status]="game.status">{{ statusLabels[game.status] | t }}</span>
-          </div>
-          @if (game.title && game.title !== game.gameName) { <p class="game-subtitle">{{ game.title }}</p> }
-        <dl class="game-facts">
-          <div>
-            <dt>{{ 'ui.firstStream' | t }}</dt>
-            <dd>
-              {{
-                game.firstStreamStartedAt
-                  ? (game.firstStreamStartedAt | date: 'mediumDate' : 'UTC' : locale.locale())
-                  : ('ui.noData' | t)
-              }}
-            </dd>
-          </div>
-          <div>
-            <dt>{{ 'ui.lastStream' | t }}</dt>
-            <dd>
-              {{
-                game.lastStreamStartedAt
-                  ? (game.lastStreamStartedAt | date: 'mediumDate' : 'UTC' : locale.locale())
-                  : ('ui.noData' | t)
-              }}
-            </dd>
-          </div>
-          <div>
-            <dt>{{ 'ui.uniqueViewers' | t }}</dt>
-            <dd>{{ game.uniqueViewersCount }}</dd>
-          </div>
-          <div>
-            <dt>{{ 'ui.duration' | t }}</dt>
-            <dd>{{ formatNumber(game.totalHours) }} {{ 'unit.hours' | t }}</dd>
-          </div>
-        </dl>
+      <li class="shelf-item" [attr.data-status]="game.status">
+        <div class="shelf-cover">
+          <app-game-art [src]="game.boxArtUrl" [large]="true" />
+          <span class="shelf-badge" [attr.data-status]="game.status">{{ statusLabels[game.status] | t }}</span>
+          @if ((game.runsCount ?? 1) > 1) {
+            <span class="shelf-run" [title]="'shelf.runNumber' | t: { number: game.runNumber ?? 1 }">#{{ game.runNumber ?? 1 }}</span>
+          }
         </div>
-      </article>
+        <div class="shelf-copy">
+          <h3 class="shelf-name" [title]="game.gameName">{{ game.gameName }}</h3>
+          <p class="shelf-period">
+            @if ((game.runsCount ?? 1) > 1) { <span class="shelf-run-label">{{ 'shelf.runNumber' | t: { number: game.runNumber ?? 1 } }} · </span> }{{ shelfPeriod(game) }}
+          </p>
+          <dl class="shelf-facts">
+            <div><dt>{{ 'ui.duration' | t }}</dt><dd>{{ formatNumber(game.totalHours) }} {{ 'unit.hours' | t }}</dd></div>
+            @if (game.streamsCount) {
+              <div><dt>{{ 'ui.streamsLabel' | t }}</dt><dd>{{ game.streamsCount }}</dd></div>
+            }
+            <div><dt>{{ 'shelf.inChat' | t }}</dt><dd [title]="'ui.uniqueViewers' | t">{{ game.uniqueViewersCount }}</dd></div>
+          </dl>
+          @if (ownerPlaythrough(game)) {
+            <label class="shelf-status-control">
+              <span class="sr-only">{{ 'shelf.statusLabel' | t: { game: game.gameName } }}</span>
+              <select [value]="game.status" [disabled]="savingId !== null" (change)="changeShelfStatus(game, $any($event.target).value)">
+                @for (status of shelfStatuses; track status) {
+                  <option [value]="status" [selected]="status === game.status">{{ statusLabels[status] | t }}</option>
+                }
+              </select>
+            </label>
+          }
+        </div>
+      </li>
     } @empty {
-      <p class="state">
+      <li class="state">
         {{
           gameQuery
             ? ('ui.noGamesMatchYourSearch' | t)
             : ('ui.noGamesInThisSectionYet' | t)
         }}
-      </p>
+      </li>
     }
-  </div>
+  </ul>
 </ng-template>

@@ -49,7 +49,11 @@ if (environment.sentry.dsn) {
   });
 }
 
-(location.pathname === '/__games-preview' ? bootstrapApplication(GameLayoutPreviewComponent, { ...appConfig, providers: [...appConfig.providers, ...gamePreviewProviders] }) : bootstrapApplication(AppComponent, appConfig))
+// The dev server renders the real app on the server; the preview starts from an empty, non-hydrated root.
+const preview = location.pathname === '/__games-preview';
+if (preview) document.querySelector('app-root')?.replaceWith(document.createElement('app-root'));
+
+(preview ? bootstrapApplication(GameLayoutPreviewComponent, { ...appConfig, providers: [...appConfig.providers, ...gamePreviewProviders] }) : bootstrapApplication(AppComponent, appConfig))
   .catch((err) => {
     Sentry.captureException(err);
     console.error(err);

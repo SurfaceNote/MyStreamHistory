@@ -9,6 +9,7 @@
       />
       <div class="streamer-info-wrapper">
         <h1 class="streamer-name">{{ streamDetails.streamerDisplayName }}</h1>
+        @if (streamDetails.streamTitle) { <p class="stream-title">{{ streamDetails.streamTitle }}</p> }
         <button class="btn-view-profile" (click)="navigateToStreamerProfile()">
           {{ 'ui.viewStreamerProfile' | t }}
         </button>
@@ -26,6 +27,110 @@
       </div>
     </div>
   </div>
+
+  @if (recap; as r) {
+    <section class="recap" aria-labelledby="recap-title">
+      <div class="recap-head">
+        <div>
+          <span class="recap-eyebrow">{{ (r.isLive ? 'recap.eyebrowLive' : 'recap.eyebrow') | t }}</span>
+          <h2 id="recap-title">{{ 'recap.title' | t }}</h2>
+          <p class="recap-sub">
+            {{ r.previousStreamsCount === 0 ? ('recap.firstStream' | t) : hasComparison ? locale.plural('recapComparison', r.comparisonStreamsCount) : '' }}
+          </p>
+        </div>
+        <div class="recap-actions">
+          <button type="button" class="recap-button" (click)="copy('text')">
+            <i class="fa-regular fa-copy" aria-hidden="true"></i>
+            {{ copyState?.kind === 'text' ? ((copyState?.ok ? 'recap.copied' : 'recap.copyFailed') | t) : ('recap.copyText' | t) }}
+          </button>
+          <button type="button" class="recap-button ghost" (click)="copy('link')">
+            <i class="fa-solid fa-link" aria-hidden="true"></i>
+            {{ copyState?.kind === 'link' ? ((copyState?.ok ? 'recap.copied' : 'recap.copyFailed') | t) : ('recap.copyLink' | t) }}
+          </button>
+          <span class="sr-only" role="status">{{ copyState ? ((copyState.ok ? 'recap.copied' : 'recap.copyFailed') | t) : '' }}</span>
+        </div>
+      </div>
+
+      <div class="recap-stats">
+        <div class="recap-stat">
+          <span>{{ 'recap.duration' | t }}</span>
+          <strong>{{ locale.duration(r.durationMinutes) }}</strong>
+          @if (durationDelta(r); as delta) { <small [attr.data-tone]="deltaTone(r.durationMinutes, r.averageDurationMinutes)">{{ delta }}</small> }
+        </div>
+        <div class="recap-stat">
+          <span>{{ 'recap.peakViewers' | t }}</span>
+          <strong>{{ r.peakViewers ?? '—' }}</strong>
+          <small>{{ r.averageViewers != null ? ('recap.peakHint' | t: { value: locale.number(r.averageViewers) }) : ('recap.noAudience' | t) }}</small>
+        </div>
+        <div class="recap-stat">
+          <span>{{ 'recap.chatAccounts' | t }}</span>
+          <strong>{{ r.viewerDataAvailable ? r.chatAccounts : '—' }}</strong>
+          @if (r.viewerDataAvailable && countDelta(r.chatAccounts, r.averageChatAccounts); as delta) { <small [attr.data-tone]="deltaTone(r.chatAccounts, r.averageChatAccounts)">{{ delta }}</small> }
+        </div>
+        <div class="recap-stat accent">
+          <span>{{ 'recap.newInChat' | t }}</span>
+          <strong>{{ r.viewerDataAvailable && r.previousStreamsCount > 0 ? r.newCount : '—' }}</strong>
+          @if (r.returningCount) { <small>{{ 'recap.returningHint' | t: { count: r.returningCount } }}</small> }
+        </div>
+      </div>
+
+      @if (r.playthroughs.length) {
+        <ul class="recap-playthroughs">
+          @for (item of r.playthroughs; track item.playthroughId) {
+            <li>
+              <app-game-art [src]="item.boxArtUrl" />
+              <div>
+                <strong>{{ item.gameName }}</strong>
+                <span>{{ 'recap.playthroughStream' | t: { number: item.streamNumber } }} · <span class="game-status" [attr.data-status]="item.status">{{ playthroughStatusLabels[item.status] | t }}</span></span>
+              </div>
+            </li>
+          }
+        </ul>
+      }
+
+      @if (!r.viewerDataAvailable) {
+        <p class="recap-note">{{ 'recap.noChatData' | t }}</p>
+      } @else if (r.chatAccounts > 0) {
+        <div class="recap-people">
+          @if (r.previousStreamsCount > 0) {
+            <ng-container *ngTemplateOutlet="people; context: { title: 'recap.newViewers', items: r.newViewers, total: r.newCount, kind: 'new', empty: 'recap.noNewViewers' }"></ng-container>
+          }
+          @if (r.returningViewers.length) {
+            <ng-container *ngTemplateOutlet="people; context: { title: 'recap.returning', items: r.returningViewers, total: r.returningCount, kind: 'returning' }"></ng-container>
+          }
+          @if (r.streakViewers.length) {
+            <ng-container *ngTemplateOutlet="people; context: { title: 'recap.regulars', items: r.streakViewers, total: r.streakViewers.length, kind: 'streak' }"></ng-container>
+          }
+          @if (r.topChatters.length) {
+            <ng-container *ngTemplateOutlet="people; context: { title: 'recap.topChatters', items: r.topChatters, total: r.topChatters.length, kind: 'chat' }"></ng-container>
+          }
+        </div>
+        <p class="recap-note">{{ 'recap.chatNote' | t }}</p>
+      }
+    </section>
+  }
+
+  <ng-template #people let-title="title" let-items="items" let-total="total" let-kind="kind" let-empty="empty">
+    <div class="recap-group" [attr.data-kind]="kind">
+      <h3>{{ title | t }} @if (total) { <span>{{ total }}</span> }</h3>
+      @if (items.length) {
+        <ul>
+          @for (viewer of items; track viewer.twitchUserId) {
+            <li>
+              <a [routerLink]="viewerLink(viewer) | localPath">
+                <img [src]="viewer.profileImageUrl || getTwitchProfileImage(viewer.twitchUserId)" alt="" loading="lazy" />
+                <span class="person-name">{{ viewer.displayName }}</span>
+                <span class="person-note">{{ viewerNote(viewer, kind) }}</span>
+              </a>
+            </li>
+          }
+          @if (total > items.length) { <li class="more">{{ 'recap.moreCount' | t: { count: total - items.length } }}</li> }
+        </ul>
+      } @else {
+        <p class="recap-empty">{{ empty | t }}</p>
+      }
+    </div>
+  </ng-template>
 
   <section class="audience-section" aria-labelledby="audience-title">
     <h2 id="audience-title" class="section-title">{{ 'ui.viewers' | t }}</h2>

@@ -9,6 +9,7 @@ import { ApiResponse } from "../core/api/api-response.model";
 import { unwrapData } from "../core/api/api-operators";
 import { StreamSession } from "../models/stream-session.model";
 import { StreamDetails } from "../models/stream-details.model";
+import { StreamRecap } from "../models/stream-recap.model";
 import { ViewerStats } from "../models/viewer-stats.model";
 import { GetSocialLinksResponse } from "../models/social-link.model";
 import { StreamerStatistics } from "../models/streamer-statistics.model";
@@ -58,6 +59,13 @@ export class StreamerService {
         const url = API_ENDPOINTS.STREAM_DETAILS(streamId);
         return this.http.get<ApiResponse<StreamDetails>>(this.endpoint(url), { context: new HttpContext().set(ANONYMOUS_REQUEST, true) })
             .pipe(unwrapData<StreamDetails>());
+    }
+
+    /** Only the streamer can read the recap, so the request carries the session. */
+    getStreamRecap(streamId: string): Observable<StreamRecap> {
+        const url = API_ENDPOINTS.STREAM_RECAP(streamId);
+        return this.http.get<ApiResponse<StreamRecap>>(this.endpoint(url))
+            .pipe(unwrapData<StreamRecap>());
     }
 
     getTopViewers(twitchId: number, limit: number = 100, source?: 'overlay'): Observable<ViewerStats[]> {

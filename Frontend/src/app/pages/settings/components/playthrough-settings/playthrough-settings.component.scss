@@ -316,3 +316,4 @@
 @media (max-width: 1150px) { .settings-grid { grid-template-columns: 1fr; } }
 
 .section-header h2 { font-size: 26px; font-weight: 600; } .form-card, .list-card { padding: 20px; }
+.field-hint { margin: -4px 0 0; color: var(--muted); font-size: 12px; line-height: 1.5; }

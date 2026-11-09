@@ -62,6 +62,8 @@ public class GetPlaythroughSettingsConsumer(
             TwitchCategoryTwitchId = game.TwitchCategoryTwitchId,
             Name = game.Name,
             BoxArtUrl = game.BoxArtUrl,
+            StreamsCount = game.StreamsCount,
+            Suggested = game.Suggested,
             StreamCategories = game.StreamCategories.Select(MapStreamCategory).ToList()
         };
     }

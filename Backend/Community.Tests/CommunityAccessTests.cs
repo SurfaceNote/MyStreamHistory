@@ -25,10 +25,13 @@ public class CommunityAccessTests
         await using var app = await CreateApp(new FakeBus());
         using var client = app.GetTestClient();
         Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/admin/streams")).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync($"/admin/streams/{Guid.NewGuid()}/recap")).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync($"/streams/{Guid.NewGuid()}/recap")).StatusCode);
         client.DefaultRequestHeaders.Authorization = new("Bearer", "admin");
         Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/admin/streams")).StatusCode);
         client.DefaultRequestHeaders.Authorization = new("Bearer", Credentials.Issue("operator", AdminServiceAuthentication.CommunityRead));
         Assert.Equal(HttpStatusCode.Forbidden, (await client.GetAsync("/admin/streams")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await client.GetAsync($"/admin/streams/{Guid.NewGuid()}/recap")).StatusCode);
         client.DefaultRequestHeaders.Authorization = new("Bearer", Credentials.Issue("operator", AdminServiceAuthentication.StreamsRead));
         foreach (var query in new[] { "page=0", "page=-1", "pageSize=0", "pageSize=101" })
             Assert.Equal(HttpStatusCode.BadRequest, (await client.GetAsync("/admin/streams?" + query)).StatusCode);

@@ -395,7 +395,7 @@ describe('StreamerProfileComponent', () => {
   it('keeps empty playthrough sections out of the page', () => {
     component.selectSection('Games');
     fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('.playthrough-card')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.shelf-item')).toBeNull();
     expect(fixture.nativeElement.textContent).not.toContain(
       'No playthroughs found',
     );
@@ -456,8 +456,20 @@ describe('StreamerProfileComponent', () => {
     expect(overview[0].textContent).toContain('Playing game');
     expect(overview[1].textContent).toContain('Completed game');
     component.selectSection('Games'); component.gameStatus = 'Planned'; fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('.playthrough-card').textContent).toContain('Planned game');
-    expect(fixture.nativeElement.querySelectorAll('.playthrough-card').length).toBe(1);
+    expect(fixture.nativeElement.querySelector('.shelf-item').textContent).toContain('Planned game');
+    expect(fixture.nativeElement.querySelectorAll('.shelf-item').length).toBe(1);
+  });
+
+  it('labels replays by run number instead of the stored playthrough title', () => {
+    const run = (id: string, runNumber: number) => ({ playthroughId: id, gameName: 'Mortal Shell II', title: 'Mortal Shell II 2026-08-24', status: 'Completed', twitchCategoryId: 'g', twitchCategoryTwitchId: 'g', boxArtUrl: '', uniqueViewersCount: 4, totalHours: 3, streamsCount: 5, runNumber, runsCount: 2, firstStreamStartedAt: '2026-08-24T18:00:00Z', lastStreamStartedAt: '2026-10-15T18:00:00Z' });
+    component.statistics = { ...statistics, playthroughs: [run('a', 1), run('b', 2)] };
+    fixture.detectChanges();
+    const shelf: HTMLElement = fixture.nativeElement.querySelector('.overview-playthroughs');
+    expect(shelf.textContent).not.toContain('2026-08-24');
+    expect(shelf.textContent).toContain('Playthrough #2');
+    expect(shelf.querySelector('.shelf-run')?.textContent).toContain('#1');
+    expect(shelf.textContent).toContain('Finished');
+    expect(shelf.querySelector('select')).toBeNull();
   });
 
 });

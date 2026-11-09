@@ -106,9 +106,12 @@ public class GetStreamerStatisticsQueryHandler : IRequestHandler<GetStreamerStat
                     FirstStreamStartedAt = orderedSegments.FirstOrDefault()?.CategoryStartedAt,
                     LastStreamStartedAt = orderedSegments.LastOrDefault()?.CategoryStartedAt,
                     UniqueViewersCount = uniqueViewersCount,
-                    TotalHours = Math.Round(totalHours, 1)
+                    TotalHours = Math.Round(totalHours, 1),
+                    StreamsCount = orderedSegments.Select(sc => sc.StreamSessionId).Distinct().Count()
                 });
             }
+
+            NumberRuns(playthroughs, configuredPlaythroughs.ToDictionary(p => p.Id, p => p.CreatedAt));
         }
 
         return new StreamerStatisticsDto
@@ -170,5 +173,21 @@ public class GetStreamerStatisticsQueryHandler : IRequestHandler<GetStreamerStat
             }
         };
     }
-}
 
+    /// <summary>Replays of the same game are numbered in the order they started.</summary>
+    public static void NumberRuns(List<PlaythroughStatisticsDto> playthroughs, IReadOnlyDictionary<Guid, DateTime> createdAt)
+    {
+        foreach (var game in playthroughs.GroupBy(p => p.TwitchCategoryId))
+        {
+            var runs = game
+                .OrderBy(p => p.FirstStreamStartedAt ?? createdAt.GetValueOrDefault(p.PlaythroughId, DateTime.MaxValue))
+                .ThenBy(p => createdAt.GetValueOrDefault(p.PlaythroughId))
+                .ToList();
+            for (var index = 0; index < runs.Count; index++)
+            {
+                runs[index].RunNumber = index + 1;
+                runs[index].RunsCount = runs.Count;
+            }
+        }
+    }
+}

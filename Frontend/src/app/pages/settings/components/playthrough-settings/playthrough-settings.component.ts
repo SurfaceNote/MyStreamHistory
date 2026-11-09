@@ -132,6 +132,12 @@ export class PlaythroughSettingsComponent implements OnInit {
     ];
   }
 
+  /** A suggested game is the most likely one to start a playthrough for. */
+  private get defaultGameId(): string {
+    const games = this.settings.availableGames;
+    return (games.find(game => game.suggested) ?? games[0])?.twitchCategoryId ?? '';
+  }
+
   loadSettings(): void {
     this.isLoading = true;
     this.errorMessage = '';
@@ -151,7 +157,7 @@ export class PlaythroughSettingsComponent implements OnInit {
         this.isLoading = false;
 
         if (this.form.id === null && !this.form.twitchCategoryId && this.settings.availableGames.length > 0) {
-          this.form.twitchCategoryId = this.settings.availableGames[0].twitchCategoryId;
+          this.form.twitchCategoryId = this.defaultGameId;
         }
       },
       error: (error) => {
@@ -164,7 +170,7 @@ export class PlaythroughSettingsComponent implements OnInit {
 
   startCreate(): void {
     this.form = this.createDefaultForm();
-    this.form.twitchCategoryId = this.settings.availableGames[0]?.twitchCategoryId ?? '';
+    this.form.twitchCategoryId = this.defaultGameId;
     this.errorMessage = '';
     this.successMessage = '';
   }
@@ -198,7 +204,7 @@ export class PlaythroughSettingsComponent implements OnInit {
       twitchCategoryId: this.form.twitchCategoryId,
       title: this.form.title,
       status: this.form.status,
-      autoAddNewStreams: this.form.autoAddNewStreams,
+      autoAddNewStreams: this.form.status !== 'Completed' && this.form.autoAddNewStreams,
       streamCategoryIds: this.form.streamCategoryIds
     };
 
@@ -218,7 +224,7 @@ export class PlaythroughSettingsComponent implements OnInit {
   }
 
   delete(playthrough: Playthrough): void {
-    if (!confirm(this.locale.t('settings.deletePlaythroughConfirm', { name: playthrough.title || playthrough.gameName }))) {
+    if (!confirm(this.locale.t('settings.deletePlaythroughConfirm', { name: playthrough.gameName }))) {
       return;
     }
 
@@ -262,6 +268,16 @@ export class PlaythroughSettingsComponent implements OnInit {
 
   trackByGame(_: number, game: PlaythroughGameOption): string {
     return game.twitchCategoryId;
+  }
+
+  /** First and last stream of the playthrough: the shelf shows games, not custom titles. */
+  playthroughPeriod(playthrough: Playthrough): string {
+    const dates = playthrough.streamCategories.map(segment => new Date(segment.streamStartedAt).getTime()).filter(Number.isFinite);
+    if (!dates.length) return '';
+    const format = (value: number) => new Intl.DateTimeFormat(this.locale.locale(), { dateStyle: 'medium', timeZone: 'UTC' }).format(new Date(value));
+    const first = Math.min(...dates);
+    const last = Math.max(...dates);
+    return format(first) === format(last) ? format(first) : `${format(first)} – ${format(last)}`;
   }
 
   statusLabel(status: PlaythroughStatus): string {

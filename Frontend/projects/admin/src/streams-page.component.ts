@@ -5,6 +5,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { EMPTY, Subject, catchError, distinctUntilChanged, map, startWith, switchMap, tap } from 'rxjs';
 import { ApiResponse } from '../../../src/app/core/api/api-response.model';
 import { unwrapData } from '../../../src/app/core/api/api-operators';
+import { StreamRecapComponent } from './stream-recap.component';
 
 export interface AdminStream {
   id: string;
@@ -22,6 +23,7 @@ export interface AdminStreamsPage { items: AdminStream[]; page: number; pageSize
 
 @Component({
   selector: 'admin-streams-page',
+  imports: [StreamRecapComponent],
   templateUrl: './streams-page.component.html',
   styleUrl: './streams-page.component.scss'
 })
@@ -37,6 +39,8 @@ export class StreamsPageComponent {
   data: AdminStreamsPage | null = null;
   groups: { day: string; streams: AdminStream[] }[] = [];
   loading = true;
+  /** Stream whose recap is open. The recap names chat accounts, so it is loaded only on request. */
+  expandedId: string | null = null;
   error = '';
   get totalPages(): number { return Math.max(1, Math.ceil((this.data?.totalCount ?? 0) / (this.data?.pageSize ?? 25))); }
 
@@ -53,6 +57,7 @@ export class StreamsPageComponent {
       takeUntilDestroyed(inject(DestroyRef))
     ).subscribe(data => {
       this.data = data;
+      this.expandedId = null;
       const groups = new Map<string, AdminStream[]>();
       for (const stream of data.items) {
         const day = this.date.format(new Date(stream.startedAt));
@@ -64,6 +69,7 @@ export class StreamsPageComponent {
     });
   }
   retry(): void { this.refresh.next(); }
+  toggleRecap(id: string): void { this.expandedId = this.expandedId === id ? null : id; }
   goToPage(page: number): void {
     if (!this.loading && page >= 1 && page <= this.totalPages)
       void this.router.navigate([], { relativeTo: this.route, queryParams: { page }, queryParamsHandling: 'merge' });

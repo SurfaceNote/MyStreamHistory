@@ -1,5 +1,8 @@
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MyStreamHistory.Gateway.Application.DTOs;
+using MyStreamHistory.Gateway.Application.Queries;
 using MyStreamHistory.Shared.Api.Extensions;
 using MyStreamHistory.Shared.Api.Wrappers;
 using MyStreamHistory.Shared.Application.Transport;
@@ -37,5 +40,15 @@ public class AdminStreamsController(ITransportBus bus, ILogger<AdminStreamsContr
             }
         }
         return this.Success(result);
+    }
+
+    /// <summary>The same recap the streamer sees on the stream page.</summary>
+    [HttpGet("{streamId:guid}/recap")]
+    public async Task<ActionResult<ApiResultContainer<StreamRecapDto>>> Recap(
+        [FromRoute] Guid streamId, [FromServices] IMediator mediator, CancellationToken ct = default)
+    {
+        Response.Headers.CacheControl = "no-store";
+        var recap = await mediator.Send(new GetStreamRecapQuery { StreamSessionId = streamId, AdminAccess = true }, ct);
+        return this.Success(recap);
     }
 }

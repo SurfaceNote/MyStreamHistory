@@ -32,6 +32,10 @@ export interface PlaythroughGameOption {
   name: string;
   boxArtUrl: string;
   streamCategories: PlaythroughStreamCategory[];
+  /** Distinct streams with this game that are not in a playthrough yet. */
+  streamsCount?: number;
+  /** The game is played on several streams and nothing on the shelf tracks it. */
+  suggested?: boolean;
 }
 
 export interface PlaythroughSettings {
@@ -42,7 +46,7 @@ export interface PlaythroughSettings {
 export interface UpsertPlaythroughRequest {
   id?: string | null;
   twitchCategoryId: string;
-  title: string;
+  title?: string;
   status: PlaythroughStatus;
   autoAddNewStreams: boolean;
   streamCategoryIds: string[];

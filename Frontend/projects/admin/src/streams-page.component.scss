@@ -20,6 +20,10 @@ time { white-space: nowrap; }
 .live { color: #9fe0bc; }
 .profile-link { display: inline-block; color: #e5cbff; border: 1px solid #67518d; border-radius: 8px; padding: 9px 12px; white-space: nowrap; text-decoration: none; }
 .profile-link:hover { background: #392a4e; }
+.actions { display: flex; gap: 8px; align-items: center; justify-content: flex-end; }
+.recap-toggle { padding: 9px 12px; background: transparent; color: #e5cbff; white-space: nowrap; }
+.recap-toggle[aria-expanded="true"] { background: #392a4e; }
+.recap-row td { border-top: 0; background: #15151c; padding-top: 4px; }
 .pagination { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px; margin-top: 28px; }
 .pagination span { color: #aaa7b6; font-size: 13px; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }

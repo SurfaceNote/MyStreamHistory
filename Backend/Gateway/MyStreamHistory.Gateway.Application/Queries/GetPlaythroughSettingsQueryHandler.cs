@@ -55,6 +55,8 @@ public class GetPlaythroughSettingsQueryHandler(ITransportBus bus) : IRequestHan
                     TwitchCategoryTwitchId = game.TwitchCategoryTwitchId,
                     Name = game.Name,
                     BoxArtUrl = game.BoxArtUrl,
+                    StreamsCount = game.StreamsCount,
+                    Suggested = game.Suggested,
                     StreamCategories = game.StreamCategories.Select(sc => new PlaythroughStreamCategoryDto
                     {
                         StreamCategoryId = sc.StreamCategoryId,

@@ -13,7 +13,7 @@ public static partial class AdminProxy
             || method == "POST" && path == "diagnostics/eventsub-subscriptions/subscribe-all")
             return ("gateway", AdminServiceAuthentication.Diagnostics);
         if (method == "GET" && path == "user/all") return ("gateway", AdminServiceAuthentication.CommunityRead);
-        if (method == "GET" && path == "admin/streams") return ("gateway", AdminServiceAuthentication.StreamsRead);
+        if (method == "GET" && (path == "admin/streams" || StreamRecapPath().IsMatch(path))) return ("gateway", AdminServiceAuthentication.StreamsRead);
         if (method == "GET" && path == "admin/product/overview") return ("gateway", AdminServiceAuthentication.ProductRead);
         if (path == "admin/bots" && method is "GET" or "POST" || method == "DELETE" && BotPath().IsMatch(path))
             return ("gateway", AdminServiceAuthentication.BotsManage);
@@ -70,6 +70,8 @@ public static partial class AdminProxy
             }
         }).RequireAuthorization();
 
+    [GeneratedRegex(@"^admin/streams/[0-9a-fA-F]{8}-(?:[0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}/recap$")]
+    private static partial Regex StreamRecapPath();
     [GeneratedRegex(@"^admin/bots/[a-z0-9_]{1,25}$")]
     private static partial Regex BotPath();
     [GeneratedRegex(@"^content/media/[0-9a-fA-F]{8}-(?:[0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$")]
