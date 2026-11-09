@@ -1,10 +1,15 @@
 <main class="community-page" [attr.lang]="locale.language()">
   <header class="page-heading">
-    <div><span class="eyebrow">{{ 'community.analytics' | t }}</span><h1>{{ 'ui.community' | t }}</h1></div>
-    <div class="heading-actions">
-      @if (report?.from) { <span class="period">{{ report!.from | date:'mediumDate':'UTC':locale.locale() }} — {{ report!.asOf | date:'mediumDate':'UTC':locale.locale() }}</span> }
+    <div>
+      <span class="eyebrow">{{ 'community.analytics' | t }}</span>
+      <h1>{{ 'ui.community' | t }}</h1>
+      <p class="subtitle">{{ 'community.subtitle' | t }}</p>
     </div>
+    @if (report?.from) {
+      <span class="period">{{ 'community.window' | t: { from: date(report!.from), to: date(report!.asOf), broadcasts: locale.plural('broadcastCount', report!.windowDates.length) } }}</span>
+    }
   </header>
+
   @if (canViewOtherChannels) {
     <div class="channel-picker"><label for="community-channel">{{ 'ui.channel' | t }}</label><select id="community-channel" [ngModel]="selectedChannelId" (ngModelChange)="viewChannel($event)">
       <option [ngValue]="ownerId">{{ 'community.yourChannel' | t }}</option>
@@ -12,64 +17,190 @@
       @for (channel of otherChannels; track channel.twitchId) { <option [ngValue]="channel.twitchId.toString()">{{ channel.displayName }}</option> }
     </select>@if (readOnly) { <span class="status-badge">{{ 'community.readOnly' | t }}</span> }</div>
   }
-  @if (loading) { <p role="status">{{ 'community.loading' | t }}</p> }
+  @if (loading) { <p role="status" class="caption">{{ 'community.loading' | t }}</p> }
   @if (error) { <div class="notice error" role="alert">{{ error }} <button type="button" (click)="load()">{{ 'ui.retry' | t }}</button></div> }
+
   @if (report; as r) {
     <div class="report-status" role="status">
       @if (!r.collectionEnabled) { <span class="status-badge">{{ 'community.paused' | t }}</span> }
-      @if (r.recalculating) { <span class="status-badge">{{ 'community.updating' | t }}</span> }
-      @if (!r.recalculating && r.quality === 'insufficient') { <span class="status-badge">{{ 'community.insufficientDays' | t: { count: format(r.eligibleDays) } }}</span> }
+      @if (r.recalculating) { <span class="status-badge live">{{ 'community.updating' | t }}</span> }
+      @if (!r.recalculating && r.quality === 'insufficient') { <span class="status-badge">{{ 'community.warmingUp' | t: { broadcasts: locale.plural('broadcastCount', broadcastsUntilReady()) } }}</span> }
       @if (!r.recalculating && r.quality === 'provisional') { <span class="status-badge">{{ 'community.preliminaryData' | t }}</span> }
     </div>
-    <div class="metrics" [attr.aria-label]="'community.overview' | t">
-      <article class="metric"><span>{{ 'community.coreMembers' | t }}</span><strong>{{ format(r.core) }}</strong><small>{{ 'community.previously' | t: { count: format(r.previousCore) } }}</small></article>
-      <article class="metric" [title]="'community.includesCore' | t"><span>{{ 'community.regulars' | t }}</span><strong>{{ format(r.regularIncludingCore) }}</strong></article>
-      <article class="metric"><span>{{ 'community.firstSeen' | t }}</span><strong>{{ format(r.firstObserved) }}</strong></article>
-      <button class="metric metric-button" type="button" (click)="selectLevel('declining')" [disabled]="r.recalculating"><span>{{ 'community.lessActive' | t }}</span><strong>{{ format(r.declining) }}</strong></button>
-    </div>
-    <div class="panels">
-      <section class="panel"><h2>{{ 'community.engagement' | t }}</h2>
-        <div class="distribution" role="group" [attr.aria-label]="'community.levels' | t">
-          @for (level of levels; track level.id) {
-            <button type="button" [title]="level.rule | t" [attr.aria-pressed]="selectedLevel === level.id" (click)="selectLevel(level.id)" [disabled]="r.recalculating"><span>{{ level.label | t }}</span><strong>{{ format(r.distribution?.[level.id]) }}</strong></button>
+
+    @if (r.lastBroadcast; as last) {
+      <section class="panel last-broadcast" [attr.aria-label]="'community.last.title' | t">
+        <div class="panel-head">
+          <div><h2>{{ 'community.last.title' | t }}</h2><p class="caption">{{ date(last.date, 'long') }}</p></div>
+          <div class="visitors"><strong>{{ format(last.visitors) }}</strong><span>{{ 'community.last.visitors' | t }}</span></div>
+        </div>
+        <div class="last-grid">
+          @for (group of lastGroups(last); track group.id) {
+            <div class="last-group" [style.--seg]="group.color">
+              <button type="button" class="last-count" (click)="selectSegment(group.segment, true)" [disabled]="r.recalculating">
+                <strong>{{ format(group.count) }}</strong><span>{{ group.label | t }}</span>
+              </button>
+              @if (group.people.length) {
+                <ul class="chips">
+                  @for (person of group.people; track person.twitchUserId) { <li>{{ person.displayName }}</li> }
+                  @if (group.count > group.people.length) { <li class="more">{{ 'community.last.more' | t: { count: format(group.count - group.people.length) } }}</li> }
+                </ul>
+              } @else { <p class="caption">{{ 'community.last.none' | t }}</p> }
+            </div>
           }
         </div>
-        <button type="button" (click)="selectLevel('')" [attr.aria-pressed]="selectedLevel === ''" [disabled]="r.recalculating">{{ 'community.allMembers' | t }}</button>
-        <p class="caption">{{ 'community.period' | t: { days: r.eligibleDays == null ? ('ui.noData' | t) : locale.plural('broadcastDayCount', r.eligibleDays), count: format(r.windowDays) } }}</p>
       </section>
-      <section class="panel"><h2>{{ 'community.coreGrowth' | t }}</h2><p class="caption">{{ 'community.last28Days' | t }}</p>
-        <div class="chart">@if (hasTrend()) { <canvas #trend role="img" [attr.aria-label]="'community.chartLabel' | t"></canvas> } @else { <p class="caption">{{ 'community.noChartData' | t }}</p> }</div>
-        <div class="transitions">@for (transition of r.transitions | keyvalue; track transition.key) { <span>{{ (transitionLabels[transition.key] || 'ui.unknown') | t }}: <strong>{{ format(transition.value) }}</strong></span> }</div>
+    }
+
+    <section class="segments" [attr.aria-label]="'community.segmentsLabel' | t">
+      @for (s of segments; track s.id) {
+        <button type="button" class="segment-card" [class.selected]="filter.segment === s.id" [style.--seg]="s.color"
+          [attr.aria-pressed]="filter.segment === s.id" (click)="selectSegment(s.id, true)" [disabled]="r.recalculating">
+          <span class="segment-name"><i class="dot" aria-hidden="true"></i>{{ s.label | t }}</span>
+          <strong>{{ pendingLevel(s.id) ? '—' : format(count(s.id)) }}</strong>
+          @if (delta(s.id) !== null && !pendingLevel(s.id)) {
+            <span class="delta" [class.up]="delta(s.id)! > 0" [class.down]="delta(s.id)! < 0">{{ deltaLabel(delta(s.id)!) }}</span>
+          }
+          <small>{{ s.rule | t }}</small>
+        </button>
+      }
+    </section>
+    @if (r.previousDate) { <p class="caption compared">{{ 'community.compared' | t: { date: date(r.previousDate, 'long') } }}</p> }
+
+    <section class="panel chart-panel">
+      <div class="panel-head">
+        <div>
+          <h2>{{ 'community.chart.title' | t }}</h2>
+          <p class="caption">{{ (chartMode === 'segments' ? 'community.chart.captionSegments' : chartMode === 'flow' ? 'community.chart.captionFlow' : 'community.chart.captionVisitors') | t }}</p>
+        </div>
+        <div class="segmented" role="group" [attr.aria-label]="'community.chart.title' | t">
+          <button type="button" [attr.aria-pressed]="chartMode === 'segments'" (click)="setChartMode('segments')">{{ 'community.chart.segments' | t }}</button>
+          <button type="button" [attr.aria-pressed]="chartMode === 'flow'" (click)="setChartMode('flow')">{{ 'community.chart.flow' | t }}</button>
+          <button type="button" [attr.aria-pressed]="chartMode === 'visitors'" (click)="setChartMode('visitors')">{{ 'community.chart.visitors' | t }}</button>
+        </div>
+      </div>
+      @if (chartMode === 'segments') {
+        <div class="series">
+          @for (s of segments; track s.id) {
+            <button type="button" class="series-chip" [style.--seg]="s.color" [attr.aria-pressed]="visibleSeries.has(s.id)" (click)="toggleSeries(s.id)"><i class="dot" aria-hidden="true"></i>{{ s.label | t }}</button>
+          }
+          <label class="stack-toggle"><input type="checkbox" [checked]="stacked" (change)="toggleStacked()"> {{ 'community.chart.stacked' | t }}</label>
+        </div>
+      } @else if (chartMode === 'flow') {
+        <div class="series legend">
+          <span class="series-chip static" [style.--seg]="segmentInfo.new.color"><i class="dot"></i>{{ 'community.segment.new' | t }}</span>
+          <span class="series-chip static" [style.--seg]="segmentInfo.returned.color"><i class="dot"></i>{{ 'community.segment.returned' | t }}</span>
+          <span class="series-chip static" [style.--seg]="segmentInfo.fading.color"><i class="dot"></i>{{ 'community.flow.fading' | t }}</span>
+          <span class="series-chip static" [style.--seg]="segmentInfo.lost.color"><i class="dot"></i>{{ 'community.flow.lost' | t }}</span>
+        </div>
+      }
+      <div class="chart">
+        @if (hasTrend() && !r.recalculating) { <canvas #trend role="img" [attr.aria-label]="'community.chart.label' | t"></canvas> }
+        @else { <p class="caption empty">{{ 'community.noChartData' | t }}</p> }
+      </div>
+      @if (r.trend.length > 20) {
+        <div class="range" role="group" [attr.aria-label]="'community.chart.range' | t">
+          <button type="button" [attr.aria-pressed]="chartRange === 20" (click)="setRange(20)">{{ 'community.chart.last' | t: { broadcasts: locale.plural('broadcastCount', 20) } }}</button>
+          <button type="button" [attr.aria-pressed]="chartRange === 60" (click)="setRange(60)">{{ 'community.chart.last' | t: { broadcasts: locale.plural('broadcastCount', r.trend.length) } }}</button>
+        </div>
+      }
+    </section>
+
+    <div class="insights">
+      <section class="panel retention">
+        <h2>{{ 'community.retention.title' | t }}</h2>
+        <p class="caption">{{ 'community.retention.caption' | t }}</p>
+        @if (r.retention?.newcomers) {
+          <div class="funnel">
+            @for (step of funnelSteps(r.retention!); track step.label) {
+              <div class="funnel-row">
+                <span>{{ step.label | t }}</span>
+                <div class="bar"><i [style.width.%]="step.value * 100 / r.retention!.newcomers"></i></div>
+                <strong>{{ format(step.value) }}</strong><small>{{ percent(step.value, r.retention!.newcomers) }}</small>
+              </div>
+            }
+          </div>
+        } @else { <p class="caption empty">{{ 'community.retention.empty' | t }}</p> }
+      </section>
+      <section class="panel activity">
+        <h2>{{ 'community.activity.title' | t }}</h2>
+        <p class="caption">{{ 'community.activity.caption' | t }}</p>
+        <div class="activity-options">
+          <button type="button" [attr.aria-pressed]="filter.activity === 'chatty'" (click)="selectActivity('chatty', true)" [disabled]="r.recalculating">
+            <strong>{{ format(r.activity.chatty) }}</strong><span>{{ 'community.activity.chatty' | t }}</span><small>{{ 'community.activity.chattyRule' | t }}</small>
+          </button>
+          <button type="button" [attr.aria-pressed]="filter.activity === 'silent'" (click)="selectActivity('silent', true)" [disabled]="r.recalculating">
+            <strong>{{ format(r.activity.silent) }}</strong><span>{{ 'community.activity.silent' | t }}</span><small>{{ 'community.activity.silentRule' | t }}</small>
+          </button>
+        </div>
       </section>
     </div>
-    <section class="panel participants"><h2>{{ selectedLevel === 'declining' ? ('community.lessActiveMembers' | t) : ('community.members' | t) }}</h2>
-      <div class="member-head" aria-hidden="true"><span>{{ 'community.account' | t }}</span><span>{{ 'community.attendance' | t }}</span><span>{{ 'ui.msgPts' | t }}</span><span>{{ 'common.status' | t }}</span></div>
+
+    <section class="panel participants" #membersPanel>
+      <div class="panel-head">
+        <h2>{{ 'community.members' | t }}</h2>
+        @if (!r.recalculating) { <span class="caption">{{ memberCountLabel() }}</span> }
+      </div>
+      <div class="filters">
+        <input type="search" [ngModel]="filter.search" (ngModelChange)="search($event)" [placeholder]="'community.searchPlaceholder' | t" [attr.aria-label]="'community.searchPlaceholder' | t" maxlength="50">
+        <select [ngModel]="filter.segment" (ngModelChange)="selectSegment($event)" [attr.aria-label]="'community.segment' | t" [disabled]="r.recalculating">
+          <option value="">{{ 'community.allSegments' | t }}</option>
+          @for (s of segments; track s.id) { <option [value]="s.id">{{ s.label | t }}</option> }
+        </select>
+        <select [ngModel]="filter.activity" (ngModelChange)="selectActivity($event)" [attr.aria-label]="'community.activity.title' | t" [disabled]="r.recalculating">
+          <option value="">{{ 'community.allActivity' | t }}</option>
+          <option value="chatty">{{ 'community.activity.chatty' | t }}</option>
+          <option value="silent">{{ 'community.activity.silent' | t }}</option>
+        </select>
+      </div>
+      <div class="member-head" aria-hidden="true">
+        <span>{{ 'community.account' | t }}</span><span>{{ 'community.segment' | t }}</span>
+        <span>{{ 'community.attendance' | t }}</span><span class="num">{{ 'community.visits' | t }}</span>
+        <span class="num messages">{{ 'community.messages' | t }}</span><span class="num">{{ 'community.lastSeen' | t }}</span>
+      </div>
       @for (member of members; track member.twitchUserId) {
         <details class="member" (toggle)="opened($event)"><summary>
-          <span class="identity">{{ member.displayName }}@if (member.quality !== 'verified') { <small>{{ member.quality === 'provisional' ? ('community.preliminary' | t) : ('community.insufficient' | t) }}</small> }</span>
-          <span>{{ 'community.attendedDays' | t: { visited: format(member.visitedDays), eligible: format(member.eligibleDays) } }}</span>
-          <span class="messages">{{ member.messagePoints == null ? '—' : ('community.messagePoints' | t: { count: (member.messagePoints | number:'1.2-2':locale.locale())! }) }}</span>
-          <span>{{ memberChange(member) }}</span>
-        </summary><div class="member-detail">
-          <p>{{ member.messagePoints == null ? ('community.messagePointsUnavailable' | t) : ('community.messagePoints' | t: { count: (member.messagePoints | number:'1.2-2':locale.locale())! }) }} · {{ r.from | date:'mediumDate':'UTC':locale.locale() }} — {{ r.asOf | date:'mediumDate':'UTC':locale.locale() }}</p>
-          <p>{{ 'community.firstSeenDate' | t: { date: member.firstObserved ? (member.firstObserved | date:'mediumDate':'UTC':locale.locale())! : ('ui.unknown' | t) } }}</p>
-          <div class="history" [attr.aria-label]="'community.last12Days' | t">@for (day of member.history; track day.date) { <span [class.visited]="day.status === 'visited'" [class.unknown]="day.status === 'unknown'">{{ day.date | date:'MMM d':'UTC':locale.locale() }}<small>{{ day.status === 'visited' ? ('community.present' | t) : day.status === 'unknown' ? ('ui.noData' | t) : ('community.notObserved' | t) }}{{ day.quality === 'provisional' ? ' · ' + ('community.preliminary' | t) : '' }}</small></span> }</div>
-          @if (member.declining) { <p>{{ 'community.missedDays' | t: { days: locale.plural('broadcastDayCount', member.consecutiveMisses) } }}</p> }
-          @if (!readOnly) { <button type="button" (click)="exclusion(member.twitchUserId, false)" [disabled]="saving">{{ 'community.exclude' | t }}</button> }
+          <span class="identity">
+            @if (member.profileImageUrl) { <img [src]="member.profileImageUrl" alt="" loading="lazy" width="32" height="32"> }
+            @else { <span class="avatar" aria-hidden="true">{{ member.displayName.charAt(0) }}</span> }
+            <span class="names"><b>{{ member.displayName }}</b>@if (member.login !== member.displayName.toLowerCase()) { <small>{{ member.login }}</small> }</span>
+          </span>
+          <span class="badges">
+            <span class="badge" [style.--seg]="segmentInfo[member.segment].color">{{ segmentInfo[member.segment].label | t }}</span>
+            @if (member.activity) { <span class="badge muted">{{ (member.activity === 'chatty' ? 'community.activity.chatty' : 'community.activity.silent') | t }}</span> }
+          </span>
+          <span class="strip" [attr.aria-label]="'community.attendanceOf' | t: { visits: format(member.visitsInWindow), total: format(member.windowSize) }">
+            @for (day of attendance(member); track $index) { <i [class.on]="day.visited" [title]="date(day.date)"></i> }
+          </span>
+          <span class="num">{{ format(member.visitsInWindow) }}<small>/{{ format(member.windowSize) }}</small></span>
+          <span class="num messages">{{ format(member.messagesInWindow) }}</span>
+          <span class="num last-seen">{{ date(member.lastSeen) }}</span>
+        </summary>
+        <div class="member-detail">
+          <dl>
+            <div><dt>{{ 'community.firstSeen' | t }}</dt><dd>{{ date(member.firstSeen, 'long') }}</dd></div>
+            <div><dt>{{ 'community.totalVisits' | t }}</dt><dd>{{ format(member.totalVisits) }}</dd></div>
+            <div><dt>{{ 'community.minutesInWindow' | t }}</dt><dd>{{ locale.duration(member.minutesInWindow) }}</dd></div>
+            <div><dt>{{ 'community.missedStreak' | t }}</dt><dd>{{ format(member.missedStreak) }}</dd></div>
+          </dl>
+          <p class="caption">{{ segmentInfo[member.segment].rule | t }}</p>
+          @if (!readOnly) { <button type="button" class="link-button" (click)="exclusion(member.twitchUserId, false)" [disabled]="saving">{{ 'community.exclude' | t }}</button> }
         </div></details>
       }
-      @if (membersLoading) { <p role="status">{{ 'community.loadingMembers' | t }}</p> }
-      @if (!membersLoading && !members.length && !r.recalculating) { <p class="caption">{{ 'community.noMembers' | t }}</p> }
-      @if (nextCursor) { <button type="button" (click)="loadMembers(true)" [disabled]="membersLoading">{{ 'community.loadMore' | t }}</button> }
+      @if (membersLoading) { <p role="status" class="caption">{{ 'community.loadingMembers' | t }}</p> }
+      @if (!membersLoading && !members.length && !r.recalculating) { <p class="caption empty">{{ 'community.noMembers' | t }}</p> }
+      @if (nextCursor) { <button type="button" class="load-more" (click)="loadMembers(true)" [disabled]="membersLoading">{{ 'community.loadMore' | t }}</button> }
     </section>
+
     <section class="panel settings">
       <details class="method"><summary>{{ 'community.howItWorks' | t }}</summary>
         <p>{{ 'community.methodVisits' | t }}</p>
-        <p>{{ 'community.methodPeriod' | t }}</p>
-        <p>{{ 'community.methodTimezone' | t }}</p>
-        <p>{{ 'community.methodLevels' | t }}</p>
+        <p>{{ 'community.methodWindow' | t }}</p>
+        <p>{{ 'community.methodSegments' | t }}</p>
         <p>{{ 'community.methodQuality' | t }}</p>
-        <p>{{ 'community.updatedMethod' | t: { date: calculatedLabel(), zone: r.timeZoneId, version: format(r.methodVersion) } }} @if (r.coverage != null) { {{ 'community.coverage' | t: { value: (r.coverage | percent:'1.0-1':locale.locale())! } }} } {{ 'community.unknownDays' | t: { count: format(r.unknownDays) } }}</p>
+        <p class="caption">{{ 'community.updatedMethod' | t: { date: calculatedLabel(), zone: r.timeZoneId, version: format(r.methodVersion) } }}
+          @if (r.coverage != null) { {{ 'community.coverage' | t: { value: (r.coverage | percent:'1.0-1':locale.locale())! } }} }
+          @if (r.skippedBroadcasts) { {{ 'community.skipped' | t: { count: format(r.skippedBroadcasts) } }} }</p>
       </details>
       <details class="excluded"><summary>{{ 'community.excludedAccounts' | t: { count: format(exclusions.length) } }}</summary>@for (account of exclusions; track account.twitchUserId) { <div class="excluded-row"><span>{{ account.displayName }}</span>@if (!readOnly) { <button type="button" (click)="exclusion(account.twitchUserId, true)" [disabled]="saving">{{ 'community.restore' | t }}</button> }</div> } @if (!exclusions.length) { <p>{{ 'community.noExclusions' | t }}</p> }</details>
       @if (settingsError) { <p class="error" role="alert">{{ settingsError }}</p> }

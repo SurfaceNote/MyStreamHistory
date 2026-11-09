@@ -2,297 +2,265 @@ using MyStreamHistory.Shared.Base.Contracts.Community;
 using MyStreamHistory.ViewerService.Application.Services;
 using MyStreamHistory.ViewerService.Domain.Entities;
 using Xunit;
+using S = MyStreamHistory.Shared.Base.Contracts.Community.CommunitySegments;
 
 namespace MyStreamHistory.ViewerService.Application.Tests.Services;
 
 public class CommunityCalculatorTests
 {
-    private static readonly DateTime Now = new(2026, 10, 17, 12, 0, 0, DateTimeKind.Utc);
-    private static readonly int[] Offsets = [0, 2, 4, 7, 9, 11, 14, 16, 18, 21];
-    private static readonly Viewer User = new() { Id = Guid.NewGuid(), TwitchUserId = "1", Login = "quiet", DisplayName = "Quiet" };
+    private const string Channel = "10";
+    private static readonly DateTime Now = new(2026, 11, 9, 12, 0, 0, DateTimeKind.Utc);
+
+    /// <summary>Builds <paramref name="count"/> daily 90-minute broadcasts ending yesterday, oldest first.</summary>
+    private sealed class Channelish(int count, int everyDays = 1)
+    {
+        public List<CommunitySessionSummary> Sessions { get; } = Enumerable.Range(0, count).Select(i =>
+        {
+            var start = Now.Date.AddDays(-(count - i) * everyDays).AddHours(18);
+            return new CommunitySessionSummary
+            {
+                StreamerTwitchUserId = Channel, StreamSessionId = Guid.NewGuid(), StartedAt = start, EndedAt = start.AddMinutes(90),
+                ExpectedMinutes = 90, CompleteMinutes = 90
+            };
+        }).ToList();
+        public List<CommunitySessionVisit> Visits { get; } = [];
+        public List<CommunityMessageAggregate> Messages { get; } = [];
+        public HashSet<string> Exclusions { get; } = [];
+
+        public Channelish Attend(string viewer, IEnumerable<int> broadcasts, int minutes = 30, int messages = 0)
+        {
+            foreach (var i in broadcasts)
+            {
+                Visits.Add(new() { StreamerTwitchUserId = Channel, StreamSessionId = Sessions[i].StreamSessionId, ViewerTwitchUserId = viewer, Minutes = minutes });
+                if (messages > 0)
+                    Messages.Add(new() { StreamerTwitchUserId = Channel, StreamSessionId = Sessions[i].StreamSessionId, ViewerTwitchUserId = viewer, Count = messages });
+            }
+            return this;
+        }
+
+        public CommunityCalculation Run(IReadOnlySet<string>? bots = null, string zone = "UTC") => CommunityCalculator.Calculate(new()
+        {
+            Now = Now, TimeZoneId = zone, StreamerTwitchUserId = Channel, Sessions = Sessions, Visits = Visits, Messages = Messages,
+            Exclusions = Exclusions, ExcludedLogins = bots ?? new HashSet<string>(),
+            Profiles = Visits.Select(v => v.ViewerTwitchUserId).Concat(Messages.Select(m => m.ViewerTwitchUserId)).Distinct()
+                .Select(id => new CommunityProfile(id, "Name " + id, "login" + id, null)).ToList()
+        });
+    }
+
+    private static IEnumerable<int> Range(int from, int to) => Enumerable.Range(from, to - from + 1);
+    private static CommunityMember Member(CommunityCalculation result, string id) => Assert.Single(result.Members, m => m.TwitchUserId == id);
 
     [Theory]
-    [InlineData(6, 10, 3, "core")]
-    [InlineData(5, 10, 3, "regular")]
-    [InlineData(3, 10, 2, "regular")]
-    [InlineData(3, 11, 2, "returning")]
-    [InlineData(6, 10, 2, "regular")]
-    [InlineData(3, 8, 1, "returning")]
-    [InlineData(2, 10, 2, "returning")]
-    [InlineData(1, 10, 1, "occasional")]
-    [InlineData(0, 10, 0, "inactive")]
-    [InlineData(6, 7, 3, "unknown")]
-    public void ThresholdsIncludeBoundariesAndRequireDistinctWeeks(int visited, int eligible, int weeks, string expected) =>
-        Assert.Equal(expected, CommunityCalculator.Classify(visited, eligible, weeks));
+    [InlineData(90, 10)]
+    [InlineData(100, 10)]
+    [InlineData(240, 24)]
+    [InlineData(301, 31)]
+    public void VisitNeedsTenMinutesOrATenthOfTheBroadcast(double minutes, int expected) =>
+        Assert.Equal(expected, CommunityCalculator.VisitThreshold(minutes));
 
     [Fact]
-    public void MessagePointsComeFromStoredPointsWithinTheReportWindow()
+    public void ShortPresenceIsNotAVisitButAMessageIs()
     {
-        var data = Input(legacy: true);
-        var expected = data.HistoricalWatches.Sum(w => w.ChatPoints);
-        var oldCategory = Guid.NewGuid();
-        var result = CommunityCalculator.Calculate(new()
-        {
-            Now = data.Now, Viewers = data.Viewers,
-            Sessions = data.Sessions.Concat([new CommunitySession { Id = Guid.NewGuid(), StartedAt = Now.AddDays(-40), EndedAt = Now.AddDays(-40).AddHours(1), CategoryIds = [oldCategory] }]).ToList(),
-            HistoricalWatches = data.HistoricalWatches.Concat([new ViewerCategoryWatch { ViewerId = User.Id, StreamCategoryId = oldCategory, ChatPoints = 999, MinutesWatched = 10 }]).ToList()
-        });
-        Assert.Equal(expected, Assert.Single(result.Members).MessagePoints);
-        Assert.Null(result.Members[0].MessageCount);
+        var data = new Channelish(20).Attend("lurker", [19], minutes: 9).Attend("chatter", [19], minutes: 1, messages: 1);
+        var result = data.Run();
+        Assert.DoesNotContain(result.Members, m => m.TwitchUserId == "lurker");
+        Assert.Equal(S.New, Member(result, "chatter").Segment);
     }
 
     [Fact]
-    public void NoRecordedPointsAreUnknownRatherThanDerivedFromMessageCounts()
+    public void AttendanceShareAcrossTwentyBroadcastsDefinesCoreRegularAndOccasional()
     {
-        var result = CommunityCalculator.Calculate(Input());
-        Assert.Null(Assert.Single(result.Members).MessagePoints);
-    }
-
-    [Fact]
-    public void QuietConnectedParticipantCanBeCoreWithoutMessages()
-    {
-        var result = CommunityCalculator.Calculate(Input());
+        var data = new Channelish(20)
+            .Attend("core", Range(8, 19))                    // 12 / 20 = 60%
+            .Attend("regular", [0, 3, 6, 9, 12, 15])          // 6 / 20 = 30%, last visit 4 broadcasts ago
+            .Attend("occasional", [0, 4, 8, 12, 16]);         // 5 / 20 = 25%
+        var result = data.Run();
         Assert.Equal("verified", result.Report.Quality);
-        Assert.Equal(1, result.Report.Core);
-        Assert.Equal("core", Assert.Single(result.Members).Level);
-        Assert.Equal(0, result.Members[0].MessageCount);
+        Assert.Equal(S.Core, Member(result, "core").Segment);
+        Assert.Equal(S.Regular, Member(result, "regular").Segment);
+        Assert.Equal(S.Occasional, Member(result, "occasional").Segment);
+        Assert.Equal(1, result.Report.Segments[S.Core]);
+        Assert.Equal(20, result.Report.WindowDates.Count);
+        Assert.Equal("00000000111111111111", Member(result, "core").Attendance);
+        Assert.Equal(new[] { "core", "regular", "occasional" }, result.Members.Select(m => m.TwitchUserId));
     }
 
     [Fact]
-    public void HistoricalMinutesAreProvisionalAndNeverConvertedToMessageCounts()
+    public void CoreFadesAfterThreeMissesAndRegularAfterFive()
     {
-        var data = Input(legacy: true);
-        var result = CommunityCalculator.Calculate(data);
-        Assert.Equal("provisional", result.Report.Quality);
-        var member = Assert.Single(result.Members);
-        Assert.Equal("core", member.Level);
-        Assert.Null(member.MessageCount);
-        Assert.True(member.HasHistoricalChat);
-        Assert.Equal("provisional", member.Quality);
-        Assert.All(member.History, day => Assert.Equal("provisional", day.Quality));
+        var data = new Channelish(30)
+            .Attend("core-2", Range(10, 27))
+            .Attend("core-3", Range(10, 26))
+            .Attend("regular-4", [10, 13, 16, 19, 22, 25])
+            .Attend("regular-5", [9, 12, 15, 18, 21, 24]);
+        var result = data.Run();
+        Assert.Equal(S.Core, Member(result, "core-2").Segment);
+        Assert.Equal(S.Fading, Member(result, "core-3").Segment);
+        Assert.Equal(3, Member(result, "core-3").MissedStreak);
+        Assert.Equal(S.Regular, Member(result, "regular-4").Segment);
+        Assert.Equal(S.Fading, Member(result, "regular-5").Segment);
+        Assert.Equal(2, result.Report.Trend[^1].BecameFading);
     }
 
     [Fact]
-    public void UnknownNewDayIsExcludedAndDoesNotManufactureAMissedVisit()
+    public void TenMissedBroadcastsMeanLostAndNinetyDaysMeanForgotten()
     {
-        var data = Input(badPollDays: [0]);
-        var result = CommunityCalculator.Calculate(data);
-        Assert.Equal(9, result.Report.EligibleDays);
-        Assert.Equal(1, result.Report.UnknownDays);
-        Assert.Equal("unknown", result.Members[0].History[^1].Quality);
-        Assert.False(result.Members[0].Declining);
+        var data = new Channelish(40)
+            .Attend("lost", [25, 27, 29])
+            .Attend("one-time", [20])
+            .Attend("almost", [28, 30]);
+        var result = data.Run();
+        Assert.Equal(S.Lost, Member(result, "lost").Segment);
+        Assert.Equal(S.OneTime, Member(result, "one-time").Segment);
+        Assert.Equal(S.Occasional, Member(result, "almost").Segment);
+
+        var old = new Channelish(30, everyDays: 4).Attend("gone", [0, 1, 2]).Run();
+        Assert.Empty(old.Members);
     }
 
     [Fact]
-    public void GapLongerThanThreeMinutesInvalidatesEvenCoverageAbove95Percent()
+    public void NewcomersStayNewForThreeBroadcastsAndComebacksAreReported()
     {
-        var data = Input(duration: 120);
-        var newest = data.Sessions.OrderByDescending(s => s.StartedAt).First();
-        var polls = data.Polls.Where(p => p.StreamSessionId != newest.Id || p.Minute < newest.StartedAt.AddMinutes(10) || p.Minute >= newest.StartedAt.AddMinutes(14)).ToList();
-        var result = CommunityCalculator.Calculate(Copy(data, polls: polls));
-        Assert.Equal(9, result.Report.EligibleDays);
-        Assert.Equal(1, result.Report.UnknownDays);
+        var data = new Channelish(30)
+            .Attend("fresh", [27, 29])
+            .Attend("older", [26])
+            .Attend("back", [4, 6, 8, 29])
+            .Attend("short-gap", [15, 17, 19, 29]);
+        var result = data.Run();
+        Assert.Equal(S.New, Member(result, "fresh").Segment);
+        Assert.Equal(S.OneTime, Member(result, "older").Segment);
+        Assert.Equal(S.Returned, Member(result, "back").Segment);
+        Assert.NotEqual(S.Returned, Member(result, "short-gap").Segment);
+        var last = result.Report.LastBroadcast!;
+        Assert.Equal(3, last.Visitors);
+        Assert.Equal(0, last.NewCount);
+        Assert.Equal("back", Assert.Single(last.Returned).TwitchUserId);
+        Assert.Equal(1, result.Report.Trend[^1].Returned);
+        Assert.Equal(1, result.Report.Trend[^3].NewViewers);
     }
 
     [Fact]
-    public void FourRepeatedMinuteRecordsDoNotBecomeFiveObservations()
+    public void MissingCoreListsCoreMembersAbsentFromTheLastBroadcast()
     {
-        var data = Input();
-        var presence = data.Presence.Where(p => p.Minute.Minute < 4).ToList();
-        presence.AddRange(presence);
-        var result = CommunityCalculator.Calculate(Copy(data, presence: presence));
-        Assert.Equal(0, result.Members[0].VisitedDays);
+        var result = new Channelish(20).Attend("present", Range(0, 19)).Attend("absent", Range(0, 18)).Run();
+        Assert.Equal("absent", Assert.Single(result.Report.LastBroadcast!.MissingCore).TwitchUserId);
+        Assert.Equal(S.Core, Member(result, "absent").Segment);
     }
 
     [Fact]
-    public void ExclusionRemovesAccountFromCurrentAndPreviousWindows()
+    public void FewBroadcastsAreInsufficientForCoreButStillShowNewcomers()
     {
-        var data = Input();
-        var result = CommunityCalculator.Calculate(new()
-        {
-            Now = data.Now, Sessions = data.Sessions, Presence = data.Presence, Polls = data.Polls,
-            TrackingStartedAt = data.TrackingStartedAt, Viewers = data.Viewers, Exclusions = new HashSet<string> { "1" }
-        });
-        Assert.Empty(result.Members);
-        Assert.Equal(0, result.Report.Core);
-        Assert.All(result.Report.Trend.Where(p => p.Core != null), p => Assert.Equal(0, p.Core));
-    }
-
-    [Fact]
-    public void NoStreamsReturnsNullMetricsRatherThanZeros()
-    {
-        var result = CommunityCalculator.Calculate(new() { Now = Now });
+        var result = new Channelish(4).Attend("always", Range(0, 3)).Attend("fresh", [3]).Run();
         Assert.Equal("insufficient", result.Report.Quality);
-        Assert.Equal(84, result.Report.WindowDays);
-        Assert.Null(result.Report.Core);
-        Assert.Null(result.Report.Distribution);
-        Assert.All(result.Report.Trend, p => Assert.Null(p.Core));
+        Assert.Equal(S.Occasional, Member(result, "always").Segment);
+        Assert.Equal(S.New, Member(result, "fresh").Segment);
+        Assert.Equal(1, result.Report.LastBroadcast!.NewCount);
+
+        var partial = new Channelish(8).Attend("always", Range(0, 7)).Run();
+        Assert.Equal("provisional", partial.Report.Quality);
+        Assert.Equal(S.Core, Member(partial, "always").Segment);
     }
 
     [Fact]
-    public void WeeklyStreamerGetsExpandedWindowAndSameWindowForTrend()
+    public void BroadcastWithIncompleteCollectionIsSkippedRatherThanCountedAsAbsence()
     {
-        var data = Input(offsets: [0, 7, 14, 21, 28, 35, 42, 49]);
-        var result = CommunityCalculator.Calculate(data);
-        Assert.Equal(56, result.Report.WindowDays);
-        Assert.Equal(8, result.Report.EligibleDays);
-        Assert.Equal(1, result.Report.Core);
-        Assert.Null(result.Report.PreviousCore);
+        var data = new Channelish(21).Attend("core", Range(0, 20).Where(i => i != 20));
+        data.Sessions[20].CompleteMinutes = 60;
+        var result = data.Run();
+        Assert.Equal(1, result.Report.SkippedBroadcasts);
+        Assert.Equal(20, result.Report.TotalBroadcasts);
+        Assert.Equal(S.Core, Member(result, "core").Segment);
+        Assert.Equal(0, Member(result, "core").MissedStreak);
     }
 
     [Fact]
-    public void MultipleSessionsOnOneDateCountAsOneOpportunity()
+    public void BroadcasterExcludedAccountsAndBotsNeverAppear()
     {
-        var data = Input(offsets: [0, 0, 2, 4, 7, 9, 11, 14, 16]);
-        var result = CommunityCalculator.Calculate(data);
-        Assert.Equal(8, result.Report.EligibleDays);
-        Assert.Equal(8, result.Members[0].VisitedDays);
+        var data = new Channelish(10).Attend(Channel, Range(0, 9)).Attend("hidden", Range(0, 9)).Attend("bot", Range(0, 9)).Attend("viewer", [9]);
+        data.Exclusions.Add("hidden");
+        var result = data.Run(new HashSet<string> { "loginbot" });
+        Assert.Equal("viewer", Assert.Single(result.Members).TwitchUserId);
     }
 
     [Fact]
-    public void OpenSessionMakesWholeBroadcastDayIncomplete()
+    public void ActivityTagsSeparateChattyAndSilentRegulars()
     {
-        var data = Input();
-        data.Sessions[0].IsLive = true;
-        data.Sessions[0].EndedAt = null;
-        var result = CommunityCalculator.Calculate(data);
-        Assert.Equal(9, result.Report.EligibleDays);
-        Assert.DoesNotContain(result.Members[0].History, h => h.Date == new DateOnly(2026, 10, 16));
+        var result = new Channelish(20).Attend("talker", Range(10, 19), messages: 3).Attend("quiet", Range(10, 19)).Run();
+        Assert.Equal(S.Chatty, Member(result, "talker").Activity);
+        Assert.Equal(30, Member(result, "talker").MessagesInWindow);
+        Assert.Equal(S.Silent, Member(result, "quiet").Activity);
+        Assert.Equal(0, Member(result, "quiet").MessagesInWindow);
+        Assert.Equal(1, result.Report.Activity[S.Silent]);
     }
 
     [Fact]
-    public void DayShorterThan15MinutesIsExcluded()
+    public void HistoricalEstimatesAreProvisionalAndUseRecordedChatPoints()
     {
-        var data = Input();
-        data.Sessions[0].EndedAt = data.Sessions[0].StartedAt.AddMinutes(14);
-        Assert.Equal(9, CommunityCalculator.Calculate(data).Report.EligibleDays);
+        var data = new Channelish(20);
+        foreach (var session in data.Sessions) { session.Legacy = true; session.ExpectedMinutes = session.CompleteMinutes = 0; }
+        data.Attend("old", Range(0, 19));
+        foreach (var visit in data.Visits) visit.LegacyChat = true;
+        var result = data.Run();
+        Assert.Equal("provisional", result.Report.Quality);
+        Assert.Null(result.Report.Coverage);
+        Assert.Equal(S.Core, Member(result, "old").Segment);
+        Assert.Equal(S.Chatty, Member(result, "old").Activity);
+        Assert.Null(Member(result, "old").MessagesInWindow);
     }
 
     [Fact]
-    public void NightStreamBelongsToItsLocalStartDate()
+    public void TrendHasSegmentSizesPerBroadcastAndComparesWithTenBroadcastsAgo()
     {
-        var session = new CommunitySession { Id = Guid.NewGuid(), StartedAt = Now.Date.AddDays(-2).AddHours(23), EndedAt = Now.Date.AddDays(-1).AddHours(2) };
-        var data = new CommunityCalculationInput
+        var data = new Channelish(70).Attend("steady", Range(0, 69)).Attend("late", Range(55, 69));
+        var result = data.Run();
+        Assert.Equal(CommunityCalculator.TrendLength, result.Report.Trend.Count);
+        Assert.Equal(result.Report.AsOf, result.Report.Trend[^1].Date);
+        Assert.Equal(2, result.Report.Trend[^1].Segments[S.Core]);
+        Assert.Equal(1, result.Report.Trend[^15].NewViewers);
+        Assert.Equal(result.Report.Trend[^11].Date, result.Report.PreviousDate);
+        Assert.Equal(result.Report.Trend[^11].Segments, result.Report.PreviousSegments);
+        Assert.Equal(2, result.Report.Trend[^1].Visitors);
+        Assert.Equal(1, result.Report.Trend[0].Visitors);
+    }
+
+    [Fact]
+    public void NewcomerRetentionCountsReturnsAndStays()
+    {
+        var data = new Channelish(20)
+            .Attend("stayed", Range(5, 19))
+            .Attend("came-back", [6, 12])
+            .Attend("gone", [7])
+            .Attend("too-fresh", [18]);
+        var retention = data.Run().Report.Retention!;
+        Assert.Equal(3, retention.Newcomers);
+        Assert.Equal(2, retention.CameBack);
+        Assert.Equal(1, retention.Stayed);
+    }
+
+    [Fact]
+    public void SessionsOnTheSameLocalDayFormOneBroadcast()
+    {
+        var data = new Channelish(6);
+        var restart = data.Sessions[^1];
+        var second = new CommunitySessionSummary
         {
-            Now = Now, TimeZoneId = "Europe/Moscow", Sessions = [session], Viewers = [User],
-            HistoricalWatches = [new() { ViewerId = User.Id, StreamCategoryId = Guid.Empty, MinutesWatched = 5 }]
+            StreamerTwitchUserId = Channel, StreamSessionId = Guid.NewGuid(), StartedAt = restart.EndedAt.AddMinutes(5),
+            EndedAt = restart.EndedAt.AddMinutes(65), ExpectedMinutes = 60, CompleteMinutes = 60
         };
-        session.CategoryIds.Add(Guid.Empty);
-        var result = CommunityCalculator.Calculate(data);
-        Assert.Equal(new DateOnly(2026, 10, 16), Assert.Single(result.Members[0].History).Date);
+        data.Sessions.Add(second);
+        data.Visits.Add(new() { StreamerTwitchUserId = Channel, StreamSessionId = restart.StreamSessionId, ViewerTwitchUserId = "split", Minutes = 6 });
+        data.Visits.Add(new() { StreamerTwitchUserId = Channel, StreamSessionId = second.StreamSessionId, ViewerTwitchUserId = "split", Minutes = 10 });
+        var result = data.Run();
+        Assert.Equal(6, result.Report.TotalBroadcasts);
+        Assert.Equal(1, Member(result, "split").VisitsInWindow);
+        Assert.Equal(16, Member(result, "split").MinutesInWindow);
     }
 
     [Fact]
-    public void CutoverDayIsNotInventedAsCompleteHistoricalData()
+    public void CoverageCountsMissingMinutesAndTheLongestGap()
     {
-        var data = Input();
-        var result = CommunityCalculator.Calculate(new()
-        {
-            Now = data.Now, Sessions = data.Sessions, Viewers = data.Viewers,
-            TrackingStartedAt = data.Sessions[0].StartedAt.AddMinutes(15),
-            HistoricalWatches = data.Sessions.Select(s => new ViewerCategoryWatch { ViewerId = User.Id, StreamCategoryId = s.CategoryIds[0], MinutesWatched = 30 }).ToList()
-        });
-        Assert.Equal(1, result.Report.UnknownDays);
-        Assert.Equal(9, result.Report.EligibleDays);
-    }
-
-    [Fact]
-    public void RecalculationDoesNotReclassifySameDayEntryAsRestoredCore()
-    {
-        var data = Input();
-        var first = CommunityCalculator.Calculate(data);
-        var dates = first.DailyStates.Where(s => s.Member.Level == "core").GroupBy(s => s.Member.TwitchUserId).ToDictionary(g => g.Key, g => g.Min(x => x.Date));
-        var second = CommunityCalculator.Calculate(new()
-        {
-            Now = data.Now, Sessions = data.Sessions, Presence = data.Presence, Polls = data.Polls,
-            TrackingStartedAt = data.TrackingStartedAt, Viewers = data.Viewers, KnownCoreDates = dates
-        });
-        Assert.Equal(first.Report.Transitions.GetValueOrDefault("enteredCore"), second.Report.Transitions.GetValueOrDefault("enteredCore"));
-    }
-
-    private static CommunityCalculationInput Copy(CommunityCalculationInput d, List<CommunityPoll>? polls = null, List<CommunityPresence>? presence = null) => new()
-    {
-        Now = d.Now, TrackingStartedAt = d.TrackingStartedAt, Sessions = d.Sessions, Viewers = d.Viewers,
-        Polls = polls ?? d.Polls, Presence = presence ?? d.Presence
-    };
-
-    [Fact]
-    public void ThreeVerifiedMissesFlagPriorRegularParticipant()
-    {
-        var data = Input(offsets: [0, 1, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]);
-        var recent = data.Sessions.Where(s => s.StartedAt.Date >= Now.Date.AddDays(-3)).Select(s => s.Id).ToHashSet();
-        var result = CommunityCalculator.Calculate(Copy(data, presence: data.Presence.Where(p => !recent.Contains(p.StreamSessionId)).ToList()));
-        Assert.True(result.Members[0].Declining);
-        Assert.Equal(3, result.Members[0].ConsecutiveMisses);
-        Assert.False(result.Members[0].Dormant);
-    }
-
-    [Fact]
-    public void UnknownDayBreaksConsecutiveMisses()
-    {
-        var data = Input(offsets: [0, 1, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24], badPollDays: [1]);
-        var recent = data.Sessions.Take(3).Select(s => s.Id).ToHashSet();
-        var result = CommunityCalculator.Calculate(Copy(data, presence: data.Presence.Where(p => !recent.Contains(p.StreamSessionId)).ToList()));
-        Assert.Equal(1, result.Members[0].ConsecutiveMisses);
-        Assert.False(result.Members[0].Declining);
-    }
-
-    [Fact]
-    public void ParticipationAfterSixVerifiedMissesIsAReturn()
-    {
-        var data = Input(offsets: [0, 1, 2, 3, 4, 5, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]);
-        var missing = data.Sessions.Skip(1).Take(6).Select(s => s.Id).ToHashSet();
-        var result = CommunityCalculator.Calculate(Copy(data, presence: data.Presence.Where(p => !missing.Contains(p.StreamSessionId)).ToList()));
-        Assert.Equal("returned", result.Members[0].Transition);
-        Assert.False(result.Members[0].Declining);
-    }
-
-    [Fact]
-    public void SixVerifiedMissesMakeParticipantDormant()
-    {
-        var data = Input(offsets: [0, 1, 2, 3, 4, 5, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24]);
-        var missing = data.Sessions.Take(6).Select(s => s.Id).ToHashSet();
-        var result = CommunityCalculator.Calculate(Copy(data, presence: data.Presence.Where(p => !missing.Contains(p.StreamSessionId)).ToList()));
-        Assert.True(result.Members[0].Dormant);
-        Assert.Equal(6, result.Members[0].ConsecutiveMisses);
-    }
-
-    [Fact]
-    public void MessagesAloneDoNotRaiseConnectionRegularity()
-    {
-        var data = Input();
-        var result = CommunityCalculator.Calculate(new()
-        {
-            Now = data.Now, TrackingStartedAt = data.TrackingStartedAt, Sessions = data.Sessions,
-            Viewers = data.Viewers, Polls = data.Polls,
-            Messages = data.Sessions.Select(s => new CommunityMessageAggregate { ViewerTwitchUserId = "1", StreamSessionId = s.Id, Count = 100 }).ToList()
-        });
-        Assert.Equal("inactive", result.Members[0].Level);
-        Assert.Equal(0, result.Members[0].VisitedDays);
-        Assert.Equal(1000, result.Members[0].MessageCount);
-    }
-
-    private static CommunityCalculationInput Input(bool legacy = false, int[]? offsets = null, int duration = 30, int[]? badPollDays = null)
-    {
-        var sessions = (offsets ?? Offsets).Select((offset, i) => new CommunitySession
-        {
-            Id = Guid.NewGuid(), StartedAt = Now.Date.AddDays(-1 - offset).AddHours(18).AddMinutes(i),
-            CategoryIds = [Guid.NewGuid()]
-        }).ToList();
-        foreach (var s in sessions) s.EndedAt = s.StartedAt.AddMinutes(duration);
-        var polls = sessions.SelectMany((s, i) => Enumerable.Range(0, duration).Select(n => new CommunityPoll
-        {
-            StreamSessionId = s.Id, Minute = s.StartedAt.AddMinutes(n), Complete = !(badPollDays ?? []).Contains(i)
-        })).ToList();
-        var presence = sessions.SelectMany(s => Enumerable.Range(0, 5).Select(n => new CommunityPresence
-        {
-            StreamSessionId = s.Id, ViewerTwitchUserId = "1", Minute = s.StartedAt.AddMinutes(n)
-        })).ToList();
-        return new()
-        {
-            Now = Now, Viewers = [User], Sessions = sessions, Polls = legacy ? [] : polls, Presence = legacy ? [] : presence,
-            TrackingStartedAt = legacy ? null : Now.AddDays(-200),
-            HistoricalWatches = legacy ? sessions.Select(s => new ViewerCategoryWatch { ViewerId = User.Id, StreamCategoryId = s.CategoryIds[0], MinutesWatched = 5, ChatPoints = 1 }).ToList() : []
-        };
+        var start = new DateTime(2026, 11, 1, 18, 0, 30, DateTimeKind.Utc);
+        var minutes = Enumerable.Range(0, 10).Where(i => i is not (3 or 4 or 5 or 8)).Select(i => start.AddMinutes(i).AddSeconds(-30));
+        Assert.Equal((10, 6, 3), CommunityCalculator.Coverage(start, start.AddMinutes(9).AddSeconds(10), minutes));
     }
 }

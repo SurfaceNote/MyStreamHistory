@@ -160,7 +160,7 @@ export class LocaleService {
     const dictionary = DICTIONARIES[this.language()];
     return dictionary[('noun.' + noun + '.' + category) as TranslationKey] || dictionary[('noun.' + noun + '.other') as TranslationKey];
   }
-  plural(key: 'streamerCount' | 'dayCount' | 'segmentCount' | 'broadcastDayCount' | 'recapComparison' | 'streakCount' | 'missedCount' | 'onStreamsCount', count: number): string {
+  plural(key: 'streamerCount' | 'dayCount' | 'segmentCount' | 'broadcastDayCount' | 'broadcastCount' | 'recapComparison' | 'streakCount' | 'missedCount' | 'onStreamsCount', count: number): string {
     const category = new Intl.PluralRules(this.locale()).select(count);
     const forms = DICTIONARIES[this.language()];
     const form = (key + '.' + category) as TranslationKey;

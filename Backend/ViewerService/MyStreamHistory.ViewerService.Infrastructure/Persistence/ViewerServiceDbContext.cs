@@ -19,7 +19,8 @@ public class ViewerServiceDbContext : DbContext
     public DbSet<CommunityMessageReceipt> CommunityMessageReceipts => Set<CommunityMessageReceipt>();
     public DbSet<CommunityMessageAggregate> CommunityMessageAggregates => Set<CommunityMessageAggregate>();
     public DbSet<CommunityExclusion> CommunityExclusions => Set<CommunityExclusion>();
-    public DbSet<CommunityDailyState> CommunityDailyStates => Set<CommunityDailyState>();
+    public DbSet<CommunitySessionSummary> CommunitySessionSummaries => Set<CommunitySessionSummary>();
+    public DbSet<CommunitySessionVisit> CommunitySessionVisits => Set<CommunitySessionVisit>();
     public DbSet<RankingExcludedAccount> RankingExcludedAccounts => Set<RankingExcludedAccount>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -42,7 +43,8 @@ public class ViewerServiceDbContext : DbContext
         modelBuilder.Entity<CommunityMessageReceipt>().HasIndex(x => x.ReceivedAt);
         modelBuilder.Entity<CommunityMessageAggregate>().HasKey(x => new { x.StreamerTwitchUserId, x.StreamSessionId, x.ViewerTwitchUserId });
         modelBuilder.Entity<CommunityExclusion>().HasKey(x => new { x.StreamerTwitchUserId, x.ViewerTwitchUserId });
-        modelBuilder.Entity<CommunityDailyState>().HasKey(x => new { x.StreamerTwitchUserId, x.Revision, x.MethodVersion, x.Date, x.ViewerTwitchUserId });
+        modelBuilder.Entity<CommunitySessionSummary>().HasKey(x => new { x.StreamerTwitchUserId, x.StreamSessionId });
+        modelBuilder.Entity<CommunitySessionVisit>().HasKey(x => new { x.StreamerTwitchUserId, x.StreamSessionId, x.ViewerTwitchUserId });
 
         modelBuilder.Entity<Viewer>(entity =>
         {

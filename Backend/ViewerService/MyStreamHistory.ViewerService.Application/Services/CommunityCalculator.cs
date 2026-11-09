@@ -1,243 +1,314 @@
 using MyStreamHistory.Shared.Base.Contracts.Community;
 using MyStreamHistory.ViewerService.Domain.Entities;
+using S = MyStreamHistory.Shared.Base.Contracts.Community.CommunitySegments;
 
 namespace MyStreamHistory.ViewerService.Application.Services;
+
+public sealed record CommunityProfile(string TwitchUserId, string DisplayName, string Login, string? ProfileImageUrl);
 
 public sealed class CommunityCalculationInput
 {
     public DateTime Now { get; init; }
     public string TimeZoneId { get; init; } = "UTC";
-    public DateTime? TrackingStartedAt { get; init; }
-    public IReadOnlyList<CommunitySession> Sessions { get; init; } = [];
-    public IReadOnlyList<CommunityPoll> Polls { get; init; } = [];
-    public IReadOnlyList<CommunityPresence> Presence { get; init; } = [];
+    public string StreamerTwitchUserId { get; init; } = "";
+    public IReadOnlyList<CommunitySessionSummary> Sessions { get; init; } = [];
+    public IReadOnlyList<CommunitySessionVisit> Visits { get; init; } = [];
     public IReadOnlyList<CommunityMessageAggregate> Messages { get; init; } = [];
-    public IReadOnlyList<ViewerCategoryWatch> HistoricalWatches { get; init; } = [];
-    public IReadOnlyList<Viewer> Viewers { get; init; } = [];
+    public IReadOnlyList<CommunityProfile> Profiles { get; init; } = [];
     public IReadOnlySet<string> Exclusions { get; init; } = new HashSet<string>();
-    public IReadOnlyDictionary<string, DateOnly> KnownCoreDates { get; init; } = new Dictionary<string, DateOnly>();
+    /// <summary>Bot logins (lower case) that never belong to an audience.</summary>
+    public IReadOnlySet<string> ExcludedLogins { get; init; } = new HashSet<string>();
 }
 
-public sealed record CommunityCalculation(CommunityReport Report, List<CommunityMember> Members,
-    List<(DateOnly Date, CommunityMember Member)> DailyStates);
+public sealed record CommunityCalculation(CommunityReport Report, List<CommunityMember> Members);
 
-/// <summary>Pure, deterministic calculation. Chat connection is never treated as video viewing.</summary>
+/// <summary>
+/// Pure, deterministic segmentation of a channel's chat audience. The unit is a broadcast (sessions grouped by their
+/// local start date); the window is the last <see cref="WindowSize"/> broadcasts with usable data, so the result does
+/// not depend on how often the channel streams. Chat connection is never treated as confirmed video viewing.
+/// </summary>
 public static class CommunityCalculator
 {
-    private sealed class Day
+    public const int WindowSize = 20;
+    public const int MinBroadcasts = 5;
+    public const int TrendLength = 60;
+    public const int RecentBroadcasts = 3;
+    public const int LostAfter = 10;
+    public const int ForgetAfterDays = 90;
+    public const int ComebackGap = 6;
+    public const int ComebackDays = 21;
+    public const int ComebackHistory = 3;
+    public const int FadingCore = 3;
+    public const int FadingRegular = 5;
+    public const int CompareOffset = 10;
+    public const decimal MinCoverage = 0.8m;
+    public const int MinBroadcastMinutes = 15;
+    private const int ListLimit = 12;
+
+    private sealed record VisitData(int Minutes, int Messages, bool Chatted);
+
+    private sealed class Broadcast
     {
         public DateOnly Date { get; init; }
-        public string Quality { get; init; } = "unknown";
+        public double Minutes { get; init; }
+        public bool Legacy { get; init; }
         public decimal? Coverage { get; init; }
-        public Dictionary<string, int> Visits { get; init; } = [];
-        public Dictionary<string, (int Count, bool Provisional)> Messages { get; init; } = [];
-        public Dictionary<string, decimal> MessagePoints { get; init; } = [];
-        public HashSet<string> HistoricalChat { get; init; } = [];
-        public bool Eligible => Quality is "verified" or "provisional";
-        public bool Visited(string id) => Visits.GetValueOrDefault(id) >= 5;
+        public bool Eligible => Minutes >= MinBroadcastMinutes && (Legacy || Coverage >= MinCoverage);
     }
 
-    public static string Classify(int visited, int eligible, int weeks)
+    private sealed class Track(string id)
     {
-        if (eligible < 8) return "unknown";
-        if (visited >= 4 && visited * 100 >= eligible * 60 && weeks >= 3) return "core";
-        if (visited >= 3 && visited * 100 >= eligible * 30 && weeks >= 2) return "regular";
-        if (visited >= 2) return "returning";
-        return visited == 1 ? "occasional" : "inactive";
+        public string Id { get; } = id;
+        public List<int> Visits { get; } = [];
+        public List<int> Comebacks { get; } = [];
+        public Dictionary<int, VisitData> Data { get; } = [];
+        public int First => Visits[0];
+
+        /// <summary>Number of visits at broadcast indices up to and including <paramref name="k"/>.</summary>
+        public int CountUpTo(int k)
+        {
+            if (k < 0) return 0;
+            int lo = 0, hi = Visits.Count;
+            while (lo < hi)
+            {
+                var mid = (lo + hi) / 2;
+                if (Visits[mid] <= k) lo = mid + 1; else hi = mid;
+            }
+            return lo;
+        }
+
+        public int InRange(int from, int to) => to < from ? 0 : CountUpTo(to) - CountUpTo(from - 1);
+        public bool Visited(int k) => Data.ContainsKey(k);
     }
+
+    /// <summary>A visit needs at least ten minutes in chat, or a tenth of a long broadcast, or a chat message.</summary>
+    public static int VisitThreshold(double broadcastMinutes) => Math.Max(10, (int)Math.Ceiling(broadcastMinutes * 0.1));
 
     public static CommunityCalculation Calculate(CommunityCalculationInput input)
     {
         var zone = TimeZoneInfo.FindSystemTimeZoneById(input.TimeZoneId);
         DateOnly LocalDate(DateTime at) => DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(at, DateTimeKind.Utc), zone));
-        var asOf = LocalDate(input.Now).AddDays(-1);
-        var sessions = input.Sessions.ToDictionary(s => s.Id);
-        var viewers = input.Viewers.ToDictionary(v => v.Id);
-        var historical = input.HistoricalWatches.Where(w => viewers.ContainsKey(w.ViewerId))
-            .Select(w => (Watch: w, User: viewers[w.ViewerId].TwitchUserId)).ToList();
-        var pollBySession = input.Polls.ToLookup(p => p.StreamSessionId);
-        var presenceBySession = input.Presence.ToLookup(p => p.StreamSessionId);
-        var messagesBySession = input.Messages.ToLookup(m => m.StreamSessionId);
-        var watchesByCategory = historical.ToLookup(w => w.Watch.StreamCategoryId);
-        var days = new List<Day>();
-        foreach (var group in input.Sessions.GroupBy(s => LocalDate(s.StartedAt)).OrderBy(g => g.Key))
+
+        // 1. Broadcasts: sessions grouped by local start date.
+        var all = input.Sessions.GroupBy(s => LocalDate(s.StartedAt)).OrderBy(g => g.Key).Select(g =>
         {
-            if (group.Key > asOf || group.Any(s => s.IsLive || !s.EndedAt.HasValue)) continue;
-            if (group.Sum(s => Math.Max(0, (s.EndedAt!.Value - s.StartedAt).TotalMinutes)) < 15) continue;
-            var legacy = !input.TrackingStartedAt.HasValue || group.All(s => s.EndedAt <= input.TrackingStartedAt);
-            var expected = new HashSet<DateTime>();
-            var successful = new HashSet<DateTime>();
-            // Old days require no synthetic coverage or minute reconstruction.
-            if (!legacy)
+            var tracked = g.Where(s => !s.Legacy).ToList();
+            var expected = tracked.Sum(s => s.ExpectedMinutes);
+            return (Sessions: g.ToList(), Broadcast: new Broadcast
             {
-                foreach (var s in group)
-                {
-                    for (var minute = FloorMinute(s.StartedAt); minute < s.EndedAt!.Value; minute = minute.AddMinutes(1)) expected.Add(minute);
-                    foreach (var poll in pollBySession[s.Id].Where(p => p.Complete)) successful.Add(poll.Minute);
-                }
-                successful.IntersectWith(expected);
+                Date = g.Key,
+                Minutes = g.Sum(s => Math.Max(0, (s.EndedAt - s.StartedAt).TotalMinutes)),
+                Legacy = tracked.Count == 0,
+                Coverage = expected == 0 ? (tracked.Count == 0 ? null : 0m) : Math.Round((decimal)tracked.Sum(s => s.CompleteMinutes) / expected, 4)
+            });
+        }).ToList();
+        var broadcasts = new List<Broadcast>();
+        var sessionIndex = new Dictionary<Guid, int>();
+        foreach (var (sessions, broadcast) in all.Where(b => b.Broadcast.Eligible))
+        {
+            foreach (var session in sessions) sessionIndex[session.StreamSessionId] = broadcasts.Count;
+            broadcasts.Add(broadcast);
+        }
+
+        // 2. Per viewer, per broadcast: minutes and messages.
+        var profiles = input.Profiles.GroupBy(p => p.TwitchUserId).ToDictionary(g => g.Key, g => g.First());
+        bool Excluded(string id) => id == input.StreamerTwitchUserId || input.Exclusions.Contains(id)
+            || profiles.TryGetValue(id, out var p) && input.ExcludedLogins.Contains(p.Login.ToLowerInvariant());
+        var raw = new Dictionary<(string Viewer, int Broadcast), (int Minutes, int Messages, bool Chatted)>();
+        foreach (var visit in input.Visits)
+        {
+            if (!sessionIndex.TryGetValue(visit.StreamSessionId, out var index) || Excluded(visit.ViewerTwitchUserId)) continue;
+            var entry = raw.GetValueOrDefault((visit.ViewerTwitchUserId, index));
+            raw[(visit.ViewerTwitchUserId, index)] = (entry.Minutes + visit.Minutes, entry.Messages, entry.Chatted || visit.LegacyChat);
+        }
+        foreach (var message in input.Messages)
+        {
+            if (message.Count <= 0 || !sessionIndex.TryGetValue(message.StreamSessionId, out var index) || Excluded(message.ViewerTwitchUserId)) continue;
+            var entry = raw.GetValueOrDefault((message.ViewerTwitchUserId, index));
+            raw[(message.ViewerTwitchUserId, index)] = (entry.Minutes, entry.Messages + message.Count, true);
+        }
+        var tracks = new Dictionary<string, Track>();
+        foreach (var ((viewer, index), value) in raw.OrderBy(x => x.Key.Broadcast))
+        {
+            if (value.Minutes < VisitThreshold(broadcasts[index].Minutes) && !value.Chatted) continue;
+            if (!tracks.TryGetValue(viewer, out var track)) tracks[viewer] = track = new Track(viewer);
+            track.Visits.Add(index);
+            track.Data[index] = new VisitData(value.Minutes, value.Messages, value.Chatted);
+        }
+        foreach (var track in tracks.Values)
+            for (var i = 1; i < track.Visits.Count; i++)
+            {
+                int p = track.Visits[i - 1], q = track.Visits[i];
+                if (q - p - 1 >= ComebackGap && broadcasts[q].Date.DayNumber - broadcasts[p].Date.DayNumber >= ComebackDays && i >= ComebackHistory)
+                    track.Comebacks.Add(q);
             }
-            var coverage = expected.Count == 0 ? (decimal?)null : (decimal)successful.Count / expected.Count;
-            var longestGap = 0;
-            var gap = 0;
-            DateTime? previous = null;
-            foreach (var minute in expected.Order())
+
+        var n = broadcasts.Count;
+        var report = new CommunityReport
+        {
+            CalculatedAt = input.Now, TimeZoneId = input.TimeZoneId, WindowSize = WindowSize, MinBroadcasts = MinBroadcasts,
+            TotalBroadcasts = n
+        };
+        if (n == 0)
+        {
+            report.SkippedBroadcasts = all.Count;
+            return new(report, []);
+        }
+
+        // 3. Segment rules, evaluated at any broadcast index.
+        int Len(int k) => Math.Min(WindowSize, k + 1);
+        string? RatioLevel(Track t, int j)
+        {
+            if (j + 1 < MinBroadcasts) return null;
+            var size = Len(j);
+            var count = t.InRange(j - size + 1, j);
+            if (count * 100 >= size * 60 && t.InRange(j - (RecentBroadcasts - 1), j) > 0) return S.Core;
+            if (count * 100 >= size * 30 && count >= 2 && t.InRange(j - (FadingRegular - 1), j) > 0) return S.Regular;
+            return null;
+        }
+        string? Segment(Track t, int k)
+        {
+            var count = t.CountUpTo(k);
+            if (count == 0) return null;
+            var last = t.Visits[count - 1];
+            if (broadcasts[k].Date.DayNumber - broadcasts[last].Date.DayNumber > ForgetAfterDays) return null;
+            if (t.Comebacks.Any(c => c <= k && c > k - RecentBroadcasts)) return S.Returned;
+            if (t.First > k - RecentBroadcasts) return S.New;
+            var streak = k - last;
+            if (streak >= LostAfter && count >= 2) return S.Lost;
+            var level = RatioLevel(t, last);
+            if (level == S.Core && streak >= FadingCore || level == S.Regular && streak >= FadingRegular) return S.Fading;
+            return RatioLevel(t, k) ?? (count >= 2 ? S.Occasional : S.OneTime);
+        }
+        bool LegacyInWindow(int k) => Enumerable.Range(k - Len(k) + 1, Len(k)).Any(i => broadcasts[i].Legacy);
+
+        // 4. Trend: segment sizes and flows per broadcast.
+        var current = n - 1;
+        var firstTrend = Math.Max(0, n - TrendLength);
+        var segmentsAt = new Dictionary<int, Dictionary<string, string>>();
+        Dictionary<string, string> SegmentsAt(int k)
+        {
+            if (segmentsAt.TryGetValue(k, out var cached)) return cached;
+            var result = new Dictionary<string, string>();
+            foreach (var t in tracks.Values)
+                if (Segment(t, k) is { } value) result[t.Id] = value;
+            return segmentsAt[k] = result;
+        }
+        for (var k = firstTrend; k <= current; k++)
+        {
+            var now = SegmentsAt(k);
+            var previous = k > 0 ? SegmentsAt(k - 1) : [];
+            if (k > 1) segmentsAt.Remove(k - 2);
+            report.Trend.Add(new CommunityTrendPoint
             {
-                if (previous.HasValue && minute != previous.Value.AddMinutes(1)) gap = 0;
-                gap = successful.Contains(minute) ? 0 : gap + 1;
-                longestGap = Math.Max(longestGap, gap);
-                previous = minute;
-            }
-            var quality = legacy ? "provisional" : coverage >= .95m && longestGap <= 3 ? "verified" : "unknown";
-            var dayWatches = group.SelectMany(s => s.CategoryIds.SelectMany(id => watchesByCategory[id])).ToList();
-            var visits = legacy
-                ? dayWatches.GroupBy(w => w.User).ToDictionary(g => g.Key, g => g.Sum(w => w.Watch.MinutesWatched))
-                : group.SelectMany(s => presenceBySession[s.Id]).GroupBy(p => p.ViewerTwitchUserId)
-                    .ToDictionary(g => g.Key, g => g.Select(p => p.Minute).Distinct().Count());
-            days.Add(new Day
-            {
-                Date = group.Key, Quality = quality, Coverage = coverage, Visits = visits,
-                MessagePoints = dayWatches.GroupBy(w => w.User).ToDictionary(g => g.Key, g => g.Sum(w => w.Watch.ChatPoints)),
-                HistoricalChat = dayWatches.Where(w => w.Watch.ChatPoints > 0).Select(w => w.User).ToHashSet(),
-                Messages = group.SelectMany(s => messagesBySession[s.Id]).GroupBy(m => m.ViewerTwitchUserId)
-                    .ToDictionary(g => g.Key, g => (g.Sum(m => m.Count), g.Any(m => m.Provisional)))
+                Date = broadcasts[k].Date,
+                Segments = S.All.ToDictionary(s => s, s => now.Values.Count(v => v == s)),
+                Visitors = tracks.Values.Count(t => t.Visited(k)),
+                NewViewers = tracks.Values.Count(t => t.First == k),
+                Returned = tracks.Values.Count(t => t.Comebacks.Contains(k)),
+                BecameFading = now.Count(x => x.Value == S.Fading && previous.GetValueOrDefault(x.Key) != S.Fading),
+                BecameLost = now.Count(x => x.Value == S.Lost && previous.GetValueOrDefault(x.Key) != S.Lost),
+                Provisional = k + 1 < WindowSize || LegacyInWindow(k)
             });
         }
 
-        var ids = input.Viewers.Select(v => v.TwitchUserId)
-            .Concat(days.SelectMany(d => d.Visits.Keys)).Concat(days.SelectMany(d => d.Messages.Keys))
-            .Where(id => !input.Exclusions.Contains(id))
-            .Where(id => days.Any(d => d.Visits.GetValueOrDefault(id) > 0 || d.Messages.ContainsKey(id) || d.HistoricalChat.Contains(id)))
-            .Distinct().Order(StringComparer.Ordinal).ToList();
-        var profiles = input.Viewers.GroupBy(v => v.TwitchUserId).ToDictionary(g => g.Key, g => g.First());
-        var window = 28;
-        while (window < 84 && days.Count(d => d.Eligible && d.Date <= asOf && d.Date > asOf.AddDays(-window)) < 8) window += 7;
-        var memo = new Dictionary<DateOnly, List<CommunityMember>>();
-        var knownCoreDates = input.KnownCoreDates.ToDictionary(x => x.Key, x => x.Value);
-        List<CommunityMember> Evaluate(DateOnly end)
+        // 5. Current state.
+        var windowLength = Len(current);
+        var from = current - windowLength + 1;
+        var segments = SegmentsAt(current);
+        var previousSegments = current > 0 ? SegmentsAt(current - 1) : [];
+        report.WindowDates = broadcasts.Skip(from).Select(b => b.Date).ToList();
+        report.From = broadcasts[from].Date;
+        report.AsOf = broadcasts[current].Date;
+        report.SkippedBroadcasts = all.Count(b => !b.Broadcast.Eligible && b.Broadcast.Date >= report.From);
+        var coverage = broadcasts.Skip(from).Where(b => b.Coverage.HasValue).Select(b => b.Coverage!.Value).ToList();
+        report.Coverage = coverage.Count == 0 ? null : Math.Round(coverage.Average(), 4);
+        report.Quality = n < MinBroadcasts ? "insufficient" : windowLength < WindowSize || LegacyInWindow(current) ? "provisional" : "verified";
+        report.Segments = S.All.ToDictionary(s => s, s => segments.Values.Count(v => v == s));
+        if (current - CompareOffset >= 0)
         {
-            if (memo.TryGetValue(end, out var result)) return result;
-            var relevant = days.Where(d => d.Date <= end && d.Date > end.AddDays(-window)).ToList();
-            var eligible = relevant.Where(d => d.Eligible).ToList();
-            var quality = eligible.Count < 8 ? "insufficient" : eligible.Any(d => d.Quality == "provisional") ? "provisional" : "verified";
-            result = ids.Select(id =>
-            {
-                var visited = eligible.Where(d => d.Visited(id)).ToList();
-                var messageDays = relevant.Where(d => d.Messages.ContainsKey(id)).ToList();
-                var oldChat = relevant.Any(d => d.HistoricalChat.Contains(id));
-                var hasLegacy = relevant.Any(d => d.Quality == "provisional");
-                profiles.TryGetValue(id, out var profile);
-                return new CommunityMember
-                {
-                    TwitchUserId = id, DisplayName = profile?.DisplayName ?? id, Login = profile?.Login ?? id,
-                    ProfileImageUrl = profile?.ProfileImageUrl,
-                    Level = Classify(visited.Count, eligible.Count, visited.Select(d => WeekStart(d.Date)).Distinct().Count()),
-                    Quality = quality, VisitedDays = visited.Count, EligibleDays = eligible.Count,
-                    Regularity = eligible.Count == 0 ? null : Math.Round((decimal)visited.Count / eligible.Count, 4),
-                    MessageCount = hasLegacy ? null : messageDays.Sum(d => d.Messages[id].Count),
-                    MessagePoints = relevant.Any(d => d.MessagePoints.ContainsKey(id)) ? relevant.Sum(d => d.MessagePoints.GetValueOrDefault(id)) : null,
-                    DaysWithMessages = hasLegacy ? null : messageDays.Count,
-                    HasHistoricalChat = oldChat,
-                    MessagesProvisional = hasLegacy || messageDays.Any(d => d.Messages[id].Provisional),
-                    FirstObserved = days.Where(d => d.Date <= end && (d.Visits.GetValueOrDefault(id) > 0 || d.Messages.ContainsKey(id) || d.HistoricalChat.Contains(id)))
-                        .Select(d => (DateOnly?)d.Date).FirstOrDefault(),
-                    History = days.Where(d => d.Date <= end).TakeLast(12).Select(d => new CommunityDayHistory
-                    {
-                        Date = d.Date, Quality = d.Quality,
-                        Status = d.Visited(id) ? "visited" : d.Quality == "verified" ? "notObserved" : "unknown"
-                    }).ToList()
-                };
-            }).ToList();
-            memo[end] = result;
-            return result;
+            var compared = current - CompareOffset;
+            report.PreviousDate = broadcasts[compared].Date;
+            report.PreviousSegments = report.Trend.FirstOrDefault(p => p.Date == broadcasts[compared].Date)?.Segments
+                ?? S.All.ToDictionary(s => s, s => tracks.Values.Count(t => Segment(t, compared) == s));
         }
 
-        void AddChanges(DateOnly end, List<CommunityMember> members)
+        CommunityAccount Account(string id) => new() { TwitchUserId = id, DisplayName = profiles.GetValueOrDefault(id)?.DisplayName ?? id };
+        List<CommunityAccount> Accounts(IEnumerable<Track> source) =>
+            source.OrderByDescending(t => t.Data.GetValueOrDefault(current)?.Minutes ?? 0).ThenBy(t => t.Id, StringComparer.Ordinal)
+                .Take(ListLimit).Select(t => Account(t.Id)).ToList();
+        var newcomers = tracks.Values.Where(t => t.First == current).ToList();
+        var returned = tracks.Values.Where(t => t.Comebacks.Contains(current)).ToList();
+        var missingCore = tracks.Values.Where(t => previousSegments.GetValueOrDefault(t.Id) == S.Core && !t.Visited(current))
+            .OrderByDescending(t => t.InRange(from, current)).ThenBy(t => t.Id, StringComparer.Ordinal).ToList();
+        report.LastBroadcast = new CommunityLastBroadcast
         {
-            var prior = Evaluate(end.AddDays(-1)).ToDictionary(m => m.TwitchUserId);
-            var completed = days.Where(d => d.Date <= end).ToList();
-            foreach (var member in members)
+            Date = broadcasts[current].Date,
+            Visitors = tracks.Values.Count(t => t.Visited(current)),
+            NewCount = newcomers.Count, ReturnedCount = returned.Count, MissingCoreCount = missingCore.Count,
+            New = Accounts(newcomers), Returned = Accounts(returned),
+            MissingCore = missingCore.Take(ListLimit).Select(t => Account(t.Id)).ToList()
+        };
+        if (current - (RecentBroadcasts - 1) > from)
+        {
+            var cohort = tracks.Values.Where(t => t.First >= from && t.First <= current - RecentBroadcasts).ToList();
+            report.Retention = new CommunityRetention
             {
-                var id = member.TwitchUserId;
-                var streak = completed.AsEnumerable().Reverse().TakeWhile(d => d.Quality == "verified" && !d.Visited(id)).ToList();
-                if (streak.Count > 0)
-                {
-                    var baseline = Evaluate(streak[^1].Date.AddDays(-1)).First(m => m.TwitchUserId == id);
-                    member.ConsecutiveMisses = streak.Count;
-                    member.Declining = streak.Count >= 3 && baseline.Level is "core" or "regular";
-                    member.Dormant = streak.Count >= 6 && member.Declining;
-                    if (member.Declining && baseline.Quality != "verified") member.Quality = "provisional";
-                }
-                var latest = completed.LastOrDefault();
-                // No decline is manufactured by an outage or mere passage of calendar time.
-                if (latest?.Date != end || latest.Quality == "unknown" || member.Quality == "insufficient") continue;
-                var before = prior[id];
-                if (before.Quality != "insufficient" && member.Level != before.Level)
-                {
-                    member.Transition = member.Level == "core" ? knownCoreDates.TryGetValue(id, out var coreDate) && coreDate < end ? "restoredCore" : "enteredCore"
-                        : before.Level == "core" ? "leftCore"
-                        : member.Level == "regular" && before.Level is not ("core" or "regular") ? "becameRegular" : null;
-                    if (member.Transition != null && before.Quality != "verified") member.Quality = "provisional";
-                }
-                if (latest.Quality == "verified" && latest.Visited(id))
-                {
-                    var missed = completed.Take(completed.Count - 1).Reverse().TakeWhile(d => d.Quality == "verified" && !d.Visited(id)).ToList();
-                    if (missed.Count >= 6)
-                    {
-                        var baseline = Evaluate(missed[^1].Date.AddDays(-1)).First(m => m.TwitchUserId == id);
-                        if (baseline.Level is "core" or "regular")
-                        {
-                            member.Returned = true;
-                            member.Transition ??= "returned";
-                            if (baseline.Quality != "verified") member.Quality = "provisional";
-                        }
-                    }
-                }
-            }
+                Newcomers = cohort.Count,
+                CameBack = cohort.Count(t => t.CountUpTo(current) >= 2),
+                Stayed = cohort.Count(t => segments.GetValueOrDefault(t.Id) is S.Core or S.Regular)
+            };
         }
 
-        var current = Evaluate(asOf);
-        var selectedDays = days.Where(d => d.Date <= asOf && d.Date > asOf.AddDays(-window)).ToList();
-        var eligibleDays = selectedDays.Where(d => d.Eligible).ToList();
-        var sufficient = eligibleDays.Count >= 8;
-        var previousPeriod = Evaluate(asOf.AddDays(-window));
-        var states = new List<(DateOnly, CommunityMember)>();
-        var trend = new List<CommunityTrendPoint>();
-        for (var date = asOf.AddDays(-27); date <= asOf; date = date.AddDays(1))
+        // 6. Members.
+        var windowAllLegacy = broadcasts.Skip(from).All(b => b.Legacy);
+        var members = new List<CommunityMember>();
+        foreach (var (id, segment) in segments)
         {
-            var members = Evaluate(date);
-            AddChanges(date, members);
-            foreach (var member in members.Where(m => m.Level == "core"))
-                if (!knownCoreDates.TryGetValue(member.TwitchUserId, out var firstCore) || date < firstCore) knownCoreDates[member.TwitchUserId] = date;
-            var count = days.Count(d => d.Eligible && d.Date <= date && d.Date > date.AddDays(-window));
-            var quality = count < 8 ? "insufficient" : days.Any(d => d.Eligible && d.Quality == "provisional" && d.Date <= date && d.Date > date.AddDays(-window)) ? "provisional" : "verified";
-            trend.Add(new() { Date = date, Core = count < 8 ? null : members.Count(m => m.Level == "core"), Quality = quality });
-            states.AddRange(members.Select(m => (date, m)));
+            var t = tracks[id];
+            var visits = Enumerable.Range(from, windowLength).Where(t.Visited).Select(i => t.Data[i]).ToList();
+            var chatVisits = visits.Count(v => v.Chatted);
+            var profile = profiles.GetValueOrDefault(id);
+            var lastIndex = t.Visits[t.CountUpTo(current) - 1];
+            members.Add(new CommunityMember
+            {
+                TwitchUserId = id, DisplayName = profile?.DisplayName ?? id, Login = profile?.Login ?? id, ProfileImageUrl = profile?.ProfileImageUrl,
+                Segment = segment,
+                Activity = visits.Count >= 2 && chatVisits * 2 >= visits.Count ? S.Chatty : visits.Count >= 3 && chatVisits == 0 ? S.Silent : null,
+                VisitsInWindow = visits.Count, WindowSize = windowLength, TotalVisits = t.CountUpTo(current),
+                MissedStreak = current - lastIndex,
+                MessagesInWindow = windowAllLegacy ? null : visits.Sum(v => v.Messages),
+                MinutesInWindow = visits.Sum(v => v.Minutes),
+                FirstSeen = broadcasts[t.First].Date, LastSeen = broadcasts[lastIndex].Date,
+                Attendance = string.Concat(Enumerable.Range(from, windowLength).Select(i => t.Visited(i) ? '1' : '0'))
+            });
         }
-        var verifiedCoverage = selectedDays.Where(d => d.Coverage.HasValue).Select(d => d.Coverage!.Value).ToList();
-        return new(new CommunityReport
+        report.Activity = new Dictionary<string, int>
         {
-            CalculatedAt = input.Now, AsOf = asOf, From = asOf.AddDays(1 - window), WindowDays = window,
-            TimeZoneId = input.TimeZoneId, EligibleDays = eligibleDays.Count,
-            UnknownDays = selectedDays.Count(d => !d.Eligible),
-            Quality = !sufficient ? "insufficient" : eligibleDays.Any(d => d.Quality == "provisional")
-                || current.Any(m => m.Quality == "provisional") || previousPeriod.Any(m => m.Quality == "provisional")
-                || trend.Any(p => p.Quality == "provisional") ? "provisional" : "verified",
-            Coverage = verifiedCoverage.Count == 0 ? null : Math.Round(verifiedCoverage.Average(), 4),
-            Core = sufficient ? current.Count(m => m.Level == "core") : null,
-            PreviousCore = days.Count(d => d.Eligible && d.Date <= asOf.AddDays(-window) && d.Date > asOf.AddDays(-2 * window)) >= 8
-                ? previousPeriod.Count(m => m.Level == "core") : null,
-            RegularIncludingCore = sufficient ? current.Count(m => m.Level is "core" or "regular") : null,
-            FirstObserved = sufficient ? current.Count(m => m.FirstObserved > asOf.AddDays(-window)) : null,
-            Declining = sufficient ? current.Count(m => m.Declining) : null,
-            Distribution = sufficient ? new[] { "core", "regular", "returning", "occasional" }.ToDictionary(l => l, l => current.Count(m => m.Level == l)) : null,
-            Trend = trend,
-            Transitions = states.SelectMany(s => new[] { s.Item2.Transition, s.Item2.Returned && s.Item2.Transition != "returned" ? "returned" : null })
-                .Where(t => t != null).GroupBy(t => t!)
-                .ToDictionary(g => g.Key, g => g.Count())
-        }, current, states);
+            [S.Chatty] = members.Count(m => m.Activity == S.Chatty),
+            [S.Silent] = members.Count(m => m.Activity == S.Silent)
+        };
+        return new(report, Order(members).ToList());
     }
 
+    /// <summary>Most present first, then most recent.</summary>
+    public static IEnumerable<CommunityMember> Order(IEnumerable<CommunityMember> members) => members
+        .OrderByDescending(m => m.VisitsInWindow).ThenByDescending(m => m.TotalVisits).ThenByDescending(m => m.LastSeen)
+        .ThenBy(m => m.DisplayName, StringComparer.OrdinalIgnoreCase).ThenBy(m => m.TwitchUserId, StringComparer.Ordinal);
+
     public static DateTime FloorMinute(DateTime value) => new(value.Ticks - value.Ticks % TimeSpan.TicksPerMinute, DateTimeKind.Utc);
-    private static DateOnly WeekStart(DateOnly value) => value.AddDays(-((7 + (int)value.DayOfWeek - (int)DayOfWeek.Monday) % 7));
+
+    /// <summary>Coverage of a finished tracked session from its complete minute polls.</summary>
+    public static (int Expected, int Complete, int LongestGap) Coverage(DateTime startedAt, DateTime endedAt, IEnumerable<DateTime> completeMinutes)
+    {
+        var complete = completeMinutes.ToHashSet();
+        int expected = 0, successful = 0, gap = 0, longest = 0;
+        for (var minute = FloorMinute(startedAt); minute < endedAt; minute = minute.AddMinutes(1))
+        {
+            expected++;
+            if (complete.Contains(minute)) { successful++; gap = 0; }
+            else longest = Math.Max(longest, ++gap);
+        }
+        return (expected, successful, longest);
+    }
 }

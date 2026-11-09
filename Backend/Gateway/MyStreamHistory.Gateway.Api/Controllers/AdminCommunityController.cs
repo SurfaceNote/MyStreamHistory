@@ -16,7 +16,8 @@ public class AdminCommunityController(ITransportBus bus, ILogger<AdminCommunityC
     public Task<ActionResult<ApiResultContainer<CommunityResponse>>> Report([FromQuery] string? channelId, CancellationToken ct) => Send(new(), channelId, ct);
     [HttpGet("members")]
     public Task<ActionResult<ApiResultContainer<CommunityResponse>>> Members([FromQuery] string? channelId, [FromQuery] string? level,
-        [FromQuery] string? cursor, CancellationToken ct) => Send(new() { Operation = "members", Level = level, Cursor = cursor }, channelId, ct);
+        [FromQuery] string? activity, [FromQuery] string? search, [FromQuery] string? cursor, CancellationToken ct) =>
+        Send(new() { Operation = "members", Level = level, Activity = activity, Search = search, Cursor = cursor }, channelId, ct);
     [HttpGet("exclusions")]
     public Task<ActionResult<ApiResultContainer<CommunityResponse>>> Exclusions([FromQuery] string? channelId, CancellationToken ct) =>
         Send(new() { Operation = "exclusions" }, channelId, ct);

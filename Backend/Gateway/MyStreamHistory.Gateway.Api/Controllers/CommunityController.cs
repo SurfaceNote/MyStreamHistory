@@ -16,8 +16,9 @@ public class CommunityController(ITransportBus bus, IConfiguration configuration
     public Task<ActionResult<ApiResultContainer<CommunityResponse>>> Report([FromQuery] string? channelId, CancellationToken ct) => Send(new(), ct, channelId);
 
     [HttpGet("members")]
-    public Task<ActionResult<ApiResultContainer<CommunityResponse>>> Members([FromQuery] string? level, [FromQuery] string? cursor, [FromQuery] string? channelId, CancellationToken ct) =>
-        Send(new() { Operation = "members", Level = level, Cursor = cursor }, ct, channelId);
+    public Task<ActionResult<ApiResultContainer<CommunityResponse>>> Members([FromQuery] string? level, [FromQuery] string? activity, [FromQuery] string? search,
+        [FromQuery] string? cursor, [FromQuery] string? channelId, CancellationToken ct) =>
+        Send(new() { Operation = "members", Level = level, Activity = activity, Search = search, Cursor = cursor }, ct, channelId);
 
     [HttpPut("settings")]
     public Task<ActionResult<ApiResultContainer<CommunityResponse>>> Settings([FromBody] CommunitySettingsRequest request, CancellationToken ct) =>

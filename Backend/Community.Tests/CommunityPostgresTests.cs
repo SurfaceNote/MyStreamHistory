@@ -216,7 +216,7 @@ public class CommunityPostgresTests
     }
 
     [PostgresFact]
-    public async Task HistoricalImportIsRepeatableAndSettingsInvalidateCachedReport()
+    public async Task HistoricalSessionsAreRolledUpOnceAndSettingsInvalidateCachedReport()
     {
         await using var fixture = await Database.Create();
         var metadata = new FakeBus();
@@ -235,21 +235,71 @@ public class CommunityPostgresTests
         await service.RecalculatePendingAsync(default);
         var first = await service.HandleAsync(new() { StreamerTwitchUserId = "10" }, default);
         Assert.Equal("provisional", first.Report!.Quality);
-        Assert.Equal(1, first.Report.Core);
-        var states = await db.CommunityDailyStates.CountAsync();
+        Assert.Equal(1, first.Report.Segments[CommunitySegments.Core]);
+        Assert.Equal(10, await db.CommunitySessionSummaries.CountAsync(s => s.Legacy));
+        Assert.Equal(10, await db.CommunitySessionVisits.CountAsync());
+        // A forced rebuild reuses the roll-ups instead of aggregating the sessions again.
         await db.CommunitySettings.ExecuteUpdateAsync(s => s.SetProperty(x => x.Pending, true));
         await service.RecalculatePendingAsync(default);
-        Assert.Equal(states, await db.CommunityDailyStates.CountAsync());
+        Assert.Equal(10, await db.CommunitySessionVisits.CountAsync());
+        var members = await service.HandleAsync(new() { StreamerTwitchUserId = "10", Operation = "members", Level = CommunitySegments.Core }, default);
+        Assert.Equal("Quiet", Assert.Single(members.Members).DisplayName);
+        Assert.Equal("1111111111", members.Members[0].Attendance);
+        Assert.Equal("invalidLevel", (await service.HandleAsync(new() { StreamerTwitchUserId = "10", Operation = "members", Level = "declining" }, default)).Error);
         var excluded = await service.HandleAsync(new() { StreamerTwitchUserId = "10", Operation = "exclude", ViewerTwitchUserId = "1" }, default);
         Assert.True(excluded.Report!.Recalculating);
-        Assert.Null(excluded.Report.Core);
+        Assert.Empty(excluded.Report.Segments);
         await service.RecalculatePendingAsync(default);
         var after = await service.HandleAsync(new() { StreamerTwitchUserId = "10" }, default);
-        Assert.Equal(0, after.Report!.Core);
-        Assert.Empty(after.Report.Transitions);
+        Assert.Equal(0, after.Report!.Segments[CommunitySegments.Core]);
+        Assert.Empty((await service.HandleAsync(new() { StreamerTwitchUserId = "10", Operation = "members" }, default)).Members);
         Assert.Null((await service.HandleAsync(new() { StreamerTwitchUserId = "10", Operation = "settings", TimeZoneId = "Europe/Moscow" }, default)).Error);
         Assert.Equal("invalidTimeZone", (await service.HandleAsync(new() { StreamerTwitchUserId = "10", Operation = "settings", TimeZoneId = "not/a/timezone" }, default)).Error);
     }
+
+    [PostgresFact]
+    public async Task TrackedSessionIsRolledUpFromMinutePollsOnceTheBroadcastEnds()
+    {
+        await using var fixture = await Database.Create();
+        var metadata = new FakeBus();
+        var start = CommunityCalculatorMinute(DateTime.UtcNow.AddHours(-3));
+        var session = new CommunitySession { Id = Guid.NewGuid(), StartedAt = start, EndedAt = start.AddMinutes(90) };
+        metadata.Sessions.Add(session);
+        await using var db = fixture.Viewers();
+        var service = Service(db, metadata);
+        for (var minute = 0; minute < 90; minute++)
+            await service.RecordPollAsync("10", session.Id, start.AddMinutes(minute).AddSeconds(10),
+                minute < 5 ? [Chatter("1"), Chatter("2"), Chatter("10")] : [Chatter("1"), Chatter("10")], default);
+        var message = Message();
+        message.ChatterUserId = "2";
+        await service.RecordMessageAsync(message, session.Id, default);
+        Assert.Equal(start.AddMinutes(89).AddSeconds(10), (await db.CommunitySettings.AsNoTracking().SingleAsync()).LastActivityAt);
+
+        await service.RecalculatePendingAsync(default);
+
+        var summary = await db.CommunitySessionSummaries.AsNoTracking().SingleAsync();
+        Assert.False(summary.Legacy);
+        Assert.Equal((90, 90, 0), (summary.ExpectedMinutes, summary.CompleteMinutes, summary.LongestGap));
+        Assert.Equal(90, (await db.CommunitySessionVisits.AsNoTracking().SingleAsync(v => v.ViewerTwitchUserId == "1")).Minutes);
+        var report = (await service.HandleAsync(new() { StreamerTwitchUserId = "10" }, default)).Report!;
+        Assert.Equal("insufficient", report.Quality);
+        Assert.Equal(1m, report.Coverage);
+        // The broadcaster is never part of the audience; viewer 2 counts through the chat message.
+        Assert.Equal(2, report.LastBroadcast!.NewCount);
+        var all = await service.HandleAsync(new() { StreamerTwitchUserId = "10", Operation = "members", Level = CommunitySegments.New }, default);
+        Assert.Equal(new[] { "1", "2" }, all.Members.Select(m => m.TwitchUserId).Order());
+        Assert.Equal(2, all.MembersTotal);
+        var found = await service.HandleAsync(new() { StreamerTwitchUserId = "10", Operation = "members", Search = "AUTH" }, default);
+        Assert.Equal("2", Assert.Single(found.Members).TwitchUserId);
+        Assert.Equal(1, Assert.Single(found.Members).MessagesInWindow);
+
+        // Nothing new happened: the worker leaves the published report alone.
+        var calculatedAt = (await db.CommunitySettings.AsNoTracking().SingleAsync()).CalculatedAt;
+        await service.RecalculatePendingAsync(default);
+        Assert.Equal(calculatedAt, (await db.CommunitySettings.AsNoTracking().SingleAsync()).CalculatedAt);
+    }
+
+    private static DateTime CommunityCalculatorMinute(DateTime value) => new(value.Ticks - value.Ticks % TimeSpan.TicksPerMinute, DateTimeKind.Utc);
 
     [PostgresFact]
     public async Task AudienceMigrationsPreserveLastValueAndStoreDistinctSamples()

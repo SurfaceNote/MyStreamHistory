@@ -21,6 +21,11 @@ public class CommunityService(ViewerServiceDbContext db, ITransportBus bus, ICon
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
     private bool Enabled => configuration.GetValue<bool>("Features:CommunityAnalytics:Enabled");
     private TimeSpan MessageReceiptRetention => TimeSpan.FromDays(options.Value.MessageReceiptRetentionDays);
+    private const int PageSize = 50;
+    /// <summary>No roster poll for this long means the broadcast is over.</summary>
+    private static readonly TimeSpan BroadcastEndDelay = TimeSpan.FromMinutes(10);
+    /// <summary>Late chat messages and the end-of-stream update settle before a session is rolled up.</summary>
+    private static readonly TimeSpan SessionSettleDelay = TimeSpan.FromMinutes(5);
 
     private async Task EnsureSettings(string channel, DateTime? trackingAt, CancellationToken ct)
     {
@@ -58,6 +63,9 @@ public class CommunityService(ViewerServiceDbContext db, ITransportBus bus, ICon
                 ON CONFLICT DO NOTHING
                 """, ct);
         }
+        // Polling stops when the broadcast ends; the worker rebuilds the report shortly after that.
+        await db.CommunitySettings.Where(s => s.StreamerTwitchUserId == channel && (s.LastActivityAt == null || s.LastActivityAt < observedAt))
+            .ExecuteUpdateAsync(s => s.SetProperty(x => x.LastActivityAt, observedAt), ct);
         await tx.CommitAsync(ct);
         logger.LogInformation("Community poll channel {Channel}: complete={Complete}, accounts={Count}", channel, complete, chatters?.Count);
     }
@@ -173,9 +181,11 @@ public class CommunityService(ViewerServiceDbContext db, ITransportBus bus, ICon
         var response = new CommunityResponse { Report = report };
         if (request.Operation == "members" && !settings.Pending && settings.MembersJson != null)
         {
-            if (request.Level != null && request.Level is not ("core" or "regular" or "returning" or "occasional" or "inactive" or "unknown" or "declining"))
-                return new() { Error = "invalidLevel" };
-            string? after = null;
+            if (request.Level != null && !CommunitySegments.All.Contains(request.Level)) return new() { Error = "invalidLevel" };
+            if (request.Activity != null && request.Activity is not (CommunitySegments.Chatty or CommunitySegments.Silent)) return new() { Error = "invalidActivity" };
+            var search = request.Search?.Trim();
+            if (search is { Length: > 50 }) return new() { Error = "invalidSearch" };
+            var offset = 0;
             var cursorVersion = settings.Revision + "-" + settings.CalculatedAt?.Ticks;
             if (request.Cursor != null)
             {
@@ -183,17 +193,21 @@ public class CommunityService(ViewerServiceDbContext db, ITransportBus bus, ICon
                 {
                     var cursor = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(request.Cursor)).Split(':', 2);
                     if (cursor.Length != 2 || cursor[0] != cursorVersion) return new() { Error = "staleCursor" };
-                    after = cursor[1];
+                    if (!int.TryParse(cursor[1], out offset) || offset < 0) return new() { Error = "invalidCursor" };
                 }
                 catch (FormatException) { return new() { Error = "invalidCursor" }; }
             }
-            var members = JsonSerializer.Deserialize<List<CommunityMember>>(settings.MembersJson, Json)!;
-            var page = members.Where(m => request.Level == null || request.Level == "declining" && m.Declining || m.Level == request.Level)
-                .Where(m => after == null || string.CompareOrdinal(m.TwitchUserId, after) > 0)
-                .OrderBy(m => m.TwitchUserId, StringComparer.Ordinal).Take(51).ToList();
-            response.Members = page.Take(50).ToList();
-            if (page.Count > 50)
-                response.NextCursor = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(cursorVersion + ":" + page[49].TwitchUserId));
+            // Members are stored already ordered by attendance.
+            var members = JsonSerializer.Deserialize<List<CommunityMember>>(settings.MembersJson, Json)!
+                .Where(m => request.Level == null || m.Segment == request.Level)
+                .Where(m => request.Activity == null || m.Activity == request.Activity)
+                .Where(m => string.IsNullOrEmpty(search) || m.DisplayName.Contains(search, StringComparison.OrdinalIgnoreCase)
+                    || m.Login.Contains(search, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+            response.MembersTotal = members.Count;
+            response.Members = members.Skip(offset).Take(PageSize).ToList();
+            if (members.Count > offset + PageSize)
+                response.NextCursor = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(cursorVersion + ":" + (offset + PageSize)));
         }
         if (request.Operation == "exclusions")
         {
@@ -207,8 +221,13 @@ public class CommunityService(ViewerServiceDbContext db, ITransportBus bus, ICon
     public async Task RecalculatePendingAsync(CancellationToken ct)
     {
         if (!Enabled) return;
-        var before = DateTime.UtcNow.AddHours(-1);
-        var channels = await db.CommunitySettings.AsNoTracking().Where(s => s.Pending || s.CalculatedAt == null || s.CalculatedAt < before)
+        var now = DateTime.UtcNow;
+        var daily = now.AddHours(-24);
+        var ended = now - BroadcastEndDelay;
+        // Rebuild on settings changes, once a broadcast has ended (polling went quiet), and daily as a safety net.
+        var channels = await db.CommunitySettings.AsNoTracking()
+            .Where(s => s.Pending || s.CalculatedAt == null || s.CalculatedAt < daily
+                || s.LastActivityAt != null && s.LastActivityAt > s.CalculatedAt && s.LastActivityAt < ended)
             .Select(s => s.StreamerTwitchUserId).ToListAsync(ct);
         foreach (var channel in channels)
         {
@@ -221,51 +240,92 @@ public class CommunityService(ViewerServiceDbContext db, ITransportBus bus, ICon
         }
     }
 
+    /// <summary>Rolls finished sessions up into per-viewer rows once, so reports never re-read raw minutes.</summary>
+    private async Task<int> AggregateSessionsAsync(string channel, CommunitySettings settings, IReadOnlyList<CommunitySession> sessions, CancellationToken ct)
+    {
+        var known = (await db.CommunitySessionSummaries.AsNoTracking().Where(x => x.StreamerTwitchUserId == channel)
+            .Select(x => x.StreamSessionId).ToListAsync(ct)).ToHashSet();
+        var cutoff = DateTime.UtcNow - SessionSettleDelay;
+        var aggregated = 0;
+        foreach (var session in sessions.Where(s => !s.IsLive && s.EndedAt.HasValue && s.EndedAt < cutoff && !known.Contains(s.Id)).OrderBy(s => s.StartedAt))
+        {
+            var startedAt = DateTime.SpecifyKind(session.StartedAt, DateTimeKind.Utc);
+            var endedAt = DateTime.SpecifyKind(session.EndedAt!.Value, DateTimeKind.Utc);
+            var legacy = settings.TrackingStartedAt == null || endedAt <= settings.TrackingStartedAt;
+            await using var tx = await db.Database.BeginTransactionAsync(ct);
+            var summary = new CommunitySessionSummary
+            {
+                StreamerTwitchUserId = channel, StreamSessionId = session.Id, StartedAt = startedAt, EndedAt = endedAt,
+                Legacy = legacy, AggregatedAt = DateTime.UtcNow
+            };
+            if (legacy)
+            {
+                // Before minute polling existed only category totals were stored; they remain estimates.
+                var categories = session.CategoryIds.ToArray();
+                var watches = await db.ViewerCategoryWatches.AsNoTracking().Where(w => categories.Contains(w.StreamCategoryId))
+                    .Join(db.Viewers.AsNoTracking(), w => w.ViewerId, v => v.Id, (w, v) => new { v.TwitchUserId, w.MinutesWatched, w.ChatPoints })
+                    .ToListAsync(ct);
+                db.CommunitySessionVisits.AddRange(watches.GroupBy(w => w.TwitchUserId).Select(g => new CommunitySessionVisit
+                {
+                    StreamerTwitchUserId = channel, StreamSessionId = session.Id, ViewerTwitchUserId = g.Key,
+                    Minutes = g.Sum(w => w.MinutesWatched), LegacyChat = g.Any(w => w.ChatPoints > 0)
+                }));
+            }
+            else
+            {
+                var polls = await db.CommunityPolls.AsNoTracking()
+                    .Where(p => p.StreamerTwitchUserId == channel && p.StreamSessionId == session.Id && p.Complete)
+                    .Select(p => p.Minute).ToListAsync(ct);
+                (summary.ExpectedMinutes, summary.CompleteMinutes, summary.LongestGap) = CommunityCalculator.Coverage(startedAt, endedAt, polls);
+                await db.Database.ExecuteSqlInterpolatedAsync($"""
+                    INSERT INTO "CommunitySessionVisits" ("StreamerTwitchUserId", "StreamSessionId", "ViewerTwitchUserId", "Minutes", "LegacyChat")
+                    SELECT {channel}, {session.Id}, p."ViewerTwitchUserId", COUNT(*), FALSE
+                    FROM "CommunityPresences" p
+                    WHERE p."StreamerTwitchUserId" = {channel} AND p."StreamSessionId" = {session.Id}
+                    GROUP BY p."ViewerTwitchUserId"
+                    ON CONFLICT DO NOTHING
+                    """, ct);
+            }
+            db.CommunitySessionSummaries.Add(summary);
+            await db.SaveChangesAsync(ct);
+            await tx.CommitAsync(ct);
+            db.ChangeTracker.Clear();
+            aggregated++;
+        }
+        return aggregated;
+    }
+
     private async Task RecalculateAsync(string channel, CancellationToken ct)
     {
         var started = System.Diagnostics.Stopwatch.StartNew();
         var settings = await db.CommunitySettings.AsNoTracking().SingleAsync(s => s.StreamerTwitchUserId == channel, ct);
         var metadata = await bus.SendRequestAsync<GetCommunitySessionsRequest, GetCommunitySessionsResponse>(new() { TwitchUserId = int.Parse(channel) }, ct);
         var sessions = metadata.Success?.Sessions ?? throw new InvalidOperationException("Session metadata unavailable");
-        var categories = sessions.SelectMany(s => s.CategoryIds).ToArray();
-        var watches = await db.ViewerCategoryWatches.AsNoTracking().Where(w => categories.Contains(w.StreamCategoryId)).ToListAsync(ct);
-        var viewerIds = watches.Select(w => w.ViewerId).Distinct().ToArray();
-        var presence = await db.CommunityPresences.AsNoTracking().Where(x => x.StreamerTwitchUserId == channel).ToListAsync(ct);
+        var aggregated = await AggregateSessionsAsync(channel, settings, sessions, ct);
+
+        var summaries = await db.CommunitySessionSummaries.AsNoTracking().Where(x => x.StreamerTwitchUserId == channel).ToListAsync(ct);
+        var visits = await db.CommunitySessionVisits.AsNoTracking().Where(x => x.StreamerTwitchUserId == channel).ToListAsync(ct);
         var messages = await db.CommunityMessageAggregates.AsNoTracking().Where(x => x.StreamerTwitchUserId == channel).ToListAsync(ct);
-        var userIds = presence.Select(p => p.ViewerTwitchUserId).Concat(messages.Select(m => m.ViewerTwitchUserId)).Distinct().ToArray();
-        var profiles = await db.Viewers.AsNoTracking().Where(v => viewerIds.Contains(v.Id) || userIds.Contains(v.TwitchUserId)).ToListAsync(ct);
-        var knownCore = await db.CommunityDailyStates.Where(s => s.StreamerTwitchUserId == channel && s.Revision == settings.Revision && s.Level == "core")
-            .GroupBy(s => s.ViewerTwitchUserId).Select(g => new { User = g.Key, Date = g.Min(s => s.Date) }).ToDictionaryAsync(x => x.User, x => x.Date, ct);
+        var userIds = visits.Select(v => v.ViewerTwitchUserId).Concat(messages.Select(m => m.ViewerTwitchUserId)).Distinct().ToArray();
+        var profiles = await db.Viewers.AsNoTracking().Where(v => userIds.Contains(v.TwitchUserId))
+            .Select(v => new CommunityProfile(v.TwitchUserId, v.DisplayName, v.Login, v.ProfileImageUrl)).ToListAsync(ct);
+        var bots = (await db.RankingExcludedAccounts.AsNoTracking().Select(x => x.Login).ToListAsync(ct)).ToHashSet();
+        var exclusions = (await db.CommunityExclusions.AsNoTracking().Where(x => x.StreamerTwitchUserId == channel)
+            .Select(x => x.ViewerTwitchUserId).ToListAsync(ct)).ToHashSet();
         var result = CommunityCalculator.Calculate(new()
         {
-            Now = DateTime.UtcNow, TimeZoneId = settings.TimeZoneId, TrackingStartedAt = settings.TrackingStartedAt,
-            Sessions = sessions, Presence = presence, Messages = messages, HistoricalWatches = watches, Viewers = profiles,
-            Polls = await db.CommunityPolls.AsNoTracking().Where(x => x.StreamerTwitchUserId == channel).ToListAsync(ct),
-            Exclusions = (await db.CommunityExclusions.Where(x => x.StreamerTwitchUserId == channel).Select(x => x.ViewerTwitchUserId).ToListAsync(ct)).ToHashSet(),
-            KnownCoreDates = knownCore
+            Now = DateTime.UtcNow, TimeZoneId = settings.TimeZoneId, StreamerTwitchUserId = channel,
+            Sessions = summaries, Visits = visits, Messages = messages, Profiles = profiles, ExcludedLogins = bots, Exclusions = exclusions
         });
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
-        // Lock only the publication stage; leave the previous completed report readable during calculation.
-        var latest = await db.CommunitySettings.FromSqlInterpolated($"""SELECT * FROM "CommunitySettings" WHERE "StreamerTwitchUserId" = {channel} FOR UPDATE""").AsNoTracking().SingleAsync(ct);
-        if (latest.Revision != settings.Revision) return;
-        var first = result.Report.AsOf!.Value.AddDays(-27);
-        await db.CommunityDailyStates.Where(s => s.StreamerTwitchUserId == channel && s.Revision == settings.Revision
-            && s.MethodVersion == CommunityReport.CurrentMethodVersion && s.Date >= first).ExecuteDeleteAsync(ct);
-        db.CommunityDailyStates.AddRange(result.DailyStates.Select(s => new CommunityDailyState
-        {
-            StreamerTwitchUserId = channel, Revision = settings.Revision, MethodVersion = CommunityReport.CurrentMethodVersion,
-            Date = s.Date, ViewerTwitchUserId = s.Member.TwitchUserId, Level = s.Member.Level, Quality = s.Member.Quality,
-            Transition = s.Member.Returned && s.Member.Transition is not (null or "returned") ? s.Member.Transition + ",returned" : s.Member.Transition
-        }));
-        await db.SaveChangesAsync(ct);
         var reportJson = JsonSerializer.Serialize(result.Report, Json);
         var membersJson = JsonSerializer.Serialize(result.Members, Json);
-        await db.CommunitySettings.Where(s => s.StreamerTwitchUserId == channel && s.Revision == settings.Revision)
+        // Publish only if no settings change arrived during the calculation; otherwise the next run picks it up.
+        var published = await db.CommunitySettings.Where(s => s.StreamerTwitchUserId == channel && s.Revision == settings.Revision)
             .ExecuteUpdateAsync(s => s.SetProperty(x => x.ReportJson, reportJson).SetProperty(x => x.MembersJson, membersJson)
                 .SetProperty(x => x.Pending, false).SetProperty(x => x.CalculatedAt, DateTime.UtcNow), ct);
-        await tx.CommitAsync(ct);
+        // Bulk updates bypass the change tracker; drop tracked copies so later reads in this scope are fresh.
         db.ChangeTracker.Clear();
-        logger.LogInformation("Community report channel {Channel}: quality={Quality}, eligibleDays={Days}, durationMs={Duration}",
-            channel, result.Report.Quality, result.Report.EligibleDays, started.ElapsedMilliseconds);
+        logger.LogInformation("Community report channel {Channel}: quality={Quality}, broadcasts={Broadcasts}, aggregatedSessions={Aggregated}, visits={Visits}, members={Members}, published={Published}, durationMs={Duration}",
+            channel, result.Report.Quality, result.Report.TotalBroadcasts, aggregated, visits.Count, result.Members.Count, published > 0, started.ElapsedMilliseconds);
     }
 }
