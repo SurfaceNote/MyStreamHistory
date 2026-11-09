@@ -468,7 +468,7 @@ describe('StreamerProfileComponent', () => {
     expect(shelf.textContent).not.toContain('2026-08-24');
     expect(shelf.textContent).toContain('Playthrough #2');
     expect(shelf.querySelector('.shelf-run')?.textContent).toContain('#1');
-    expect(shelf.textContent).toContain('Finished');
+    expect(shelf.textContent).toContain('Last stream');
     expect(shelf.querySelector('select')).toBeNull();
   });
 

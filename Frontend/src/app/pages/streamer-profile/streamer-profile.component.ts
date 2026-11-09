@@ -39,6 +39,7 @@ import {
   TimeSeriesPoint,
 } from '../../models/streamer-statistics.model';
 import { PlaythroughStatistics } from '../../models/playthrough-statistics.model';
+import { CategoryStatistics } from '../../models/category-statistics.model';
 import { Chart, registerables } from 'chart.js';
 import { SeoService } from '../../service/seo.service';
 import { AnalyticsService } from '../../service/analytics.service';
@@ -54,6 +55,14 @@ interface PlaythroughStatusSection {
   items: PlaythroughStatistics[];
   total?: number;
 }
+
+interface GameProgressItem {
+  status: string;
+  count: number;
+}
+
+const PROGRESS_ORDER = ['Playing', 'Completed', 'Planned', 'Dropped'];
+const NO_PROGRESS: GameProgressItem[] = [];
 
 interface OwnerChecklistStep {
   id: 'playthroughs' | 'profile';
@@ -235,6 +244,68 @@ export class StreamerProfileComponent
     });
   }
   readonly sectionLabels: Record<string, TranslationKey> = { Overview: 'ui.overview', Streams: 'ui.streamsLabel', Games: 'ui.gamesLabel', Viewers: 'ui.viewers' };
+  readonly sectionIcons: Record<string, string> = {
+    Overview: 'fa-solid fa-chart-simple',
+    Streams: 'fa-solid fa-tower-broadcast',
+    Games: 'fa-solid fa-gamepad',
+    Viewers: 'fa-solid fa-users',
+  };
+  readonly statusIcons: Record<string, string> = {
+    Playing: 'fa-solid fa-play',
+    Completed: 'fa-solid fa-trophy',
+    Planned: 'fa-solid fa-bookmark',
+    Dropped: 'fa-solid fa-pause',
+  };
+
+  /** Shown next to a tab label; drawn by CSS so the tab name stays the button text. */
+  sectionCount(section: string): string | null {
+    const count = section === 'Streams' ? this.statistics?.totalStreamsCount
+      : section === 'Games' ? this.statistics?.categories?.length
+      : undefined;
+    return count ? this.locale.number(count, 0) : null;
+  }
+
+  statusCount(status: string): number {
+    if (status === 'All') return this.statistics?.categories?.length ?? 0;
+    return (this.statistics?.playthroughs ?? []).filter((game) => game.status === status).length;
+  }
+
+  /** The overview shows the most streamed games first, whatever order the API returns. */
+  get topGames() {
+    return [...(this.statistics?.categories ?? [])]
+      .sort((a, b) => b.totalHours - a.totalHours)
+      .slice(0, 6);
+  }
+
+  /**
+   * Shelf state of a game for the collection tiles: in progress, finished (and how many times), planned, dropped.
+   * Cached per statistics response, since the template asks for every tile on each check.
+   */
+  gameProgress(game: CategoryStatistics): GameProgressItem[] {
+    if (this.progressSource !== this.statistics) {
+      this.progressSource = this.statistics;
+      this.progressByGame.clear();
+      for (const playthrough of this.statistics?.playthroughs ?? []) {
+        for (const key of [playthrough.twitchCategoryId, 'twitch:' + playthrough.twitchCategoryTwitchId]) {
+          const counts = this.progressByGame.get(key) ?? new Map<string, number>();
+          counts.set(playthrough.status, (counts.get(playthrough.status) ?? 0) + 1);
+          this.progressByGame.set(key, counts);
+        }
+      }
+    }
+    const counts = this.progressByGame.get(game.twitchCategoryId) ?? this.progressByGame.get('twitch:' + game.twitchId);
+    if (!counts) return NO_PROGRESS;
+    return PROGRESS_ORDER.filter((status) => counts.has(status)).map((status) => ({ status, count: counts.get(status)! }));
+  }
+
+  private progressSource: StreamerStatistics | null = null;
+  private readonly progressByGame = new Map<string, Map<string, number>>();
+
+  /** The podium takes the first three places on the Viewers tab. */
+  get viewerRankOffset(): number {
+    return this.activeSection === 'Viewers' && this.topViewers.length >= 3 ? 3 : 0;
+  }
+
   readonly statusLabels: Record<string, TranslationKey> = { Playing: 'ui.playing', Completed: 'ui.completed', Planned: 'ui.planned', Dropped: 'ui.dropped' };
   get isOwnProfile(): boolean { return this.authReady && this.auth.getTwitchIdFromToken() === String(this.twitchId); }
   get canViewCommunity(): boolean { return this.authReady && (this.isOwnProfile); }
@@ -346,18 +417,8 @@ export class StreamerProfileComponent
 
   // ---- Shelf: playthrough posters. The owner can change a status in place and add suggested games.
 
-  /** "Since Aug 24", "Finished Oct 15"… The last stream of a finished game is its finish date. */
-  shelfPeriod(game: PlaythroughStatistics): string {
-    const first = game.firstStreamStartedAt;
-    const last = game.lastStreamStartedAt;
-    if (!first || !last) return this.locale.t('shelf.notStarted');
-    const date = (value: string) => this.formatShelfDate(value);
-    switch (game.status) {
-      case 'Completed': return this.locale.t('shelf.finishedOn', { date: date(last) });
-      case 'Dropped': return this.locale.t('shelf.droppedOn', { date: date(last) });
-      case 'Playing': return this.locale.t('shelf.since', { date: date(first) });
-      default: return `${date(first)} – ${date(last)}`;
-    }
+  shelfDate(value: string): string {
+    return this.formatShelfDate(value);
   }
 
   private formatShelfDate(value: string): string {
@@ -427,11 +488,12 @@ export class StreamerProfileComponent
     this.settings.savePlaythrough({
       twitchCategoryId: game.twitchCategoryId,
       status,
-      autoAddNewStreams: status !== 'Completed',
+      autoAddNewStreams: status === 'Playing',
       streamCategoryIds: game.streamCategories.map((segment) => segment.streamCategoryId),
     }).pipe(finalize(() => { this.savingId = null; })).subscribe({
       next: () => {
-        this.shelfMessage = { key: status === 'Completed' ? 'suggest.addedCompleted' : 'suggest.added', params: { game: game.name } };
+        const key: TranslationKey = status === 'Completed' ? 'suggest.addedCompleted' : status === 'Dropped' ? 'suggest.addedDropped' : 'suggest.added';
+        this.shelfMessage = { key, params: { game: game.name } };
         this.analytics.trackEvent('playthrough_created', { source: 'suggested', status: status.toLowerCase() });
         this.refreshShelf();
       },

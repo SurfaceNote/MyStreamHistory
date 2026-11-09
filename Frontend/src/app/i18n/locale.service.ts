@@ -155,7 +155,7 @@ export class LocaleService {
     return hours ? this.t('duration.hoursMinutes', { hours: this.number(hours, 0), minutes: this.number(total % 60, 0) })
       : this.t('duration.minutes', { minutes: this.number(total, 0) });
   }
-  countLabel(noun: 'streams' | 'games' | 'hours' | 'chatAccounts' | 'uniqueChatAccounts' | 'minutes', count: number): string {
+  countLabel(noun: 'streams' | 'games' | 'hours' | 'chatAccounts' | 'uniqueChatAccounts' | 'uniqueViewers' | 'minutes', count: number): string {
     const category = new Intl.PluralRules(this.locale()).select(count);
     const dictionary = DICTIONARIES[this.language()];
     return dictionary[('noun.' + noun + '.' + category) as TranslationKey] || dictionary[('noun.' + noun + '.other') as TranslationKey];
