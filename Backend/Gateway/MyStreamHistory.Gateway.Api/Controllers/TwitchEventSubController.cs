@@ -2,6 +2,8 @@ using MyStreamHistory.Shared.Api.Features;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using MyStreamHistory.Gateway.Application.Commands.TwitchEventSub;
+using MyStreamHistory.Shared.Base.Error;
+using MyStreamHistory.Shared.Base.Exceptions;
 
 namespace MyStreamHistory.Gateway.Api.Controllers;
 
@@ -63,8 +65,18 @@ public class TwitchEventSubController : ControllerBase
 
             return NoContent();
         }
+        catch (AppException ex) when (ex.ErrorCode == ErrorCodes.PermissionDenied)
+        {
+            // Bad signature or unacceptable timestamp: the sender is not verifiably Twitch.
+            return StatusCode(StatusCodes.Status403Forbidden);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return StatusCode(499);
+        }
         catch (Exception ex)
         {
+            // Transient failure (e.g. message bus unavailable): 500 lets Twitch redeliver the message.
             _logger.LogError(ex, "Error processing Twitch EventSub callback");
             return StatusCode(500, "Internal server error");
         }

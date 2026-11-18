@@ -97,6 +97,8 @@ builder.Services.AddScoped<MyStreamHistory.Gateway.Api.ProductActivity.ChannelAc
 builder.Services.AddAutoMapperProfiles()
     .AddMediatRHandlers();
 
+builder.Services.AddSingleton(TimeProvider.System);
+
 builder.Services.AddOptions<TwitchEventSubOptions>()
     .Bind(builder.Configuration.GetSection(TwitchEventSubOptions.SectionName))
     .ValidateDataAnnotations()

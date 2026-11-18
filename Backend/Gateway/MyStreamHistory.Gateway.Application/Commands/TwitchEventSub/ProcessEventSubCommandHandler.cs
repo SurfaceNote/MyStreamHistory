@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -12,196 +13,241 @@ using MyStreamHistory.Shared.Base.Exceptions;
 
 namespace MyStreamHistory.Gateway.Application.Commands.TwitchEventSub;
 
+/// <summary>
+/// Verifies and dispatches one Twitch EventSub webhook delivery.
+/// Throws <see cref="AppException"/> with <see cref="ErrorCodes.PermissionDenied"/> when the request
+/// cannot be proven to come from Twitch (bad signature, stale or malformed timestamp).
+/// A correctly signed message whose payload cannot be parsed is logged and acknowledged instead of failing:
+/// Twitch retries every non-2xx answer and revokes the subscription after repeated failures, and retrying
+/// a payload we cannot read would never succeed.
+/// </summary>
 public class ProcessEventSubCommandHandler : IRequestHandler<ProcessEventSubCommand, string?>
 {
+    public const string SignaturePrefix = "sha256=";
+
+    /// <summary>Tolerated clock difference for timestamps slightly ahead of our clock.</summary>
+    public static readonly TimeSpan AllowedClockSkew = TimeSpan.FromMinutes(1);
+
     private readonly ITransportBus _transportBus;
     private readonly TwitchEventSubOptions _options;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger<ProcessEventSubCommandHandler> _logger;
 
     public ProcessEventSubCommandHandler(
         ITransportBus transportBus,
         IOptions<TwitchEventSubOptions> options,
+        TimeProvider timeProvider,
         ILogger<ProcessEventSubCommandHandler> logger)
     {
         _transportBus = transportBus;
         _options = options.Value;
+        _timeProvider = timeProvider;
         _logger = logger;
     }
 
     public async Task<string?> Handle(ProcessEventSubCommand request, CancellationToken cancellationToken)
     {
-        // Validate signature
-        if (!ValidateSignature(request.RequestBody, request.MessageId, request.MessageTimestamp, request.MessageSignature))
+        if (!IsSignatureValid(_options.Secret, request.MessageId, request.MessageTimestamp, request.RequestBody, request.MessageSignature))
         {
-            _logger.LogWarning("Invalid Twitch EventSub signature");
+            _logger.LogWarning("Rejected Twitch EventSub message {MessageId}: invalid signature", request.MessageId);
             throw new AppException(ErrorCodes.PermissionDenied, "Invalid signature");
         }
 
-        // Check message age
-        if (!ValidateMessageAge(request.MessageTimestamp))
+        if (!TryParseTimestamp(request.MessageTimestamp, out var sentAt) ||
+            !IsTimestampFresh(sentAt, _timeProvider.GetUtcNow(), TimeSpan.FromMinutes(_options.MaxAgeMinutes)))
         {
-            _logger.LogWarning("Twitch EventSub message too old");
-            throw new AppException(ErrorCodes.PermissionDenied, "Message too old");
+            _logger.LogWarning(
+                "Rejected Twitch EventSub message {MessageId}: timestamp {MessageTimestamp} is missing, stale or in the future",
+                request.MessageId, request.MessageTimestamp);
+            throw new AppException(ErrorCodes.PermissionDenied, "Message timestamp is not acceptable");
         }
 
-        var jsonDocument = JsonDocument.Parse(request.RequestBody);
-        var root = jsonDocument.RootElement;
-
-        switch (request.MessageType)
+        try
         {
-            // Handle webhook challenge (verification)
-            case "webhook_callback_verification" when root.TryGetProperty("challenge", out var challenge):
+            using var document = JsonDocument.Parse(request.RequestBody);
+            var root = document.RootElement;
+
+            switch (request.MessageType)
             {
-                var challengeValue = challenge.GetString();
-                _logger.LogInformation("Responding to Twitch EventSub challenge");
-                return challengeValue;
-            }
-            // Handle notification
-            case "notification":
-            {
-                if (!root.TryGetProperty("subscription", out var subscription) ||
-                    !root.TryGetProperty("event", out var eventData))
-                {
-                    _logger.LogWarning("Invalid EventSub notification format");
-                    throw new AppException(ErrorCodes.InternalError, "Invalid notification format");
-                }
+                case "webhook_callback_verification":
+                    _logger.LogInformation("Responding to Twitch EventSub challenge");
+                    return EventSubJson.RequireString(root, "challenge");
 
-                var subscriptionType = subscription.GetProperty("type").GetString();
+                case "notification":
+                    await HandleNotificationAsync(root, request, sentAt, cancellationToken);
+                    return null;
 
-                switch (subscriptionType)
-                {
-                    case "stream.online":
-                        await HandleStreamOnlineAsync(eventData, request.MessageId, cancellationToken);
-                        break;
-                    case "stream.offline":
-                        await HandleStreamOfflineAsync(
-                            eventData,
-                            request.MessageId,
-                            request.MessageTimestamp,
-                            cancellationToken);
-                        break;
-                    case "channel.chat.message":
-                        await HandleChatMessageAsync(eventData, request.MessageId, cancellationToken);
-                        break;
-                    case "channel.update":
-                        await HandleChannelUpdateAsync(eventData, request.MessageId, cancellationToken);
-                        break;
-                    default:
-                        _logger.LogWarning("Unknown EventSub subscription type: {Type}", subscriptionType);
-                        break;
-                }
+                case "revocation":
+                    LogRevocation(root, request.MessageId);
+                    return null;
 
-                break;
+                default:
+                    _logger.LogWarning("Ignoring unknown Twitch EventSub message type {MessageType}", request.MessageType);
+                    return null;
             }
         }
-
-        return null;
-    }
-
-    private async Task HandleStreamOnlineAsync(JsonElement eventData, string messageId, CancellationToken cancellationToken)
-    {
-        var eventContract = new StreamOnlineEventContract
+        catch (Exception ex) when (ex is JsonException or EventSubPayloadException)
         {
-            MessageId = messageId,
-            BroadcasterUserId = int.Parse(eventData.GetProperty("broadcaster_user_id").GetString()!),
-            BroadcasterUserLogin = eventData.GetProperty("broadcaster_user_login").GetString()!,
-            BroadcasterUserName = eventData.GetProperty("broadcaster_user_name").GetString()!,
-            StartedAt = eventData.GetProperty("started_at").GetDateTime(),
-            Type = eventData.GetProperty("type").GetString()!
-        };
-
-        _logger.LogInformation("Publishing stream.online event for {BroadcasterUserLogin}", eventContract.BroadcasterUserLogin);
-        await _transportBus.PublishAsync(eventContract, cancellationToken);
+            _logger.LogError(
+                ex,
+                "Dropping signed Twitch EventSub message {MessageId} of type {MessageType}: payload could not be parsed",
+                request.MessageId, request.MessageType);
+            return null;
+        }
     }
 
-    private async Task HandleStreamOfflineAsync(
-        JsonElement eventData,
-        string messageId,
-        string messageTimestamp,
+    private async Task HandleNotificationAsync(
+        JsonElement root,
+        ProcessEventSubCommand request,
+        DateTimeOffset sentAt,
         CancellationToken cancellationToken)
     {
-        var eventContract = new StreamOfflineEventContract
-        {
-            MessageId = messageId,
-            BroadcasterUserId = int.Parse(eventData.GetProperty("broadcaster_user_id").GetString()!),
-            BroadcasterUserLogin = eventData.GetProperty("broadcaster_user_login").GetString()!,
-            BroadcasterUserName = eventData.GetProperty("broadcaster_user_name").GetString()!,
-            OccurredAt = DateTime.TryParse(messageTimestamp, out var occurredAt)
-                ? occurredAt.ToUniversalTime()
-                : DateTime.UtcNow
-        };
+        var subscription = EventSubJson.RequireObject(root, "subscription");
+        var eventData = EventSubJson.RequireObject(root, "event");
+        var subscriptionType = EventSubJson.RequireString(subscription, "type");
 
-        _logger.LogInformation("Publishing stream.offline event for {BroadcasterUserLogin}", eventContract.BroadcasterUserLogin);
-        await _transportBus.PublishAsync(eventContract, cancellationToken);
+        switch (subscriptionType)
+        {
+            case "stream.online":
+                await PublishAsync(BuildStreamOnline(eventData, request.MessageId), cancellationToken);
+                break;
+            case "stream.offline":
+                await PublishAsync(BuildStreamOffline(eventData, request.MessageId, sentAt), cancellationToken);
+                break;
+            case "channel.chat.message":
+                await PublishAsync(BuildChatMessage(eventData, request.MessageId), cancellationToken);
+                break;
+            case "channel.update":
+                await PublishAsync(BuildChannelUpdate(eventData, request.MessageId), cancellationToken);
+                break;
+            default:
+                _logger.LogWarning("Unknown EventSub subscription type: {Type}", subscriptionType);
+                break;
+        }
     }
 
-    private async Task HandleChatMessageAsync(JsonElement eventData, string messageId, CancellationToken cancellationToken)
+    private Task PublishAsync<T>(T contract, CancellationToken cancellationToken) where T : class
     {
-        var messageText = eventData.GetProperty("message").GetProperty("text").GetString() ?? string.Empty;
-        
-        var eventContract = new ChatMessageEventContract
+        _logger.LogDebug("Publishing {ContractType} from Twitch EventSub", typeof(T).Name);
+        return _transportBus.PublishAsync(contract, cancellationToken);
+    }
+
+    private void LogRevocation(JsonElement root, string messageId)
+    {
+        var subscription = EventSubJson.RequireObject(root, "subscription");
+        string? broadcasterId = null;
+        if (subscription.TryGetProperty("condition", out var condition) && condition.ValueKind == JsonValueKind.Object)
+        {
+            broadcasterId = EventSubJson.OptionalString(condition, "broadcaster_user_id");
+        }
+
+        // Twitch has already removed the subscription; SubscriptionSyncService recreates stream subscriptions
+        // on its next run if the broadcaster still has a valid authorization.
+        _logger.LogWarning(
+            "Twitch revoked EventSub subscription {SubscriptionId} ({SubscriptionType}) for broadcaster {BroadcasterUserId}: {Status}. Message {MessageId}",
+            EventSubJson.OptionalString(subscription, "id"),
+            EventSubJson.OptionalString(subscription, "type"),
+            broadcasterId,
+            EventSubJson.OptionalString(subscription, "status"),
+            messageId);
+    }
+
+    private static StreamOnlineEventContract BuildStreamOnline(JsonElement eventData, string messageId) => new()
+    {
+        MessageId = messageId,
+        BroadcasterUserId = EventSubJson.RequireNumericId(eventData, "broadcaster_user_id"),
+        BroadcasterUserLogin = EventSubJson.RequireString(eventData, "broadcaster_user_login"),
+        BroadcasterUserName = EventSubJson.RequireString(eventData, "broadcaster_user_name"),
+        StartedAt = EventSubJson.RequireUtcDateTime(eventData, "started_at"),
+        Type = EventSubJson.RequireString(eventData, "type")
+    };
+
+    private static StreamOfflineEventContract BuildStreamOffline(JsonElement eventData, string messageId, DateTimeOffset sentAt) => new()
+    {
+        MessageId = messageId,
+        BroadcasterUserId = EventSubJson.RequireNumericId(eventData, "broadcaster_user_id"),
+        BroadcasterUserLogin = EventSubJson.RequireString(eventData, "broadcaster_user_login"),
+        BroadcasterUserName = EventSubJson.RequireString(eventData, "broadcaster_user_name"),
+        OccurredAt = sentAt.UtcDateTime
+    };
+
+    private static ChatMessageEventContract BuildChatMessage(JsonElement eventData, string messageId)
+    {
+        var message = EventSubJson.RequireObject(eventData, "message");
+        var messageText = EventSubJson.OptionalString(message, "text") ?? string.Empty;
+
+        return new ChatMessageEventContract
         {
             MessageId = messageId,
-            BroadcasterUserId = eventData.GetProperty("broadcaster_user_id").GetString()!,
-            TwitchMessageId = eventData.TryGetProperty("message_id", out var chatMessageId) ? chatMessageId.GetString() : null,
-            SourceBroadcasterUserId = eventData.TryGetProperty("source_broadcaster_user_id", out var sourceChannel) ? sourceChannel.GetString() : null,
+            BroadcasterUserId = EventSubJson.RequireString(eventData, "broadcaster_user_id"),
+            TwitchMessageId = EventSubJson.OptionalString(eventData, "message_id"),
+            SourceBroadcasterUserId = EventSubJson.OptionalString(eventData, "source_broadcaster_user_id"),
             HasSourceMetadata = true,
-            BroadcasterUserLogin = eventData.GetProperty("broadcaster_user_login").GetString()!,
-            BroadcasterUserName = eventData.GetProperty("broadcaster_user_name").GetString()!,
-            ChatterUserId = eventData.GetProperty("chatter_user_id").GetString()!,
-            ChatterUserLogin = eventData.GetProperty("chatter_user_login").GetString()!,
-            ChatterUserName = eventData.GetProperty("chatter_user_name").GetString()!,
+            BroadcasterUserLogin = EventSubJson.RequireString(eventData, "broadcaster_user_login"),
+            BroadcasterUserName = EventSubJson.RequireString(eventData, "broadcaster_user_name"),
+            ChatterUserId = EventSubJson.RequireString(eventData, "chatter_user_id"),
+            ChatterUserLogin = EventSubJson.RequireString(eventData, "chatter_user_login"),
+            ChatterUserName = EventSubJson.RequireString(eventData, "chatter_user_name"),
             MessageText = messageText,
             CharacterCount = messageText.Length,
             MessageTimestamp = DateTime.UtcNow // EventSub doesn't provide message timestamp, use current time
         };
-
-        _logger.LogDebug("Publishing chat message event for broadcaster {BroadcasterUserLogin}, chatter {ChatterUserLogin}", 
-            eventContract.BroadcasterUserLogin, eventContract.ChatterUserLogin);
-        await _transportBus.PublishAsync(eventContract, cancellationToken);
     }
 
-    private async Task HandleChannelUpdateAsync(JsonElement eventData, string messageId, CancellationToken cancellationToken)
+    private static ChannelUpdateEventContract BuildChannelUpdate(JsonElement eventData, string messageId) => new()
     {
-        var eventContract = new ChannelUpdateEventContract
-        {
-            MessageId = messageId,
-            BroadcasterUserId = int.Parse(eventData.GetProperty("broadcaster_user_id").GetString()!),
-            BroadcasterUserLogin = eventData.GetProperty("broadcaster_user_login").GetString()!,
-            BroadcasterUserName = eventData.GetProperty("broadcaster_user_name").GetString()!,
-            StreamTitle = eventData.GetProperty("title").GetString()!,
-            Language = eventData.GetProperty("language").GetString()!,
-            CategoryId = eventData.GetProperty("category_id").GetString()!,
-            CategoryName = eventData.GetProperty("category_name").GetString()!
-        };
+        MessageId = messageId,
+        BroadcasterUserId = EventSubJson.RequireNumericId(eventData, "broadcaster_user_id"),
+        BroadcasterUserLogin = EventSubJson.RequireString(eventData, "broadcaster_user_login"),
+        BroadcasterUserName = EventSubJson.RequireString(eventData, "broadcaster_user_name"),
+        // Twitch sends empty strings when the title or category is unset; null is tolerated the same way.
+        StreamTitle = EventSubJson.OptionalString(eventData, "title") ?? string.Empty,
+        Language = EventSubJson.OptionalString(eventData, "language") ?? string.Empty,
+        CategoryId = EventSubJson.OptionalString(eventData, "category_id") ?? string.Empty,
+        CategoryName = EventSubJson.OptionalString(eventData, "category_name") ?? string.Empty
+    };
 
-        _logger.LogInformation("Publishing channel.update event for {BroadcasterUserLogin}, new category: {CategoryName}", 
-            eventContract.BroadcasterUserLogin, eventContract.CategoryName);
-        await _transportBus.PublishAsync(eventContract, cancellationToken);
-    }
-
-    private bool ValidateSignature(string requestBody, string messageId, string messageTimestamp, string messageSignature)
+    /// <summary>
+    /// Checks the Twitch HMAC-SHA256 signature over message id + timestamp + raw body in constant time.
+    /// </summary>
+    public static bool IsSignatureValid(string secret, string messageId, string messageTimestamp, string requestBody, string signatureHeader)
     {
-        var message = messageId + messageTimestamp + requestBody;
-        var secretBytes = Encoding.UTF8.GetBytes(_options.Secret);
-        var messageBytes = Encoding.UTF8.GetBytes(message);
-
-        using var hmac = new HMACSHA256(secretBytes);
-        var hash = hmac.ComputeHash(messageBytes);
-        var computedSignature = "sha256=" + BitConverter.ToString(hash).Replace("-", "").ToLower();
-
-        return computedSignature == messageSignature;
-    }
-
-    private bool ValidateMessageAge(string messageTimestamp)
-    {
-        if (!DateTime.TryParse(messageTimestamp, out var timestamp))
+        if (string.IsNullOrEmpty(secret) ||
+            !signatureHeader.StartsWith(SignaturePrefix, StringComparison.OrdinalIgnoreCase))
         {
             return false;
         }
 
-        var age = DateTime.UtcNow - timestamp;
-        return age.TotalMinutes <= _options.MaxAgeMinutes;
+        byte[] providedHash;
+        try
+        {
+            providedHash = Convert.FromHexString(signatureHeader.AsSpan(SignaturePrefix.Length));
+        }
+        catch (FormatException)
+        {
+            return false;
+        }
+
+        var expectedHash = HMACSHA256.HashData(
+            Encoding.UTF8.GetBytes(secret),
+            Encoding.UTF8.GetBytes(messageId + messageTimestamp + requestBody));
+
+        return CryptographicOperations.FixedTimeEquals(expectedHash, providedHash);
+    }
+
+    /// <summary>
+    /// Parses the RFC 3339 timestamp header as an absolute instant, independent of the server time zone.
+    /// </summary>
+    public static bool TryParseTimestamp(string value, out DateTimeOffset timestamp) =>
+        DateTimeOffset.TryParse(
+            value,
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
+            out timestamp);
+
+    public static bool IsTimestampFresh(DateTimeOffset sentAt, DateTimeOffset now, TimeSpan maxAge)
+    {
+        var age = now - sentAt;
+        return age <= maxAge && age >= -AllowedClockSkew;
     }
 }
-

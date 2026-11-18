@@ -28,7 +28,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '9.0.x'
+          # Gateway.Application.Tests targets net8.0, so its runtime is needed alongside the .NET 9 SDK.
+          dotnet-version: |
+            8.0.x
+            9.0.x
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -37,6 +40,7 @@ jobs:
       - run: dotnet test Backend/AdminService/MyStreamHistory.AdminService.Tests/MyStreamHistory.AdminService.Tests.csproj -c Release
       - run: dotnet test Backend/ContentService/MyStreamHistory.ContentService.Api.Tests/MyStreamHistory.ContentService.Api.Tests.csproj -c Release
       - run: dotnet test Backend/Community.Tests/MyStreamHistory.Community.Tests.csproj -c Release --filter FullyQualifiedName~CommunityAccessTests
+      - run: dotnet test Backend/Gateway/MyStreamHistory.Gateway.Application.Tests/MyStreamHistory.Gateway.Application.Tests.csproj -c Release
       - run: npm ci
         working-directory: Frontend
       - run: npm run build:admin
