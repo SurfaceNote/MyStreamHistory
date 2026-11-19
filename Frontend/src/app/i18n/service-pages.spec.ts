@@ -51,8 +51,8 @@ describe('Localized service pages', () => {
       expect(harness.routeNativeElement?.querySelector('.section-title')?.textContent).toBe(locale.t('ui.profile'));
       expect(harness.routeNativeElement?.querySelector('.section-description')?.textContent).toBe(locale.t('settings.socialDescription'));
       component.onSectionChange('playthroughs'); harness.detectChanges();
-      expect(harness.routeNativeElement?.textContent).toContain(locale.t('settings.newPlaythrough'));
-      expect(harness.routeNativeElement?.querySelector('option[value="Playing"]')?.textContent).toBe(locale.t('ui.playing'));
+      expect(harness.routeNativeElement?.querySelector('.playthrough-settings .section-header p')?.textContent).toBe(locale.t('pt.intro'));
+      expect(harness.routeNativeElement?.querySelector('.empty-card strong')?.textContent).toBe(locale.t('pt.emptyTitle'));
       component.onSectionChange('overlay'); harness.detectChanges();
       expect(harness.routeNativeElement?.textContent).toContain(locale.t('settings.overlayTitle'));
       expect(harness.routeNativeElement?.querySelector<HTMLInputElement>('#overlay-url')?.value).toContain('/overlay/top-viewers/123?language=' + code);

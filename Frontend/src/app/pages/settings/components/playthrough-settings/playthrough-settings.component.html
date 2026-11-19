@@ -1,118 +1,227 @@
 <div class="playthrough-settings">
-  <div class="section-header">
+  <header class="section-header">
     <div>
       <h2>{{ 'settings.playthroughs' | t }}</h2>
-      <p>{{ 'settings.playthroughDescription' | t }}</p>
+      <p>{{ 'pt.intro' | t }}</p>
     </div>
 
-    <button type="button" class="secondary-btn" (click)="startCreate()">{{ 'settings.newPlaythrough' | t }}</button>
-  </div>
+    @if (!isLoading && !loadFailed && settings.availableGames.length && !isCreating) {
+      <button type="button" class="primary-btn" (click)="startCreate()">
+        <span aria-hidden="true">+</span> {{ 'settings.newPlaythrough' | t }}
+      </button>
+    }
+  </header>
 
-  <div *ngIf="errorMessage" class="message error">{{ errorMessage }}</div>
-  <div *ngIf="successMessage" class="message success">{{ successMessage }}</div>
+  @if (notice; as message) {
+    <p class="notice" [class.error]="message.error" [attr.role]="message.error ? 'alert' : 'status'">
+      <span>{{ locale.message(message.text) }}</span>
+      <button type="button" class="notice-close" (click)="notice = null" [attr.aria-label]="'pt.dismiss' | t">✕</button>
+    </p>
+  }
 
-  <div *ngIf="isLoading" class="state-card">{{ 'settings.loadingPlaythroughs' | t }}</div>
+  @if (isLoading) {
+    <div class="state-card">{{ 'settings.loadingPlaythroughs' | t }}</div>
+  } @else if (loadFailed) {
+    <div class="state-card">
+      <button type="button" class="secondary-btn" (click)="loadSettings(true)">{{ 'pt.retry' | t }}</button>
+    </div>
+  } @else {
+    @if (isCreating) {
+      <ng-container *ngTemplateOutlet="editor" />
+    } @else if (suggestedGames.length && !form) {
+      <section class="suggestions" aria-labelledby="pt-suggestions-title">
+        <h3 id="pt-suggestions-title">{{ 'pt.suggestTitle' | t }}</h3>
+        <p>{{ 'pt.suggestText' | t }}</p>
+        <ul class="suggestion-list">
+          @for (game of suggestedGames; track game.twitchCategoryId) {
+            <li class="suggestion">
+              <app-game-art [src]="game.boxArtUrl" />
+              <div class="suggestion-copy">
+                <strong>{{ game.name }}</strong>
+                <span>{{ locale.plural('onStreamsCount', game.streamsCount ?? streamCount(game.streamCategories)) }}</span>
+              </div>
+              <button type="button" class="secondary-btn small" (click)="startCreate(game)"
+                [attr.aria-label]="'pt.createNamed' | t: { name: game.name }">
+                {{ 'settings.createPlaythrough' | t }}
+              </button>
+            </li>
+          }
+        </ul>
+      </section>
+    }
 
-  <div *ngIf="!isLoading" class="settings-grid">
-    <section class="form-card">
-      <h3>{{ form.id ? ('settings.editPlaythrough' | t) : ('settings.createPlaythrough' | t) }}</h3>
-
-      <label class="field">
-        <span>{{ 'settings.game' | t }}</span>
-        <select [(ngModel)]="form.twitchCategoryId">
-          <option value="" disabled>{{ 'settings.selectGame' | t }}</option>
-          <option *ngFor="let game of gameOptions; trackBy: trackByGame" [value]="game.twitchCategoryId">
-            {{ game.name }} ({{ locale.plural('segmentCount', game.streamCategories.length) }}){{ game.suggested ? ' · ' + ('settings.suggestedGame' | t) : '' }}
-          </option>
-        </select>
-      </label>
-
-      <label class="field">
-        <span>{{ 'common.status' | t }}</span>
-        <select [(ngModel)]="form.status">
-          <option *ngFor="let option of statusOptions" [value]="option.value">{{ option.label | t }}</option>
-        </select>
-      </label>
-
-      <label class="checkbox-field">
-        <input type="checkbox" [ngModel]="form.status !== 'Completed' && form.autoAddNewStreams" (ngModelChange)="form.autoAddNewStreams = $event" [disabled]="form.status === 'Completed'">
-        <span>{{ 'settings.autoAdd' | t }}</span>
-      </label>
-      @if (form.status === 'Completed') { <p class="field-hint">{{ 'settings.autoAddCompletedHint' | t }}</p> }
-
-      <div class="segment-picker" *ngIf="selectedGame; else noGameSelected">
-        <div class="segment-picker-header">
-          <app-game-art [src]="selectedGame.boxArtUrl" />
-          <div>
-            <h4>{{ selectedGame.name }}</h4>
-            <p>{{ 'settings.selectSegments' | t }}</p>
+    @if (settings.playthroughs.length) {
+      <section class="playthrough-list" [attr.aria-label]="'settings.playthroughs' | t">
+        @if (statusTabs.length) {
+          <div class="status-tabs" role="group" [attr.aria-label]="'common.status' | t">
+            @for (tab of statusTabs; track tab.value) {
+              <button type="button" [class.active]="statusFilter === tab.value" [attr.aria-pressed]="statusFilter === tab.value"
+                (click)="statusFilter = tab.value">
+                {{ tab.label | t }} <span class="count">{{ tab.count }}</span>
+              </button>
+            }
           </div>
-        </div>
+        }
 
-        <label *ngFor="let streamCategory of selectedGame.streamCategories" class="segment-option">
-          <input
-            type="checkbox"
-            [checked]="isSelected(streamCategory.streamCategoryId)"
-            (change)="toggleStreamCategory(streamCategory.streamCategoryId, $any($event.target).checked)">
-          <div>
-            <strong>{{ streamCategory.streamTitle || ('ui.untitledStream' | t) }}</strong>
-            <span>{{ formatStreamCategoryDate(streamCategory.categoryStartedAt) }}</span>
-          </div>
-        </label>
+        @for (playthrough of visiblePlaythroughs; track playthrough.id) {
+          @if (form?.id === playthrough.id) {
+            <ng-container *ngTemplateOutlet="editor" />
+          } @else {
+            <article class="playthrough-item" [class.busy]="busyId === playthrough.id">
+              <app-game-art [src]="playthrough.boxArtUrl" />
+
+              <div class="playthrough-copy">
+                <h4>{{ playthrough.gameName }}</h4>
+                <p>
+                  <span>{{ locale.plural('broadcastCount', streamCount(playthrough.streamCategories)) }}</span>
+                  @if (playthroughPeriod(playthrough); as period) { <span>{{ period }}</span> }
+                </p>
+                @if (playthrough.autoAddNewStreams) {
+                  <span class="auto-badge" [title]="'pt.autoAddHint' | t">{{ 'pt.autoAddBadge' | t }}</span>
+                }
+              </div>
+
+              @if (confirmingDeleteId === playthrough.id) {
+                <div class="delete-confirm" role="alertdialog" [attr.aria-label]="'pt.deleteConfirm' | t: { name: playthrough.gameName }">
+                  <p>{{ 'pt.deleteConfirm' | t: { name: playthrough.gameName } }}</p>
+                  <div class="playthrough-actions">
+                    <button type="button" class="danger-btn small" (click)="delete(playthrough)" [disabled]="busyId !== null">{{ 'common.delete' | t }}</button>
+                    <button type="button" class="secondary-btn small" (click)="confirmingDeleteId = null">{{ 'common.cancel' | t }}</button>
+                  </div>
+                </div>
+              } @else {
+                <div class="playthrough-actions">
+                  <select #statusSelect class="status-select" [attr.data-status]="playthrough.status" [value]="playthrough.status"
+                    [disabled]="busyId !== null" (change)="changeStatus(playthrough, statusSelect)"
+                    [attr.aria-label]="'pt.statusOf' | t: { name: playthrough.gameName }">
+                    @for (option of statusOptions; track option.value) {
+                      <option [value]="option.value" [selected]="option.value === playthrough.status">{{ option.label | t }}</option>
+                    }
+                  </select>
+                  <button type="button" class="secondary-btn small" (click)="startEdit(playthrough)"
+                    [attr.aria-label]="'common.editNamed' | t: { name: playthrough.gameName }">{{ 'common.edit' | t }}</button>
+                  <button type="button" class="ghost-danger-btn small" (click)="askDelete(playthrough)"
+                    [attr.aria-label]="'common.deleteNamed' | t: { name: playthrough.gameName }">{{ 'common.delete' | t }}</button>
+                </div>
+              }
+            </article>
+          }
+        }
+      </section>
+    } @else if (!form) {
+      <div class="empty-card">
+        <strong>{{ 'pt.emptyTitle' | t }}</strong>
+        <p>{{ (settings.availableGames.length ? 'pt.emptyText' : 'pt.noHistory') | t }}</p>
+        @if (settings.availableGames.length) {
+          <button type="button" class="primary-btn" (click)="startCreate()">{{ 'settings.createPlaythrough' | t }}</button>
+        }
       </div>
+    }
 
-      <ng-template #noGameSelected>
-        <div class="empty-card">
-          {{ form.id ? ('settings.noSegments' | t) : ('settings.noUnassignedSegments' | t) }}
-        </div>
-      </ng-template>
-
-      <div class="actions">
-        <button type="button" class="primary-btn" (click)="save()" [disabled]="isSaving || !gameOptions.length">
-          {{ isSaving ? ('common.saving' | t) : (form.id ? ('common.saveChanges' | t) : ('settings.createPlaythrough' | t)) }}
-        </button>
-      </div>
-    </section>
-
-    <section class="list-card">
-      <h3>{{ 'settings.existingPlaythroughs' | t }}</h3>
-
-      <div *ngIf="!settings.playthroughs.length" class="empty-card">
-        {{ 'settings.noPlaythroughs' | t }}
-      </div>
-
-      <article *ngFor="let playthrough of settings.playthroughs; trackBy: trackByPlaythrough" class="playthrough-item">
-        <div class="playthrough-top">
-          <div class="playthrough-title">
-            <app-game-art [src]="playthrough.boxArtUrl" />
-            <div>
-              <h4>{{ playthrough.gameName }}</h4>
-              <p *ngIf="playthroughPeriod(playthrough) as period">{{ period }}</p>
-              <span class="game-status" [attr.data-status]="playthrough.status">{{ statusLabel(playthrough.status) }}</span>
-            </div>
-          </div>
-
-          <div class="playthrough-actions">
-            <button type="button" class="secondary-btn small" (click)="startEdit(playthrough)" [attr.aria-label]="'common.editNamed' | t: { name: playthrough.gameName }">{{ 'common.edit' | t }}</button>
-            <button type="button" class="danger-btn small" (click)="delete(playthrough)" [attr.aria-label]="'common.deleteNamed' | t: { name: playthrough.gameName }">{{ 'common.delete' | t }}</button>
-          </div>
-        </div>
-
-        <div class="badges">
-          <span class="badge">{{ locale.plural('segmentCount', playthrough.streamCategories.length) }}</span>
-          <span class="badge active" *ngIf="playthrough.autoAddNewStreams">{{ 'settings.autoAddEnabled' | t }}</span>
-        </div>
-
-        <details class="segment-disclosure" *ngIf="playthrough.streamCategories.length">
-          <summary>{{ 'settings.viewSegments' | t: { count: locale.number(playthrough.streamCategories.length, 0) } }}</summary>
-          <div class="segment-summary">
-            <div *ngFor="let streamCategory of playthrough.streamCategories" class="segment-summary-item">
-              <strong>{{ streamCategory.streamTitle || ('ui.untitledStream' | t) }}</strong>
-              <span>{{ formatStreamCategoryDate(streamCategory.categoryStartedAt) }}</span>
-            </div>
-          </div>
-        </details>
-      </article>
-    </section>
-  </div>
+    @if (settings.playthroughs.length && !settings.availableGames.length) {
+      <p class="footnote">{{ 'pt.allAssigned' | t }}</p>
+    }
+  }
 </div>
+
+<ng-template #editor>
+  @if (form; as draft) {
+    <section class="editor" id="playthrough-editor" tabindex="-1" aria-labelledby="pt-editor-title">
+      <h3 id="pt-editor-title">{{ (draft.id ? 'settings.editPlaythrough' : 'settings.newPlaythrough') | t }}</h3>
+
+      @if (editorGame; as game) {
+        <div class="editor-game">
+          <app-game-art [src]="game.boxArtUrl" />
+          <div>
+            <strong>{{ game.name }}</strong>
+            @if (!draft.id && settings.availableGames.length > 1) {
+              <button type="button" class="link-btn" (click)="clearGame()">{{ 'pt.changeGame' | t }}</button>
+            }
+          </div>
+        </div>
+
+        <fieldset class="editor-field">
+          <legend>{{ 'common.status' | t }}</legend>
+          <div class="segmented">
+            @for (option of statusOptions; track option.value) {
+              <label [class.checked]="draft.status === option.value">
+                <input type="radio" name="pt-status" [value]="option.value" [(ngModel)]="draft.status">
+                {{ option.label | t }}
+              </label>
+            }
+          </div>
+        </fieldset>
+
+        <label class="switch-field" [class.disabled]="!autoAddAvailable">
+          <input type="checkbox" role="switch" [ngModel]="autoAddAvailable && draft.autoAddNewStreams"
+            (ngModelChange)="draft.autoAddNewStreams = $event" [disabled]="!autoAddAvailable" aria-describedby="pt-auto-hint">
+          <span class="switch" aria-hidden="true"></span>
+          <span class="switch-copy">
+            <strong>{{ 'pt.autoAddTitle' | t }}</strong>
+            <span id="pt-auto-hint">
+              {{ (draft.status === 'Completed' ? 'settings.autoAddCompletedHint' : autoAddConflict ? 'pt.autoAddConflict' : 'pt.autoAddHint') | t }}
+            </span>
+          </span>
+        </label>
+
+        <fieldset class="editor-field">
+          <legend>{{ 'pt.streamsTitle' | t }}</legend>
+          @if (game.streamCategories.length) {
+            <div class="streams-toolbar">
+              <span aria-live="polite">{{ 'pt.selectedOf' | t: { selected: draft.streamCategoryIds.length, total: game.streamCategories.length } }}</span>
+              @if (game.streamCategories.length > 1) {
+                <button type="button" class="link-btn" (click)="toggleAllStreams()">
+                  {{ (allStreamsSelected ? 'pt.clearAll' : 'pt.selectAll') | t }}
+                </button>
+              }
+            </div>
+            <div class="stream-options">
+              @for (streamCategory of game.streamCategories; track streamCategory.streamCategoryId) {
+                <label class="stream-option">
+                  <input type="checkbox" [checked]="isSelected(streamCategory.streamCategoryId)"
+                    (change)="toggleStreamCategory(streamCategory.streamCategoryId, $any($event.target).checked)">
+                  <span class="stream-title">{{ streamCategory.streamTitle || ('ui.untitledStream' | t) }}</span>
+                  <span class="stream-date">{{ formatStreamCategoryDate(streamCategory.categoryStartedAt) }}</span>
+                </label>
+              }
+            </div>
+          } @else {
+            <p class="field-hint">{{ 'pt.noStreams' | t }}</p>
+          }
+        </fieldset>
+      } @else {
+        <fieldset class="editor-field">
+          <legend>{{ 'settings.selectGame' | t }}</legend>
+          @if (showGameSearch) {
+            <input type="search" class="game-search" [(ngModel)]="gameQuery" [placeholder]="'pt.searchGame' | t" [attr.aria-label]="'pt.searchGame' | t">
+          }
+          <div class="game-options">
+            @for (game of filteredGames; track game.twitchCategoryId) {
+              <button type="button" class="game-option" (click)="chooseGame(game)">
+                <app-game-art [src]="game.boxArtUrl" />
+                <span class="game-option-copy">
+                  <strong>{{ game.name }}</strong>
+                  <span>{{ locale.plural('broadcastCount', game.streamsCount ?? streamCount(game.streamCategories)) }}</span>
+                </span>
+                @if (game.suggested) { <span class="tag">{{ 'settings.suggestedGame' | t }}</span> }
+              </button>
+            } @empty {
+              <p class="field-hint">{{ 'pt.noGamesFound' | t }}</p>
+            }
+          </div>
+        </fieldset>
+      }
+
+      @if (formError) { <p class="notice error" role="alert">{{ locale.message(formError) }}</p> }
+
+      <div class="editor-actions">
+        @if (editorGame) {
+          <button type="button" class="primary-btn" (click)="save()" [disabled]="isSaving">
+            {{ (isSaving ? 'common.saving' : draft.id ? 'common.saveChanges' : 'settings.createPlaythrough') | t }}
+          </button>
+        }
+        <button type="button" class="secondary-btn" (click)="cancelEdit()" [disabled]="isSaving">{{ 'common.cancel' | t }}</button>
+      </div>
+    </section>
+  }
+</ng-template>
