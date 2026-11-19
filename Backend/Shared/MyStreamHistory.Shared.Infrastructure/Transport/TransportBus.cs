@@ -13,7 +13,7 @@ namespace MyStreamHistory.Shared.Infrastructure.Transport
 
         public async Task<EmptyResponse> SendRequestAsync<TRequest>(TRequest request, CancellationToken cancellationToken = default) where TRequest : class
         {
-            var response = await bus.Request<TRequest, EmptyResponse>(request, cancellationToken);
+            var response = await RestoreAppExceptions(() => bus.Request<TRequest, EmptyResponse>(request, cancellationToken));
             return response.Message;
         }
 
@@ -21,7 +21,7 @@ namespace MyStreamHistory.Shared.Infrastructure.Transport
             where TRequest : class
             where TResponse : class
         {
-            var response = await bus.Request<TRequest, TResponse>(request, cancellationToken);
+            var response = await RestoreAppExceptions(() => bus.Request<TRequest, TResponse>(request, cancellationToken));
             return new TransportResponse<TResponse> { Success = response.Message };
         }
 
@@ -32,7 +32,7 @@ namespace MyStreamHistory.Shared.Infrastructure.Transport
         {
             var client = bus.CreateRequestClient<TRequest>();
 
-            var response = await client.GetResponse<TSuccessResponse, TFailureResponse>(request, cancellationToken);
+            var response = await RestoreAppExceptions(() => client.GetResponse<TSuccessResponse, TFailureResponse>(request, cancellationToken));
 
             if (response.Is(out Response<TSuccessResponse>? success))
             {
@@ -52,5 +52,28 @@ namespace MyStreamHistory.Shared.Infrastructure.Transport
 
             throw new TransportBusException("Unexpected response type");
         }
+
+        /// <summary>
+        /// Turns a fault caused by <see cref="AppException"/> in the consumer back into that exception, so a
+        /// business error (expired token, missing user) keeps its status code instead of becoming HTTP 500.
+        /// </summary>
+        private static async Task<T> RestoreAppExceptions<T>(Func<Task<T>> request)
+        {
+            try
+            {
+                return await request();
+            }
+            catch (RequestFaultException exception) when (FindErrorCode(exception.Fault) is { } errorCode)
+            {
+                throw new AppException(errorCode);
+            }
+        }
+
+        private static string? FindErrorCode(Fault? fault) =>
+            fault?.Exceptions
+                .Select(info => info.Data is { } data && data.TryGetValue(AppException.ErrorCodeDataKey, out var code)
+                    ? code?.ToString()
+                    : null)
+                .FirstOrDefault(code => !string.IsNullOrEmpty(code));
     }
 }

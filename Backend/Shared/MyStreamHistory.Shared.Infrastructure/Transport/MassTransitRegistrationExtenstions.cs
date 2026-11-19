@@ -1,6 +1,7 @@
 ﻿using MassTransit;
 using MyStreamHistory.Shared.Infrastructure.Transport;
 using MyStreamHistory.Shared.Infrastructure.Configuration;
+using MyStreamHistory.Shared.Base.Exceptions;
 
 namespace MyStreamHistory.Shared.Infrastructure.Transport
 {
@@ -29,6 +30,7 @@ namespace MyStreamHistory.Shared.Infrastructure.Transport
                     });
 
                     cfg.PropagateTraceContext();
+                    cfg.RespondToAppExceptions();
 
                     if (massTransitOptions.UseInMemoryOutbox)
                     {
@@ -37,7 +39,7 @@ namespace MyStreamHistory.Shared.Infrastructure.Transport
 
                     if (massTransitOptions.UseRetry)
                     {
-                        cfg.UseMessageRetry(r => r.Intervals(massTransitOptions.RetryIntervals));
+                        cfg.UseRetryExceptBusinessErrors(massTransitOptions.RetryIntervals);
                     }
 
                     configureTransport?.Invoke(cfg, context);
@@ -47,6 +49,18 @@ namespace MyStreamHistory.Shared.Infrastructure.Transport
             });
 
             return builder;
+        }
+
+        public static void UseRetryExceptBusinessErrors(this IBusFactoryConfigurator configurator, params int[] intervals)
+        {
+            configurator.UseMessageRetry(r =>
+            {
+                r.Intervals(intervals);
+                // A business error gives the same answer on every attempt, and retrying can change it:
+                // RefreshTokenConsumer revokes an expired token before throwing, so a retry would report
+                // invalid_token instead of token_expired.
+                r.Ignore<AppException>();
+            });
         }
     }
 }
