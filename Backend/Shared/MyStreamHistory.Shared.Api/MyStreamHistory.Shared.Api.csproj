@@ -15,7 +15,11 @@
     <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.11" />
     <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="8.9.0" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.16.0" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.16.0" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="1.16.0" />
     <PackageReference Include="Sentry.AspNetCore" Version="6.8.0" />
+    <PackageReference Include="Sentry.OpenTelemetry" Version="6.8.0" />
     <PackageReference Include="Sentry.Serilog" Version="6.8.0" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.9.0" />
   </ItemGroup>

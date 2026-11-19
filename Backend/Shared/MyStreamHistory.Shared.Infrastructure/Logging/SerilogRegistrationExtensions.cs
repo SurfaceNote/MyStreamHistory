@@ -9,6 +9,9 @@ namespace MyStreamHistory.Shared.Infrastructure.Logging
 {
     public static class SerilogRegistrationExtensions
     {
+        private const string ConsoleOutputTemplate =
+            "[{Timestamp:HH:mm:ss} {Level:u3} {TraceId}] {Message:lj}{NewLine}{Exception}";
+
         public static InfrastructureBuilder AddSerilog(this InfrastructureBuilder builder)
         {
             var options = builder.Configuration.GetSection("Serilog").GetValidated<SerilogOptions>();
@@ -20,7 +23,9 @@ namespace MyStreamHistory.Shared.Infrastructure.Logging
 
             if (options.WriteToConsole)
             {
-                loggerConfig.WriteTo.Console();
+                // TraceId is the W3C trace id shared by every service handling the same request, including
+                // RabbitMQ consumers, and matches the trace id of the Sentry event for that request.
+                loggerConfig.WriteTo.Console(outputTemplate: ConsoleOutputTemplate);
             }
 
             if (options.WriteToElastic && !string.IsNullOrWhiteSpace(options.ElasticUrl))

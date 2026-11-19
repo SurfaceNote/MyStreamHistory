@@ -1,9 +1,14 @@
+using System.Diagnostics;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using MyStreamHistory.Shared.Base.Exceptions;
+using OpenTelemetry.Trace;
 using Sentry;
 using Sentry.Extensibility;
+using Sentry.OpenTelemetry;
 using Sentry.Serilog;
 
 namespace MyStreamHistory.Shared.Api.Extensions;
@@ -12,8 +17,27 @@ public static class SentryRegistrationExtensions
 {
     private const double DefaultTracesSampleRate = 0.05;
 
+    /// <summary>Activity sources traced in addition to ASP.NET Core and HttpClient.</summary>
+    internal static readonly string[] TracedSources = ["MassTransit", "Npgsql"];
+
     public static WebApplicationBuilder AddSentryObservability(this WebApplicationBuilder builder)
     {
+        var tracesSampleRate = Math.Clamp(
+            builder.Configuration.GetValue<double?>("Sentry:TracesSampleRate") ?? DefaultTracesSampleRate,
+            0,
+            1);
+
+        // OpenTelemetry carries the trace across services, including RabbitMQ: MassTransit writes the
+        // caller's trace context into message headers and continues it in the consumer. Sentry receives
+        // the recorded spans, so one user action shows up as a single trace from Gateway to the consumer.
+        builder.Services.AddOpenTelemetry().WithTracing(tracing => tracing
+            .SetSampler(CreateSampler(tracesSampleRate))
+            .AddAspNetCoreInstrumentation(instrumentation =>
+                instrumentation.Filter = context => !IsInfrastructurePath(context.Request.Path))
+            .AddHttpClientInstrumentation()
+            .AddSource(TracedSources)
+            .AddSentry());
+
         builder.WebHost.UseSentry(options =>
         {
             var configuration = builder.Configuration;
@@ -31,10 +55,11 @@ public static class SentryRegistrationExtensions
             options.Release = FirstNotEmpty(
                 configuration["Sentry:Release"],
                 Environment.GetEnvironmentVariable("SENTRY_RELEASE"));
-            options.TracesSampleRate = Math.Clamp(
-                configuration.GetValue<double?>("Sentry:TracesSampleRate") ?? DefaultTracesSampleRate,
-                0,
-                1);
+            // The sampling decision is made once per trace by the OpenTelemetry sampler and travels with
+            // the trace context, so every service keeps or drops the same traces. Sentry only receives
+            // spans that were already sampled and must keep all of them.
+            options.TracesSampleRate = tracesSampleRate > 0 ? 1.0 : 0.0;
+            options.UseOpenTelemetry(disableSentryTracing: true);
             options.SendDefaultPii = false;
             options.AttachStacktrace = true;
             options.MaxRequestBodySize = RequestSize.None;
@@ -70,6 +95,25 @@ public static class SentryRegistrationExtensions
         });
 
         return builder;
+    }
+
+    internal static Sampler CreateSampler(double tracesSampleRate) =>
+        new ParentBasedSampler(new OperationRootSampler(new TraceIdRatioBasedSampler(tracesSampleRate)));
+
+    private static bool IsInfrastructurePath(PathString path) =>
+        path.StartsWithSegments("/health") || path.StartsWithSegments("/internal");
+
+    /// <summary>
+    /// Starts traces only for operations: incoming requests and bus messages. A database query or an
+    /// outgoing HTTP call made outside any operation (for example, inside a background polling loop)
+    /// would otherwise become a separate Sentry transaction on every iteration.
+    /// </summary>
+    private sealed class OperationRootSampler(Sampler inner) : Sampler
+    {
+        public override SamplingResult ShouldSample(in SamplingParameters samplingParameters) =>
+            samplingParameters.Kind == ActivityKind.Client
+                ? new SamplingResult(SamplingDecision.Drop)
+                : inner.ShouldSample(samplingParameters);
     }
 
     private static bool IsExpectedException(Exception? exception)

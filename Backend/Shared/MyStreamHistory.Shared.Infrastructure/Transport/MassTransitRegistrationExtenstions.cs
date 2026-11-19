@@ -28,6 +28,8 @@ namespace MyStreamHistory.Shared.Infrastructure.Transport
                         h.Password(rabbitOptions.Password);
                     });
 
+                    cfg.PropagateTraceContext();
+
                     if (massTransitOptions.UseInMemoryOutbox)
                     {
                         cfg.UseInMemoryOutbox(context);
