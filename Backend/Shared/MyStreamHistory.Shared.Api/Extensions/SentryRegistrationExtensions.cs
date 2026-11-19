@@ -59,7 +59,10 @@ public static class SentryRegistrationExtensions
             // the trace context, so every service keeps or drops the same traces. Sentry only receives
             // spans that were already sampled and must keep all of them.
             options.TracesSampleRate = tracesSampleRate > 0 ? 1.0 : 0.0;
-            options.UseOpenTelemetry(disableSentryTracing: true);
+            // The OpenTelemetry instrumenter already turns off Sentry's own ASP.NET tracing. Do not pass
+            // disableSentryTracing: it also makes every transaction started for OpenTelemetry spans a no-op,
+            // and the SDK then throws when a third nested span starts (request or message → child → query).
+            options.UseOpenTelemetry();
             options.SendDefaultPii = false;
             options.AttachStacktrace = true;
             options.MaxRequestBodySize = RequestSize.None;
