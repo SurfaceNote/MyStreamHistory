@@ -131,18 +131,37 @@ public class ViewerDataProcessingServiceTests
         Assert.Null(buffer.CreateSnapshot().StreamSnapshots["streamer-1"].CurrentCategoryId);
     }
 
+    [Fact]
+    public async Task ProcessSnapshotAsync_ChattersRequestRefreshesToken_SyncsViewerDataWithRefreshedToken()
+    {
+        var viewer = CreateViewer(lastDataSyncAt: null);
+        var viewerRepository = new FakeViewerRepository(viewer);
+        var usersApiClient = new FakeTwitchUsersApiClient(CreateTwitchUserFrom(viewer));
+        var chatApiClient = new FakeTwitchChatApiClient { RejectedToken = "access-token" };
+        var authTokenService = new FakeAuthTokenService { RefreshedToken = "refreshed-token" };
+        var service = CreateService(viewerRepository, usersApiClient, chatApiClient: chatApiClient, authTokenService: authTokenService);
+
+        await service.ProcessSnapshotAsync(CreateSnapshot());
+
+        Assert.Equal(["access-token", "refreshed-token"], chatApiClient.ReceivedTokens);
+        Assert.Equal("refreshed-token", Assert.Single(usersApiClient.ReceivedTokens));
+        Assert.Single(viewerRepository.BulkUpdatedViewers);
+    }
+
     private static ViewerDataProcessingService CreateService(
         FakeViewerRepository viewerRepository,
         FakeTwitchUsersApiClient usersApiClient,
         FakeStreamCategoryService? categoryService = null,
         ChatMessageBufferService? bufferService = null,
         FakeViewerCategoryWatchRepository? watches = null,
-        FakeViewerStatsRepository? stats = null)
+        FakeViewerStatsRepository? stats = null,
+        FakeTwitchChatApiClient? chatApiClient = null,
+        FakeAuthTokenService? authTokenService = null)
     {
         return new ViewerDataProcessingService(
-            new FakeTwitchChatApiClient(),
+            chatApiClient ?? new FakeTwitchChatApiClient(),
             usersApiClient,
-            new FakeAuthTokenService(),
+            authTokenService ?? new FakeAuthTokenService(),
             viewerRepository,
             watches ?? new FakeViewerCategoryWatchRepository(),
             stats ?? new FakeViewerStatsRepository(),
@@ -209,6 +228,8 @@ public class ViewerDataProcessingServiceTests
 
     private sealed class FakeAuthTokenService : IAuthTokenService
     {
+        public string? RefreshedToken { get; init; }
+
         public Task<(string AccessToken, DateTime ExpiresAt)?> GetTwitchAccessTokenAsync(
             string twitchUserId,
             CancellationToken cancellationToken = default)
@@ -220,17 +241,23 @@ public class ViewerDataProcessingServiceTests
             string twitchUserId,
             CancellationToken cancellationToken = default)
         {
-            throw new NotSupportedException();
+            if (RefreshedToken == null) throw new NotSupportedException();
+            return Task.FromResult<(string, DateTime)?>((RefreshedToken, DateTime.UtcNow.AddHours(1)));
         }
     }
 
     private sealed class FakeTwitchChatApiClient : ITwitchChatApiClient
     {
+        public string? RejectedToken { get; init; }
+        public List<string> ReceivedTokens { get; } = [];
+
         public Task<List<TwitchChatterDto>> GetChattersAsync(
             string broadcasterId,
             string accessToken,
             CancellationToken cancellationToken = default)
         {
+            ReceivedTokens.Add(accessToken);
+            if (accessToken == RejectedToken) throw new HttpRequestException("Failed to get chatters: Unauthorized");
             return Task.FromResult(new List<TwitchChatterDto>
             {
                 new()
@@ -246,6 +273,7 @@ public class ViewerDataProcessingServiceTests
     private sealed class FakeTwitchUsersApiClient(TwitchUserDto twitchUser) : ITwitchUsersApiClient
     {
         public int CallCount { get; private set; }
+        public List<string> ReceivedTokens { get; } = [];
 
         public Task<List<TwitchUserDto>> GetUsersByIdsAsync(
             List<string> userIds,
@@ -253,6 +281,7 @@ public class ViewerDataProcessingServiceTests
             CancellationToken cancellationToken = default)
         {
             CallCount++;
+            ReceivedTokens.Add(accessToken);
             return Task.FromResult(userIds.Contains(twitchUser.Id)
                 ? new List<TwitchUserDto> { twitchUser }
                 : []);

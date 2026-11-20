@@ -94,12 +94,13 @@ public class ViewerDataProcessingService : IViewerDataProcessingService
                 return;
             }
 
-            var (newAccessToken, _) = refreshResult.Value;
-            
+            // Keep the refreshed token for every later Twitch call in this snapshot (chatters retry and viewer sync).
+            (accessToken, _) = refreshResult.Value;
+
             // Retry with new token
             try
             {
-                chatters = await _chatApiClient.GetChattersAsync(twitchUserId, newAccessToken, cancellationToken);
+                chatters = await _chatApiClient.GetChattersAsync(twitchUserId, accessToken, cancellationToken);
                 _logger.LogInformation("Successfully retrieved chatters after token refresh for TwitchUserId: {TwitchUserId}", twitchUserId);
             }
             catch (Exception retryEx)
