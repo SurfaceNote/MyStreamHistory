@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.spec.json",
+  "include": [
+    "src/app/service/analytics.service.spec.ts",
+    "src/app/components/callback/**/*.spec.ts",
+    "src/app/components/buttons/**/*.spec.ts",
+    "src/app/components/header/**/*.spec.ts",
+    "src/app/pages/home/**/*.spec.ts",
+    "src/app/pages/settings/**/*.spec.ts",
+    "src/app/pages/streamer-profile/**/*.spec.ts",
+    "src/app/pages/stream-detail/**/*.spec.ts",
+    "src/app/features/community/**/*.spec.ts",
+    "src/**/*.d.ts"
+  ]
+}
