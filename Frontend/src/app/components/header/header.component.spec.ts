@@ -3,6 +3,8 @@ import { provideRouter } from '@angular/router';
 import { Subject, of } from 'rxjs';
 import { HeaderComponent } from './header.component';
 import { AuthService } from '../../auth/auth.service';
+import { AnalyticsService } from '../../service/analytics.service';
+import { LocaleService } from '../../i18n/locale.service';
 
 describe('Header authentication', () => {
   for (const token of ['stored-session', null]) {
@@ -41,4 +43,23 @@ describe('Header authentication', () => {
       fixture.destroy();
     });
   }
+
+  it('reports a language switch with the previous language, but not re-selecting the current one', () => {
+    const analytics = jasmine.createSpyObj<AnalyticsService>('AnalyticsService', ['trackEvent']);
+    const locale = jasmine.createSpyObj<LocaleService>('LocaleService', ['rememberLanguage', 'language']);
+    locale.language.and.returnValue('en');
+    TestBed.configureTestingModule({
+      imports: [HeaderComponent],
+      providers: [
+        { provide: AnalyticsService, useValue: analytics }, { provide: LocaleService, useValue: locale },
+        { provide: AuthService, useValue: { getAccessTokenObservable: () => of(null) } }
+      ]
+    });
+    TestBed.overrideComponent(HeaderComponent, { set: { template: '' } });
+    const header = TestBed.createComponent(HeaderComponent).componentInstance;
+    header.selectLanguage('en');
+    header.selectLanguage('ru');
+    expect(analytics.trackEvent).toHaveBeenCalledOnceWith('language_select', { language: 'ru', from: 'en' });
+    expect(locale.rememberLanguage.calls.allArgs()).toEqual([['en'], ['ru']]);
+  });
 });

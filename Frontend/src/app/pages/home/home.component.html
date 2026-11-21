@@ -18,11 +18,11 @@
         <div class="search-field">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg>
           <label for="streamer-search" class="sr-only">{{ 'ui.searchStreamers' | t }}</label>
-          <input id="streamer-search" type="search" [placeholder]="'ui.searchByStreamerName' | t" [(ngModel)]="searchQuery" autocomplete="off" [disabled]="isLoadingStreamers || streamersLoadFailed">
+          <input id="streamer-search" type="search" [placeholder]="'ui.searchByStreamerName' | t" [ngModel]="searchQuery" (ngModelChange)="searchChanged($event)" autocomplete="off" [disabled]="isLoadingStreamers || streamersLoadFailed">
         </div>
         <div class="directory-filters" role="group" [attr.aria-label]="'ui.streamerStatus' | t">
-          <button type="button" [class.active]="!liveOnly" [attr.aria-pressed]="!liveOnly" (click)="liveOnly = false">{{ 'ui.all' | t }}</button>
-          <button type="button" [class.active]="liveOnly" [attr.aria-pressed]="liveOnly" (click)="liveOnly = true">
+          <button type="button" [class.active]="!liveOnly" [attr.aria-pressed]="!liveOnly" (click)="setLiveOnly(false)">{{ 'ui.all' | t }}</button>
+          <button type="button" [class.active]="liveOnly" [attr.aria-pressed]="liveOnly" (click)="setLiveOnly(true)">
             <span class="live-dot" aria-hidden="true"></span>{{ 'ui.liveNow' | t }}
             <span *ngIf="!isLoadingStreamers && !streamersLoadFailed" class="filter-count">{{ liveStreamerIds.size }}</span>
           </button>
@@ -80,7 +80,7 @@
         <p>{{ isLoggedIn ? ('ui.pickUpWhereYouLeftOffYourBroadcastsGamesAndAudienceAreInYourProfile' | t) : ('ui.connectYourTwitchAccountToStartBuildingYourChannelHistory' | t) }}</p>
         <div class="auth-slot" [attr.aria-busy]="!authReady">
           <span *ngIf="!authReady" class="auth-placeholder" aria-hidden="true"></span>
-          <app-login-component *ngIf="authReady && !isLoggedIn" />
+          <app-login-component *ngIf="authReady && !isLoggedIn" placement="home" />
           <a *ngIf="authReady && isLoggedIn" [routerLink]="(['/profile', twitchId]) | localPath" class="primary-button">{{ 'ui.openMyProfile' | t }} <span aria-hidden="true">→</span></a>
         </div>
         <span class="panel-note">{{ 'ui.freeForever' | t }}</span>

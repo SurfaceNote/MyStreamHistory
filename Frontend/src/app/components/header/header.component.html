@@ -19,7 +19,7 @@
           <a [routerLink]="locale.switchUrl(language.code)" [attr.lang]="language.code"
              [attr.hreflang]="locale.hasTranslation(language.code) ? language.code : null"
              [attr.aria-current]="locale.language() === language.code ? 'true' : null"
-             (click)="locale.rememberLanguage(language.code); $any($event.currentTarget).closest('details').open = false">
+             (click)="selectLanguage(language.code); $any($event.currentTarget).closest('details').open = false">
             <img class="language-flag" [src]="language.flag" alt="" width="20" height="14" />
             <span>{{ language.name }}
               @if (!locale.hasTranslation(language.code)) { <small>{{ 'translation.missing' | t: { language: language.name } }}</small> }
@@ -30,7 +30,7 @@
     </details>
     <div class="auth" [attr.aria-busy]="!authReady">
         <span *ngIf="!authReady" class="auth-placeholder" aria-hidden="true"></span>
-        <app-login-component *ngIf="authReady && !isLoggedIn" [compact]="true"/>
+        <app-login-component *ngIf="authReady && !isLoggedIn" [compact]="true" placement="header"/>
         <div *ngIf="authReady && isLoggedIn" class="user-menu">
             <a class="profile-link" [routerLink]="(['/profile', twitchId]) | localPath" [title]="username || ''" [attr.aria-label]="locale.t('ui.profile') + ': ' + username">{{username}}</a>
             <button class="icon-btn settings-btn" (click)="navigateToSettings()" [title]="'ui.settings' | t" [attr.aria-label]="'ui.settings' | t">

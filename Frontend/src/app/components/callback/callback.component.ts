@@ -4,6 +4,7 @@ import { afterNextRender, Component, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { switchMap, take, of } from 'rxjs';
 import { AuthService } from '../../auth/auth.service';
+import { AnalyticsService } from '../../service/analytics.service';
 
 @Component({
   selector: 'app-callback',
@@ -16,6 +17,7 @@ export class CallbackComponent {
   private authService = inject(AuthService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
+  private analytics = inject(AnalyticsService);
 
   constructor() { afterNextRender(() => this.completeSignIn()); }
   private completeSignIn(): void {
@@ -23,14 +25,18 @@ export class CallbackComponent {
     this.route.queryParams.pipe(
       take(1),
       switchMap(params => params['code'] && params['state']
-        ? this.authService.handleTwitchCallback(params['code'], params['state']) : of(false))
-    ).subscribe(() => {
+        ? this.authService.handleTwitchCallback(params['code'], params['state']) : of(null))
+    ).subscribe(result => {
       const twitchId = this.authService.getTwitchIdFromToken();
       // A first sign-in has nothing to return to yet: show the new channel its own profile.
       const destination = this.authService.isNewChannel() && twitchId
         ? this.locale.path(['/profile', twitchId])
         : returnUrl;
-      void this.router.navigateByUrl(destination);
+      // Analytics starts only once the URL with the one-time code is gone, so the landing page is the first page view.
+      void this.router.navigateByUrl(destination).finally(() => {
+        this.analytics.start();
+        if (result) this.analytics.trackEvent(result.isNewUser ? 'sign_up' : 'login', { method: 'Twitch' });
+      });
     });
   }
 }

@@ -214,7 +214,11 @@ export class CommunityComponent implements OnDestroy {
     this.reportRequest?.unsubscribe(); clearTimeout(this.poll);
     this.saving = true; this.settingsError = '';
     this.channelRequests.add((restore ? this.api.restore(id) : this.api.exclude(id)).subscribe({
-      next: r => { this.saving = false; this.apply(r.report); this.loadExclusions(); },
+      next: r => {
+        this.saving = false;
+        this.analytics.trackEvent('community_exclusion_change', { action: restore ? 'restore' : 'exclude' });
+        this.apply(r.report); this.loadExclusions();
+      },
       error: () => { this.saving = false; this.settingsError = 'community.updateExclusionsFailed'; this.cdr.markForCheck(); }
     }));
   }

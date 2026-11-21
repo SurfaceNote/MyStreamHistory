@@ -12,6 +12,9 @@ import { LoginComponentComponent } from '../../components/buttons/login-componen
 import { StreamerService } from '../../service/streamer.service';
 import { StreamerShortDTO } from '../../models/streamer-short.dto';
 import { FormsModule } from '@angular/forms';
+import { AnalyticsService } from '../../service/analytics.service';
+
+const SEARCH_TRACK_DELAY_MS = 1500;
 
 @Component({
   selector: 'app-home',
@@ -43,6 +46,9 @@ export class HomeComponent implements OnInit, OnDestroy {
   searchQuery = '';
   liveOnly = false;
   private liveStatusSubscription?: Subscription;
+  private analytics = inject(AnalyticsService);
+  private searchTimer?: ReturnType<typeof setTimeout>;
+  private lastTrackedSearch = '';
 
   get filteredStreamers(): StreamerShortDTO[] {
     const query = this.searchQuery.trim().toLocaleLowerCase();
@@ -56,6 +62,26 @@ export class HomeComponent implements OnInit, OnDestroy {
   resetFilters(): void {
     this.searchQuery = '';
     this.liveOnly = false;
+    clearTimeout(this.searchTimer);
+  }
+
+  /** The search is reported once typing pauses: whether something was found, never the text itself. */
+  searchChanged(value: string): void {
+    this.searchQuery = value;
+    clearTimeout(this.searchTimer);
+    const query = value.trim().toLocaleLowerCase();
+    if (!query) { this.lastTrackedSearch = ''; return; }
+    this.searchTimer = setTimeout(() => {
+      if (query === this.lastTrackedSearch) return;
+      this.lastTrackedSearch = query;
+      this.analytics.trackEvent('streamer_search', { outcome: this.filteredStreamers.length ? 'found' : 'empty' });
+    }, SEARCH_TRACK_DELAY_MS);
+  }
+
+  setLiveOnly(liveOnly: boolean): void {
+    if (this.liveOnly === liveOnly) return;
+    this.liveOnly = liveOnly;
+    this.analytics.trackEvent('streamer_filter_select', { filter: liveOnly ? 'live' : 'all' });
   }
 
   retryStreamers(): void {
@@ -149,6 +175,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    clearTimeout(this.searchTimer);
     this.subscriptions.unsubscribe();
   }
 }

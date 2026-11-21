@@ -5,6 +5,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SettingsService } from '../../../../service/settings.service';
+import { AnalyticsService } from '../../../../service/analytics.service';
 import { SocialLink, SocialNetworkType } from '../../../../models/social-link.model';
 
 interface SocialNetworkConfig {
@@ -32,6 +33,7 @@ interface SocialLinkState extends SocialLink {
 })
 export class ProfileSettingsComponent implements OnInit {
   readonly locale = inject(LocaleService);
+  private readonly analytics = inject(AnalyticsService);
   socialNetworks: SocialNetworkConfig[] = [
     { type: SocialNetworkType.YouTube, label: 'YouTube', icon: 'fa-youtube', domain: 'youtube.com/', placeholder: 'settings.youtubePath' },
     { type: SocialNetworkType.Instagram, label: 'Instagram', icon: 'fa-instagram', domain: 'instagram.com/', placeholder: 'settings.username' },
@@ -163,6 +165,7 @@ export class ProfileSettingsComponent implements OnInit {
     link.isSaving = true;
     link.error = undefined;
     this.globalSuccessMessage = '';
+    const action = link.originalPath ? 'edit' : 'add';
 
     const linkToSave = {
       socialNetworkType: link.socialNetworkType,
@@ -173,6 +176,7 @@ export class ProfileSettingsComponent implements OnInit {
     this.settingsService.updateSocialLinks({ socialLink: linkToSave }).subscribe({
       next: (response) => {
         if (response.success) {
+          this.analytics.trackEvent('profile_link_save', { network: type.toLowerCase(), action });
           link.isEditing = false;
           link.isSaving = false;
           link.originalPath = undefined;
@@ -244,6 +248,7 @@ export class ProfileSettingsComponent implements OnInit {
     this.settingsService.updateSocialLinks({ socialLink: linkToDelete }).subscribe({
       next: (response) => {
         if (response.success) {
+          this.analytics.trackEvent('profile_link_delete', { network: type.toLowerCase() });
           this.socialLinks.delete(type);
           this.globalSuccessMessage = 'settings.linkDeleted';
           setTimeout(() => this.globalSuccessMessage = '', 3000);

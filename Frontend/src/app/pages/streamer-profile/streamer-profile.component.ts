@@ -356,7 +356,15 @@ export class StreamerProfileComponent
     return !this.showWaitingIntro;
   }
 
+  /** A checklist link opens the matching settings section. */
+  openOwnerStep(step: OwnerChecklistStep): void {
+    this.analytics.trackEvent('owner_step_open', { step: step.id });
+  }
+
   hideOwnerPanel(): void {
+    this.analytics.trackEvent('owner_panel_hide', {
+      steps_done: this.ownerChecklist.filter((step) => step.done).length,
+    });
     this.ownerPanelHidden = true;
     this.auth.clearNewChannel();
     try { localStorage.setItem(OWNER_PANEL_HIDDEN_KEY, '1'); } catch { /* Storage is optional. */ }
@@ -506,6 +514,7 @@ export class StreamerProfileComponent
 
   dismissSuggestion(game: PlaythroughGameOption): void {
     this.dismissedSuggestions.add(game.twitchCategoryId);
+    this.analytics.trackEvent('playthrough_suggestion_dismiss');
     try { localStorage.setItem(DISMISSED_SUGGESTIONS_KEY, JSON.stringify([...this.dismissedSuggestions])); } catch { /* Storage is optional. */ }
   }
 

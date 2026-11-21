@@ -78,11 +78,12 @@ export class AuthService {
         return safeReturnUrl(saved) || this.locale.path('/');
     }
 
-    handleTwitchCallback(code: string, state: string): Observable<boolean> {
+    /** Completes the Twitch sign-in; null when it failed. */
+    handleTwitchCallback(code: string, state: string): Observable<{ isNewUser: boolean } | null> {
         const storedState = localStorage.getItem('twitchAuthState');
         if (state !== storedState) {
             console.error('Invalid state parameter');
-            return of(false);
+            return of(null);
         }
 
         return this.http
@@ -99,10 +100,10 @@ export class AuthService {
                         try { localStorage.setItem(NEW_CHANNEL_KEY, '1'); } catch { /* Storage is optional. */ }
                     }
                 }),
-                map(() => true),
+                map((tokens) => ({ isNewUser: !!tokens.isNewUser })),
                 catchError((error) => {
                     console.error('Twitch callback failed', error);
-                    return of(false);
+                    return of(null);
                 }
             )
         );

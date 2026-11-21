@@ -5,6 +5,7 @@ import { BehaviorSubject, Subject, of, throwError } from 'rxjs';
 import { HomeComponent } from './home.component';
 import { AuthService } from '../../auth/auth.service';
 import { StreamerService } from '../../service/streamer.service';
+import { AnalyticsService } from '../../service/analytics.service';
 
 describe('Home streamer directory', () => {
   it('searches names, combines the live filter, and clears an empty result through the UI', fakeAsync(() => {
@@ -256,6 +257,39 @@ describe('Home authentication after the first render', () => {
     expect(element.querySelectorAll('app-login-component').length).toBe(1);
     expect(element.querySelectorAll('a[href="/profile/106010980"]').length).toBe(0);
     expect(fixture.componentInstance.twitchId).toBe('');
+    fixture.destroy();
+  }));
+
+  it('reports a paused search by outcome only, and live filter changes', fakeAsync(() => {
+    const analytics = jasmine.createSpyObj<AnalyticsService>('AnalyticsService', ['trackEvent']);
+    TestBed.configureTestingModule({
+      imports: [HomeComponent],
+      providers: [
+        provideRouter([]),
+        { provide: AuthService, useValue: { getAccessTokenObservable: () => of(null) } },
+        { provide: StreamerService, useValue: { getAllStreamers: () => of([{ twitchId: 1, displayName: 'Alice', avatar: '', isLive: true }]) } },
+        { provide: AnalyticsService, useValue: analytics }
+      ]
+    });
+    const fixture = TestBed.createComponent(HomeComponent);
+    fixture.detectChanges(); tick(); fixture.detectChanges();
+    const home = fixture.componentInstance;
+    home.searchChanged('al'); tick(500);
+    home.searchChanged('alice'); tick(1499);
+    expect(analytics.trackEvent).not.toHaveBeenCalled();
+    tick(1);
+    expect(analytics.trackEvent).toHaveBeenCalledOnceWith('streamer_search', { outcome: 'found' });
+    home.searchChanged('alice '); tick(1500);
+    expect(analytics.trackEvent).toHaveBeenCalledTimes(1);
+    home.searchChanged('zed'); tick(1500);
+    expect(analytics.trackEvent).toHaveBeenCalledWith('streamer_search', { outcome: 'empty' });
+    expect(JSON.stringify(analytics.trackEvent.calls.allArgs())).not.toContain('zed');
+
+    analytics.trackEvent.calls.reset();
+    home.setLiveOnly(true); home.setLiveOnly(true); home.setLiveOnly(false);
+    expect(analytics.trackEvent.calls.allArgs()).toEqual([
+      ['streamer_filter_select', { filter: 'live' }], ['streamer_filter_select', { filter: 'all' }]
+    ]);
     fixture.destroy();
   }));
 });

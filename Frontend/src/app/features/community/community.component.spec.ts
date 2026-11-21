@@ -207,6 +207,12 @@ describe('Community analytics', () => {
     api.exclude.and.returnValue(of(response(recalculating())));
     f.componentInstance.exclusion('1', false); f.detectChanges();
     expect(api.exclude).toHaveBeenCalledWith('1');
+    expect(analytics.trackEvent).toHaveBeenCalledWith('community_exclusion_change', { action: 'exclude' });
+    f.componentInstance.exclusion('1', true);
+    expect(analytics.trackEvent).toHaveBeenCalledWith('community_exclusion_change', { action: 'restore' });
+    expect(JSON.stringify(analytics.trackEvent.calls.allArgs())).not.toContain('Quiet');
+    api.exclude.and.returnValue(of(response(recalculating())));
+    f.componentInstance.exclusion('1', false); f.detectChanges();
     expect(f.componentInstance.members).toEqual([]);
     expect(f.nativeElement.textContent).toContain('Updating report');
     expect(f.nativeElement.querySelector('canvas')).toBeNull();

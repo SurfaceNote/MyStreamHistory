@@ -7,6 +7,7 @@ import { StreamDetailComponent } from './stream-detail.component';
 import { StreamerService } from '../../service/streamer.service';
 import { SeoService } from '../../service/seo.service';
 import { AuthService } from '../../auth/auth.service';
+import { AnalyticsService } from '../../service/analytics.service';
 
 describe('Stream audience chart', () => {
   const data: any = {
@@ -106,6 +107,21 @@ describe('Stream audience chart', () => {
   it('does not request the recap during server rendering', () => {
     const f = create(data, 'server', { any: true });
     expect(f.componentInstance.recap).toBeNull();
+    f.destroy();
+  });
+
+  it('reports a copied recap or link as a stream share, not a failed copy', async () => {
+    const analytics = jasmine.createSpyObj<AnalyticsService>('AnalyticsService', ['trackEvent']);
+    TestBed.overrideProvider(AnalyticsService, { useValue: analytics });
+    const f = create(data);
+    const component = f.componentInstance;
+    component.recap = {} as any;
+    const write = spyOn(navigator.clipboard, 'writeText').and.resolveTo();
+    await component.copy('link');
+    expect(analytics.trackEvent).toHaveBeenCalledOnceWith('share', { method: 'link', content_type: 'stream' });
+    write.and.rejectWith(new Error('denied'));
+    await component.copy('link');
+    expect(analytics.trackEvent).toHaveBeenCalledTimes(1);
     f.destroy();
   });
 });

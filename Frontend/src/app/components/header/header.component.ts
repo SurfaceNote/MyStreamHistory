@@ -6,6 +6,8 @@ import { AuthService } from '../../auth/auth.service';
 import { CommonModule } from '@angular/common';
 import { Subscription } from 'rxjs';
 import { Router, RouterModule } from '@angular/router';
+import { AnalyticsService } from '../../service/analytics.service';
+import { Language } from '../../i18n/languages';
 
 @Component({
   selector: 'app-header',
@@ -21,12 +23,19 @@ export class HeaderComponent implements OnDestroy {
   private authService = inject(AuthService);
   private router = inject(Router);
   private changeDetector = inject(ChangeDetectorRef);
+  private analytics = inject(AnalyticsService);
   username: string | null = null;
   twitchId: string | null = null;
   private subscriptions: Subscription = new Subscription();
 
   constructor() {
     afterNextRender(() => this.initializeAuth());
+  }
+
+  selectLanguage(language: Language): void {
+    const from = this.locale.language();
+    if (language !== from) this.analytics.trackEvent('language_select', { language, from });
+    this.locale.rememberLanguage(language);
   }
 
   private initializeAuth(): void {

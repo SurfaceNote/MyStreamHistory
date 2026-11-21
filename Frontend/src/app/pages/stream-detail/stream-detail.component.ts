@@ -13,6 +13,7 @@ import { RecapViewer, StreamRecap } from '../../models/stream-recap.model';
 import { TranslationKey } from '../../i18n/translations';
 import { SeoService } from '../../service/seo.service';
 import { AuthService } from '../../auth/auth.service';
+import { AnalyticsService } from '../../service/analytics.service';
 
 Chart.register(...registerables);
 
@@ -50,6 +51,7 @@ export class StreamDetailComponent implements OnInit, OnDestroy {
   private audienceCanvas?: HTMLCanvasElement;
   private platform = inject(PLATFORM_ID);
   private auth = inject(AuthService);
+  private analytics = inject(AnalyticsService);
   @ViewChild('audienceChart') set audienceChart(element: ElementRef<HTMLCanvasElement> | undefined) {
     this.audienceCanvas = element?.nativeElement;
     this.drawAudience();
@@ -283,6 +285,7 @@ export class StreamDetailComponent implements OnInit, OnDestroy {
     const value = kind === 'text' ? this.recapText(this.recap, this.streamDetails) : this.shareUrl;
     let ok = true;
     try { await navigator.clipboard.writeText(value); } catch { ok = false; }
+    if (ok) this.analytics.trackEvent('share', { method: kind, content_type: 'stream' });
     this.copyState = { kind, ok };
     clearTimeout(this.copyTimer);
     this.copyTimer = setTimeout(() => { this.copyState = null; }, 2500);

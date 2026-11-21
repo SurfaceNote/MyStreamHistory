@@ -371,6 +371,19 @@ describe('StreamerProfileComponent', () => {
     expect(component.showOwnerPanel).toBeFalse();
   });
 
+  it('tracks setup step links, hiding the owner panel and dismissed suggestions', () => {
+    ownerId = '1';
+    component.socialLinks = [{ socialNetworkType: 'YouTube', fullUrl: 'https://youtube.com/@example' } as any];
+    component.openOwnerStep(component.ownerChecklist[0]);
+    expect(gtag).toHaveBeenCalledWith('event', 'owner_step_open', { step: 'playthroughs' });
+    component.hideOwnerPanel();
+    expect(gtag).toHaveBeenCalledWith('event', 'owner_panel_hide', { steps_done: 1 });
+    localStorage.removeItem('msh.ownerPanel.hidden');
+    component.dismissSuggestion({ twitchCategoryId: 'game' } as any);
+    expect(gtag).toHaveBeenCalledWith('event', 'playthrough_suggestion_dismiss', {});
+    localStorage.removeItem('msh.playthroughSuggestions.dismissed');
+  });
+
   it('does not show the owner panel or request the status on other channels', () => {
     const settings = TestBed.inject(SettingsService) as any;
     spyOn(settings, 'getCollectionStatus').and.callThrough();

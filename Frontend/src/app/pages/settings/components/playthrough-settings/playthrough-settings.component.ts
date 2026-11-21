@@ -6,6 +6,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule, DOCUMENT } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SettingsService } from '../../../../service/settings.service';
+import { AnalyticsService } from '../../../../service/analytics.service';
 import {
   Playthrough,
   PlaythroughGameOption,
@@ -45,6 +46,7 @@ const GAME_SEARCH_THRESHOLD = 8;
 export class PlaythroughSettingsComponent implements OnInit {
   readonly locale = inject(LocaleService);
   private readonly document = inject(DOCUMENT);
+  private readonly analytics = inject(AnalyticsService);
 
   readonly statusOptions: PlaythroughStatusOption[] = [
     { value: 'Playing', label: 'ui.playing' },
@@ -238,6 +240,7 @@ export class PlaythroughSettingsComponent implements OnInit {
       next: () => {
         this.isSaving = false;
         this.notice = { text: form.id ? 'settings.playthroughUpdated' : 'settings.playthroughCreated', error: false };
+        if (!form.id) this.analytics.trackEvent('playthrough_created', { source: 'settings', status: form.status.toLowerCase() });
         this.form = null;
         this.loadSettings();
       },
@@ -266,6 +269,7 @@ export class PlaythroughSettingsComponent implements OnInit {
     }).subscribe({
       next: () => {
         this.busyId = null;
+        this.analytics.trackEvent('playthrough_status_changed', { status: status.toLowerCase(), source: 'settings' });
         this.notice = {
           text: { key: 'pt.statusUpdated', params: { name: playthrough.gameName, status: this.statusLabel(status) } },
           error: false
@@ -296,6 +300,7 @@ export class PlaythroughSettingsComponent implements OnInit {
         this.confirmingDeleteId = null;
         if (this.form?.id === playthrough.id) this.form = null;
         this.notice = { text: 'settings.playthroughDeleted', error: false };
+        this.analytics.trackEvent('playthrough_deleted', { source: 'settings', status: playthrough.status.toLowerCase() });
         this.loadSettings();
       },
       error: (error) => {

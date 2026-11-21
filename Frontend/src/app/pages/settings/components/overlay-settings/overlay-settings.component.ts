@@ -2,6 +2,7 @@ import { TranslatePipe } from '../../../../i18n/translate.pipe';
 import { LocaleService, LocalizedMessage } from '../../../../i18n/locale.service';
 import { Component, inject } from '@angular/core';
 import { AuthService } from '../../../../auth/auth.service';
+import { AnalyticsService } from '../../../../service/analytics.service';
 
 @Component({
   imports: [TranslatePipe],
@@ -13,6 +14,7 @@ import { AuthService } from '../../../../auth/auth.service';
 export class OverlaySettingsComponent {
   readonly locale = inject(LocaleService);
   private auth = inject(AuthService);
+  private analytics = inject(AnalyticsService);
   private _copyStatus: LocalizedMessage = '';
   get copyStatus(): string { return this.locale.message(this._copyStatus); }
   set copyStatus(value: LocalizedMessage) { this._copyStatus = value; }
@@ -31,6 +33,7 @@ export class OverlaySettingsComponent {
     try {
       await navigator.clipboard.writeText(url);
       this.copyStatus = 'settings.linkCopied';
+      this.analytics.trackEvent('overlay_link_copy');
     } catch {
       this.copyStatus = 'settings.copyFailed';
     }
