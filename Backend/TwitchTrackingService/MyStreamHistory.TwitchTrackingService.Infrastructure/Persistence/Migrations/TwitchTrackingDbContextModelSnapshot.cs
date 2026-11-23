@@ -368,6 +368,10 @@ namespace MyStreamHistory.TwitchTrackingService.Infrastructure.Persistence.Migra
                     b.Property<bool>("IsLive")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("Language")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
                     b.Property<DateTime?>("LastConfirmedLiveAt")
                         .HasColumnType("timestamp with time zone");
 

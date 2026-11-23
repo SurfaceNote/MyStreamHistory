@@ -294,7 +294,7 @@ li[data-rank='1'] .podium-card { padding-block: 30px 20px; img { width: 76px; he
   dd { margin: 0; color: #e7ecf6; font-weight: 600; text-align: right; white-space: nowrap; }
   .shelf-empty dd { color: var(--muted); font-weight: 500; text-align: left; white-space: normal; }
 }
-.shelf-status-control { grid-column: 1 / -1; position: relative; display: flex; align-items: center;
+.shelf-status-control { grid-column: 1 / -1; position: relative; z-index: 1; display: flex; align-items: center;
   --dot: var(--st-all);
   &[data-status='Playing'] { --dot: var(--st-playing); }
   &[data-status='Completed'] { --dot: var(--st-completed); }

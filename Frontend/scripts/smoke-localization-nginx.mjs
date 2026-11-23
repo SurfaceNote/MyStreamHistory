@@ -33,6 +33,8 @@ try {
  for(let i=0;i<100;i++){try{if((await request(origin+'/settings')).status===200)break;}catch{}if(i===99)throw new Error('Nginx did not start');await new Promise(r=>setTimeout(r,100));}
  await smokeSsr({...runtime,origin,request});
  const sitemap=await request(origin+'/sitemap.xml'); assert.equal(sitemap.status,200); assert.ok((await sitemap.text()).includes('/es/news'));
+ const games=await request(origin+'/sitemap-games.xml'); assert.equal(games.status,200); assert.ok((await games.text()).includes('/es/game/22197-colin-mcrae-dirt-2'));
+ assert.ok((await (await request(origin+'/robots.txt')).text()).includes('Sitemap: https://mystreamhistory.com/sitemap-games.xml'));
  const js=await readFile(new URL('../dist/my-stream-history.web/browser/index.csr.html',import.meta.url),'utf8');
  const asset=js.match(/src="((?!https?:)[^\"]+\.js)"/)[1];
  assert.equal((await request(origin+'/'+asset)).status,200);

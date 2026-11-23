@@ -60,6 +60,7 @@ public class StreamSessionRepository : IStreamSessionRepository
                 StreamTitle = s.StreamTitle,
                 GameName = s.GameName,
                 ViewerCount = s.ViewerCount,
+                Language = s.Language,
                 Categories = s.StreamCategories
                     .Select(sc => new
                     {
@@ -145,6 +146,7 @@ public class StreamSessionRepository : IStreamSessionRepository
         string title,
         string gameName,
         int viewerCount,
+        string? language,
         CancellationToken cancellationToken = default)
     {
         await _context.StreamSessions
@@ -154,8 +156,29 @@ public class StreamSessionRepository : IStreamSessionRepository
                     .SetProperty(s => s.StreamId, streamId)
                     .SetProperty(s => s.StreamTitle, title)
                     .SetProperty(s => s.GameName, gameName)
-                    .SetProperty(s => s.ViewerCount, viewerCount),
+                    .SetProperty(s => s.ViewerCount, viewerCount)
+                    .SetProperty(s => s.Language, s => language ?? s.Language),
                 cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<int>> GetTwitchUserIdsWithoutLanguageAsync(CancellationToken cancellationToken = default)
+    {
+        return await _context.StreamSessions
+            .AsNoTracking()
+            .Where(s => !s.IsLive && s.Language == null)
+            .Select(s => s.TwitchUserId)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<int> FillMissingLanguageAsync(
+        int twitchUserId,
+        string language,
+        CancellationToken cancellationToken = default)
+    {
+        return await _context.StreamSessions
+            .Where(s => s.TwitchUserId == twitchUserId && !s.IsLive && s.Language == null)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(s => s.Language, language), cancellationToken);
     }
 
     public async Task<bool> TryEndActiveAsync(
@@ -214,6 +237,7 @@ public class StreamSessionRepository : IStreamSessionRepository
                 StreamTitle = s.StreamTitle,
                 GameName = s.GameName,
                 ViewerCount = s.ViewerCount,
+                Language = s.Language,
                 Categories = s.StreamCategories
                     .Select(sc => new
                     {

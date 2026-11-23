@@ -5,6 +5,7 @@ export const prefix = language => language === 'en' ? '' : '/' + language;
 export const streamId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 export function fixtureApi(raw) {
   const url = new URL(raw, 'http://localhost');
+  if (url.pathname === '/games/sitemap.xml') return { contentType: 'application/xml', body: '<urlset>' + languages.map(code => '<url><loc>https://mystreamhistory.com' + prefix(code) + '/game/22197-colin-mcrae-dirt-2</loc></url>').join('') + '</urlset>' };
   if (url.pathname === '/content/sitemap.xml') return { contentType: 'application/xml', body: '<urlset>' + languages.map(code => '<url><loc>https://mystreamhistory.com' + prefix(code) + '/news</loc></url>').join('') + '</urlset>' };
   const language = url.searchParams.get('language') || 'en';
   if (url.pathname.endsWith('/missing') || url.pathname === '/user/999') return { status: 404, body: {} };

@@ -1,0 +1,140 @@
+<div class="game-page">
+  @if (isLoading) {
+    <div class="state" role="status">
+      <span class="spinner" aria-hidden="true"></span>
+    </div>
+  } @else if (error) {
+    <div class="state">
+      <h1>{{ (error === 'notFound' ? 'error.notFound' : 'game.failedToLoad') | t }}</h1>
+      <p>{{ (error === 'notFound' ? 'game.notFound' : 'error.unavailable') | t }}</p>
+      <a class="state-link" [routerLink]="'/' | localPath">{{ 'game.home' | t }}</a>
+    </div>
+  } @else if (game) {
+    @if (game; as g) {
+    <nav class="breadcrumbs" aria-label="Breadcrumb">
+      <a [routerLink]="'/' | localPath">{{ 'game.home' | t }}</a>
+      <span aria-hidden="true">/</span>
+      <a [routerLink]="'/games' | localPath">{{ 'games.title' | t }}</a>
+      <span aria-hidden="true">/</span>
+      <span aria-current="page">{{ g.summary.name }}</span>
+    </nav>
+
+    <header class="game-hero">
+      <app-game-art class="game-cover" [src]="g.summary.boxArtUrl" [large]="true" />
+      <div class="game-heading">
+        <h1>{{ g.summary.name }}</h1>
+        <p class="game-meta">
+          {{ 'game.streamedBy' | t: { streamers: locale.plural('streamerCount', g.summary.channelsCount) } }}
+          · {{ 'game.firstStreamed' | t: { date: date(g.summary.firstStreamedAt) } }}
+          · {{ 'game.lastStreamed' | t: { date: date(g.summary.lastStreamedAt) } }}
+        </p>
+        @if (!g.summary.isGame) {
+          <p class="game-note">{{ 'game.notGame' | t }}</p>
+        }
+      </div>
+    </header>
+
+    <dl class="game-stats">
+      <div class="stat">
+        <dt>{{ 'game.totalHours' | t }}</dt>
+        <dd>{{ hours(g.summary.totalHours) }}</dd>
+      </div>
+      <div class="stat">
+        <dt>{{ 'game.streams' | t }}</dt>
+        <dd>{{ locale.number(g.summary.streamsCount, 0) }}</dd>
+      </div>
+      <div class="stat">
+        <dt>{{ 'game.channels' | t }}</dt>
+        <dd>{{ locale.number(g.summary.channelsCount, 0) }}</dd>
+      </div>
+      @if (g.summary.isGame) {
+        <div class="stat stat-completed">
+          <dt>{{ 'game.completedBy' | t }}</dt>
+          <dd>{{ locale.number(g.summary.completedCount, 0) }}</dd>
+        </div>
+      }
+    </dl>
+
+    @for (streamer of liveStreamers; track streamer.twitchUserId) {
+      <section class="live-card" [attr.aria-label]="'ui.live' | t">
+        <span class="live-badge">{{ 'ui.live' | t }}</span>
+        <a class="live-who" [routerLink]="['/profile', streamer.twitchUserId] | localPath">
+          @if (streamer.streamerAvatarUrl) {
+            <img class="avatar" [src]="streamer.streamerAvatarUrl" alt="" loading="lazy">
+          } @else {
+            <span class="avatar avatar-initials" aria-hidden="true">{{ initials(streamer.streamerDisplayName) }}</span>
+          }
+          <strong>{{ streamer.streamerDisplayName }}</strong>
+        </a>
+        <span class="live-note">
+          {{ 'game.liveNow' | t }}@if (streamer.language) { · {{ languageName(streamer.language) }} }
+        </span>
+        <a class="live-watch" [href]="twitchUrl(streamer.streamerLogin)" target="_blank" rel="noopener">{{ 'ui.watchOnTwitch' | t }}</a>
+      </section>
+    }
+
+    <div class="toolbar">
+      <div class="chips" role="group" [attr.aria-label]="'ui.language' | t">
+        <span class="toolbar-label">{{ 'ui.language' | t }}:</span>
+        <button type="button" class="chip" [class.on]="language === null" [attr.aria-pressed]="language === null"
+                (click)="selectLanguage(null)">
+          {{ 'ui.all' | t }} <span class="chip-count">{{ g.streamers.length }}</span>
+        </button>
+        @for (option of languageOptions; track option.code) {
+          <button type="button" class="chip" [class.on]="language === option.code" [attr.aria-pressed]="language === option.code"
+                  (click)="selectLanguage(option.code)">
+            {{ option.label }} <span class="chip-count">{{ option.count }}</span>
+          </button>
+        }
+      </div>
+      <div class="chips" role="group" [attr.aria-label]="'game.sort' | t">
+        <span class="toolbar-label">{{ 'game.sort' | t }}:</span>
+        <button type="button" class="chip" [class.on]="sort === 'recent'" [attr.aria-pressed]="sort === 'recent'"
+                (click)="selectSort('recent')">{{ 'game.sortRecent' | t }}</button>
+        <button type="button" class="chip" [class.on]="sort === 'hours'" [attr.aria-pressed]="sort === 'hours'"
+                (click)="selectSort('hours')">{{ 'game.sortHours' | t }}</button>
+      </div>
+    </div>
+
+    <div class="streamers" role="table" [class.no-playthroughs]="!hasPlaythroughs">
+      <div class="row head" role="row">
+        <span role="columnheader">{{ 'game.colStreamer' | t }}</span>
+        <span role="columnheader">{{ 'ui.language' | t }}</span>
+        <span role="columnheader" class="num">{{ 'game.colHours' | t }}</span>
+        <span role="columnheader" class="num">{{ 'game.colStreams' | t }}</span>
+        <span role="columnheader">{{ 'game.colLastStream' | t }}</span>
+        @if (hasPlaythroughs) { <span role="columnheader">{{ 'game.colPlaythrough' | t }}</span> }
+      </div>
+      @for (streamer of visibleStreamers; track streamer.twitchUserId) {
+        <a class="row" role="row" [routerLink]="['/profile', streamer.twitchUserId] | localPath">
+          <span class="who" role="cell">
+            @if (streamer.streamerAvatarUrl) {
+              <img class="avatar" [src]="streamer.streamerAvatarUrl" alt="" loading="lazy">
+            } @else {
+              <span class="avatar avatar-initials" aria-hidden="true">{{ initials(streamer.streamerDisplayName) }}</span>
+            }
+            <span class="name">{{ streamer.streamerDisplayName }}</span>
+          </span>
+          <span class="row-break" aria-hidden="true"></span>
+          <span role="cell" class="lang">{{ languageName(streamer.language) }}</span>
+          <span role="cell" class="num">{{ hours(streamer.hours) }}</span>
+          <span role="cell" class="num">{{ locale.number(streamer.streamsCount, 0) }}<span class="unit"> {{ locale.countLabel('streams', streamer.streamsCount) }}</span></span>
+          <span role="cell" class="last" [class.is-live]="streamer.isLiveWithGame">
+            {{ streamer.isLiveWithGame ? ('game.liveNowShort' | t) : date(streamer.lastStreamedAt) }}
+          </span>
+          @if (hasPlaythroughs) {
+            <span role="cell" class="pt">
+              @if (streamer.playthrough; as p) {
+                <span class="status" [attr.data-status]="p.status" [attr.title]="p.title">{{ statusLabels[p.status] | t }}</span>
+              } @else {
+                <span class="status-none" aria-hidden="true">—</span>
+              }
+            </span>
+          }
+        </a>
+      }
+    </div>
+    <p class="hint">{{ 'game.rowHint' | t }}</p>
+    }
+  }
+</div>

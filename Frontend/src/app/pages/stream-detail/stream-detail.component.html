@@ -152,10 +152,10 @@
       <h2 class="section-title">{{ 'ui.gamesCategories' | t }} <span class="viewers-count">({{ streamDetails.categories.length }})</span></h2>
       <div class="game-library" role="list" [attr.aria-label]="'ui.gamesInThisStream' | t">
         @for (category of streamDetails.categories; track category.streamCategoryId) {
-          <article class="game-entry" role="listitem">
+          <article class="game-entry has-game-link" role="listitem">
             <app-game-art [src]="category.boxArtUrl" />
             <div class="game-copy">
-              <h3 class="game-name">{{ category.name }}</h3>
+              <h3 class="game-name"><a class="game-card-link" [routerLink]="category.twitchId | gamePath: category.name" [state]="{ gameSource: 'stream_page' }">{{ category.name }}</a></h3>
               <dl class="game-facts">
                 <div><dt>{{ 'ui.timeStreamed' | t }}</dt><dd>{{ formatMinutes(category.durationMinutes) }}</dd></div>
                 <div><dt>{{ 'ui.uniqueChatAccountsLabel' | t }}</dt><dd>{{ category.uniqueViewers ?? '—' }}</dd></div>

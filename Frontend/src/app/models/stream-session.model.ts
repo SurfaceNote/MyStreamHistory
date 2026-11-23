@@ -12,6 +12,7 @@ export interface StreamSession {
     streamTitle?: string;
     gameName?: string;
     viewerCount?: number;
+    language?: string | null;
     uniqueViewersCount?: number | null;
     categories: TwitchCategory[];
 }

@@ -22,7 +22,7 @@ export function localizedPath(url: string, language: Language): string {
   return language === 'en' ? path : '/' + language + (path.startsWith('/') ? path : '/' + path);
 }
 export function isPublicPath(url: string): boolean {
-  return /^\/(?:$|[?#]|news(?:[/?#]|$)|reviews(?:[/?#]|$)|profile\/|stream\/)/.test(unlocalizedPath(url));
+  return /^\/(?:$|[?#]|news(?:[/?#]|$)|reviews(?:[/?#]|$)|games(?:[/?#]|$)|profile\/|stream\/|game\/)/.test(unlocalizedPath(url));
 }
 export function isServicePath(url: string): boolean {
   return /^\/(?:settings|analytics\/community|admin(?:\/publications(?:\/[^/]+(?:\/preview)?)?)?|callback|overlay\/top-viewers\/[^/]+)\/?$/.test(url.split(/[?#]/)[0]);

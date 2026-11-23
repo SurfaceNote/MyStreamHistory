@@ -1,9 +1,10 @@
 import { LocaleService } from '../../i18n/locale.service';
 import { TranslatePipe } from '../../i18n/translate.pipe';
 import { GameArtComponent } from '../../components/game-art/game-art.component';
+import { GamePathPipe } from '../game/game-path.pipe';
 import { CommonModule } from '@angular/common';
 import { Component, inject, OnDestroy, OnInit } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { forkJoin, Subscription } from 'rxjs';
 import { StreamerShortDTO } from '../../models/streamer-short.dto';
 import { ViewerStats } from '../../models/viewer-stats.model';
@@ -12,7 +13,7 @@ import { SeoService } from '../../service/seo.service';
 
 @Component({
   selector: 'app-viewer-stats',
-  imports: [TranslatePipe, GameArtComponent, CommonModule],
+  imports: [TranslatePipe, GamePathPipe, RouterLink, GameArtComponent, CommonModule],
   templateUrl: './viewer-stats.component.html',
   styleUrl: './viewer-stats.component.scss'
 })

@@ -1,0 +1,81 @@
+@use "../../../styles/variables" as *;
+
+:host { display: block; }
+
+.games-page {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 2rem var(--page-gutter) 3rem;
+  color: $text-1-color;
+}
+
+.games-head h1 { margin: 0 0 .25rem; font-size: clamp(1.6rem, 3vw, 2.2rem); letter-spacing: -.02em; }
+.games-sub { margin: 0 0 1.25rem; color: $text-4-color; font-size: .9rem; }
+
+.search {
+  position: relative; margin-bottom: .9rem;
+  i { position: absolute; left: .9rem; top: 50%; transform: translateY(-50%); color: $text-5-color; font-size: .85rem; }
+  input {
+    width: 100%; padding: .65rem 1rem .65rem 2.4rem; border-radius: 12px;
+    background: $bg-2-color; border: 1px solid #ffffff1c; color: $text-1-color; font-size: .95rem;
+    &:focus { outline: none; border-color: #a3baff80; }
+  }
+}
+
+.controls { display: flex; flex-direction: column; gap: .5rem; margin-bottom: 1.25rem; }
+.chips { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; }
+.label { margin-right: .2rem; font-size: .8rem; color: $text-5-color; }
+.chip {
+  padding: .3rem .75rem; border-radius: 999px; cursor: pointer;
+  border: 1px solid #ffffff1c; background: transparent; color: $text-3-color; font-size: .8rem;
+  &:hover { border-color: #9fb4ff55; color: $text-1-color; }
+  &.on { background: var(--accent-soft); border-color: #a3baff80; color: #fff; }
+}
+.count { opacity: .6; }
+
+.grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 1rem;
+  margin: 0; padding: 0; list-style: none;
+}
+.card {
+  display: flex; flex-direction: column; height: 100%; overflow: hidden; border-radius: 14px;
+  background: $bg-2-color; border: 1px solid var(--border);
+  transition: border-color .18s ease, transform .18s ease;
+  &:hover { border-color: #9fb4ff55; transform: translateY(-2px); }
+}
+.cover {
+  position: relative;
+  app-game-art { --game-art-width: 100%; border-radius: 0; }
+}
+.badge {
+  position: absolute; top: .5rem; padding: .1rem .45rem; border-radius: 4px;
+  font-size: .7rem; font-weight: 700;
+}
+.badge.live { left: .5rem; background: $red-color; color: #fff; text-transform: uppercase; letter-spacing: .03em; }
+.badge.done { right: .5rem; background: #0f3a29; color: #3fcf8e; }
+.body { display: flex; flex-direction: column; gap: .3rem; padding: .6rem .7rem .75rem; }
+.name { font-size: .9rem; font-weight: 600; line-height: 1.25; overflow-wrap: anywhere; }
+.facts { font-size: .75rem; color: $text-4-color; }
+
+.state {
+  display: grid; justify-items: center; gap: .75rem; padding: 4rem 0; text-align: center;
+  p { margin: 0; color: $text-4-color; }
+}
+.state-inline { margin: 1rem 0 0; text-align: center; color: $text-4-color; }
+.spinner {
+  width: 2rem; height: 2rem; border-radius: 50%;
+  border: 3px solid $bg-3-color; border-top-color: var(--accent);
+  animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.reset, .more-button {
+  padding: .5rem 1.1rem; border-radius: 10px; cursor: pointer; font-size: .85rem;
+  background: var(--accent-soft); border: 1px solid #a3baff55; color: #fff;
+  &:hover:not(:disabled) { border-color: #a3baffaa; }
+}
+.more { display: flex; justify-content: center; margin-top: 1.5rem; }
+
+@media (max-width: 520px) {
+  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; }
+}

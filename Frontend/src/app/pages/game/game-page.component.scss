@@ -1,0 +1,152 @@
+@use "../../../styles/variables" as *;
+
+:host {
+  display: block;
+  // Playthrough status colours, the same as on the streamer profile.
+  --st-playing: #8f7dff;
+  --st-completed: #3fcf8e;
+  --st-planned: #5aa9ff;
+  --st-dropped: #d0917a;
+}
+
+.game-page {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem var(--page-gutter) 3rem;
+  color: $text-1-color;
+}
+
+.state {
+  display: grid;
+  justify-items: center;
+  gap: .75rem;
+  padding: 5rem 0;
+  text-align: center;
+  h1 { margin: 0; font-size: 1.5rem; }
+  p { margin: 0; color: $text-4-color; }
+}
+.state-link { color: var(--accent); }
+.spinner {
+  width: 2rem; height: 2rem; border-radius: 50%;
+  border: 3px solid $bg-3-color; border-top-color: var(--accent);
+  animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.breadcrumbs {
+  display: flex; flex-wrap: wrap; gap: .5rem;
+  margin-bottom: 1rem; font-size: .85rem; color: $text-5-color;
+  a { color: $text-4-color; &:hover { color: $text-1-color; } }
+  [aria-current] { color: $text-3-color; }
+}
+
+.game-hero {
+  display: flex; align-items: flex-end; gap: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+.game-cover { --game-art-width: 120px; border-radius: 12px; border: 1px solid var(--border); }
+.game-heading { min-width: 0; }
+.game-heading h1 {
+  margin: 0 0 .4rem; font-size: clamp(1.6rem, 3vw, 2.2rem); line-height: 1.15; letter-spacing: -.02em;
+  overflow-wrap: anywhere;
+}
+.game-meta { margin: 0; color: $text-4-color; font-size: .9rem; }
+.game-note { margin: .5rem 0 0; color: $text-5-color; font-size: .85rem; }
+
+.game-stats {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: .75rem;
+  margin: 0 0 1.25rem;
+}
+.stat {
+  padding: .75rem 1rem; border-radius: 14px;
+  background: var(--panel-fill); border: 1px solid var(--border);
+  dt { font-size: .75rem; color: $text-5-color; }
+  dd { margin: .15rem 0 0; font-size: 1.4rem; font-weight: 600; }
+}
+.stat-completed dd { color: var(--st-completed); }
+
+.live-card {
+  display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .9rem;
+  margin-bottom: .75rem; padding: .7rem 1rem; border-radius: 14px;
+  background: $bg-2-color; border: 1px solid #ef000e55;
+}
+.live-badge {
+  padding: .1rem .5rem; border-radius: 4px; background: $red-color; color: #fff;
+  font-size: .7rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+}
+.live-who { display: flex; align-items: center; gap: .6rem; strong { font-weight: 600; } }
+.live-note { flex: 1; min-width: 10rem; color: $text-4-color; font-size: .9rem; }
+.live-watch { color: var(--accent); font-size: .85rem; white-space: nowrap; }
+
+.toolbar {
+  display: flex; flex-wrap: wrap; justify-content: space-between; gap: .75rem 1.5rem;
+  margin: 1.5rem 0 .75rem;
+}
+.chips { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; }
+.toolbar-label { margin-right: .2rem; font-size: .85rem; color: $text-5-color; }
+.chip {
+  padding: .3rem .75rem; border-radius: 999px; cursor: pointer;
+  border: 1px solid #ffffff1c; background: transparent; color: $text-3-color; font-size: .8rem;
+  &:hover { border-color: #9fb4ff55; color: $text-1-color; }
+  &.on { background: var(--accent-soft); border-color: #a3baff80; color: #fff; }
+}
+.chip-count { opacity: .6; }
+
+.streamers {
+  border-radius: 14px; overflow: hidden;
+  background: $bg-2-color; border: 1px solid var(--border);
+}
+.row {
+  display: grid; align-items: center; gap: .5rem;
+  grid-template-columns: minmax(0, 2.2fr) minmax(0, 1fr) .7fr .6fr minmax(0, 1fr) minmax(0, 1.1fr);
+  padding: .65rem 1rem; border-top: 1px solid #ffffff0d; font-size: .9rem;
+}
+.no-playthroughs .row { grid-template-columns: minmax(0, 2.2fr) minmax(0, 1fr) .7fr .6fr minmax(0, 1fr); }
+a.row:hover { background: var(--surface-hover); }
+.row.head { border-top: none; font-size: .72rem; color: $text-5-color; }
+.num { text-align: right; font-variant-numeric: tabular-nums; }
+.who { display: flex; align-items: center; gap: .65rem; min-width: 0; }
+.name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lang, .last { color: $text-3-color; }
+.row > .last, .row.head > :nth-child(5) { padding-left: 1rem; }
+.last.is-live { color: #ff6b6b; }
+
+.avatar {
+  width: 30px; height: 30px; border-radius: 50%; flex: none; object-fit: cover;
+}
+.avatar-initials {
+  display: grid; place-items: center; background: var(--primary); color: #fff;
+  font-size: .7rem; font-weight: 600;
+}
+
+.status {
+  --tone: var(--st-playing);
+  display: inline-flex; align-items: center; gap: .4rem;
+  padding: .15rem .6rem; border-radius: 999px; font-size: .78rem;
+  background: color-mix(in srgb, var(--tone) 16%, transparent); color: var(--tone);
+  &::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--tone); }
+  &[data-status='Playing'] { --tone: var(--st-playing); }
+  &[data-status='Completed'] { --tone: var(--st-completed); }
+  &[data-status='Planned'] { --tone: var(--st-planned); }
+  &[data-status='Dropped'] { --tone: var(--st-dropped); }
+}
+.status-none { color: $text-5-color; }
+
+.hint { margin: .6rem 0 0; font-size: .75rem; color: $text-5-color; }
+.row-break, .unit { display: none; }
+
+@media (max-width: 720px) {
+  .game-hero { align-items: flex-start; }
+  .game-cover { --game-art-width: 84px; }
+  // Name and playthrough on the first line, the numbers on the second.
+  .row, .no-playthroughs .row { display: flex; flex-wrap: wrap; gap: .3rem .9rem; }
+  .who { flex: 1; order: 0; }
+  .pt { order: 1; }
+  .row-break { display: block; flex-basis: 100%; height: 0; order: 2; }
+  .lang, .num, .last { order: 3; text-align: left; font-size: .8rem; color: $text-4-color; }
+  .lang { margin-left: calc(30px + .65rem); }
+  .unit { display: inline; }
+  .row > .last { padding-left: 0; }
+  .streamers .row.head { display: none; }
+}

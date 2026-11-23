@@ -137,6 +137,7 @@ public class GetStreamDetailsByIdQueryHandler : IRequestHandler<GetStreamDetails
             StreamTitle = streamSession.StreamTitle,
             GameName = streamSession.GameName,
             ViewerCount = streamSession.ViewerCount,
+            Language = streamSession.Language,
             Audience = streamSession.Audience,
             Categories = streamSession.Categories.Select(c => new CategoryDetailsDto
             {

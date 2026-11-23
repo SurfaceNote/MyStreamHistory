@@ -1,4 +1,5 @@
 import { environment } from "../../environments/environment";
+import { GamesCatalogQuery } from "../models/game.model";
 
 export const API_ENDPOINTS = {
     STREAMERS: {
@@ -21,6 +22,18 @@ export const API_ENDPOINTS = {
         `${environment.api_url}/user/${twitchId}/statistics?period=${period}`,
     STREAM_DETAILS: (streamId: string) => `${environment.api_url}/streams/${streamId}`,
     STREAM_RECAP: (streamId: string) => `${environment.api_url}/streams/${streamId}/recap`,
+    GAME: (twitchId: string) => `${environment.api_url}/games/${encodeURIComponent(twitchId)}`,
+    GAMES: (query: GamesCatalogQuery) => {
+        const params = new URLSearchParams();
+        if (query.search) params.set('search', query.search);
+        if (query.lang) params.set('lang', query.lang);
+        if (query.filter && query.filter !== 'all') params.set('filter', query.filter);
+        if (query.sort && query.sort !== 'popular') params.set('sort', query.sort);
+        if (query.page && query.page > 1) params.set('page', String(query.page));
+        if (query.pageSize) params.set('pageSize', String(query.pageSize));
+        const search = params.toString();
+        return `${environment.api_url}/games` + (search ? `?${search}` : '');
+    },
     SETTINGS: {
         SOCIAL_LINKS: `${environment.api_url}/settings/social-links`,
         PLAYTHROUGHS: `${environment.api_url}/settings/playthroughs`,

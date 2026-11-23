@@ -4,6 +4,9 @@
     "src/app/components/game-art/game-art.component.spec.ts",
     "src/app/pages/streamer-profile/streamer-profile.component.spec.ts",
     "src/app/pages/stream-detail/stream-detail.component.spec.ts",
+    "src/app/pages/game/game-page.component.spec.ts",
+    "src/app/pages/games/games-catalog.component.spec.ts",
+    "src/app/pages/viewer-stats/viewer-stats.component.spec.ts",
     "src/**/*.d.ts"
   ]
 }

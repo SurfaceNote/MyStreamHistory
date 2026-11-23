@@ -42,7 +42,7 @@ public sealed class ContentController(ContentDbContext db, MediaStorage storage,
         XNamespace ns = "http://www.sitemaps.org/schemas/sitemap/0.9";
         var articles = await db.Articles.AsNoTracking().Where(x => x.PublishedAt != null)
             .Select(x => new { x.Language, x.Type, x.Slug }).ToListAsync();
-        var urls = ContentLanguages.All.SelectMany(language => new[] { ContentLanguages.Prefix(language) + "/", ContentLanguages.Prefix(language) + "/news", ContentLanguages.Prefix(language) + "/reviews" })
+        var urls = ContentLanguages.All.SelectMany(language => new[] { ContentLanguages.Prefix(language) + "/", ContentLanguages.Prefix(language) + "/news", ContentLanguages.Prefix(language) + "/reviews", ContentLanguages.Prefix(language) + "/games" })
             .Select(path => new XElement(ns + "url", new XElement(ns + "loc", "https://mystreamhistory.com" + path)))
             .Concat(articles.Select(article => new XElement(ns + "url",
                 new XElement(ns + "loc", "https://mystreamhistory.com" + ContentLanguages.ArticlePath(article.Language, article.Type, article.Slug)))));

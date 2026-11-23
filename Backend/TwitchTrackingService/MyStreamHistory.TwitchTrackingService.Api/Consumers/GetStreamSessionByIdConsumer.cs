@@ -53,6 +53,7 @@ public class GetStreamSessionByIdConsumer : IConsumer<GetStreamSessionByIdReques
                     StreamTitle = s.StreamTitle,
                     GameName = s.GameName,
                     ViewerCount = s.ViewerCount,
+                    Language = s.Language,
                     Categories = s.StreamCategories
                         .OrderBy(sc => sc.StartedAt)
                         .Select(sc => new StreamCategoryDetailsDto

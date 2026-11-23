@@ -97,10 +97,10 @@
           </div>
           <div class="game-library" role="list" [attr.aria-label]="'ui.favoriteCategories' | t">
             @for (category of stats.favoriteCategories; track category.twitchCategoryId) {
-              <article class="game-entry" role="listitem">
+              <article class="game-entry has-game-link" role="listitem">
                 <app-game-art [src]="category.boxArtUrl" />
                 <div class="game-copy">
-                  <h3 class="game-name">{{ category.name }}</h3>
+                  <h3 class="game-name"><a class="game-card-link" [routerLink]="category.twitchCategoryId | gamePath: category.name" [state]="{ gameSource: 'viewer_stats' }">{{ category.name }}</a></h3>
                   <dl class="game-facts">
                     <div><dt>{{ 'ui.timeWatched' | t }}</dt><dd>{{ formatWatchTime(category.minutesWatched) }}</dd></div>
                     <div><dt>{{ 'ui.streamsWatched' | t }}</dt><dd>{{ category.streamsCount }}</dd></div>

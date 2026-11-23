@@ -37,6 +37,9 @@ builder.Services.AddInfrastructure(builder.Configuration)
         configurator.AddConsumer<UserRegisteredConsumer>();
         configurator.AddConsumer<GetRecentStreamsConsumer>();
         configurator.AddConsumer<GetAdminStreamsConsumer>();
+        configurator.AddConsumer<GetGamePageConsumer>();
+        configurator.AddConsumer<GetGamesCatalogConsumer>();
+        configurator.AddConsumer<GetGameSitemapConsumer>();
         configurator.AddConsumer<GetLiveStreamersConsumer>();
         configurator.AddConsumer<GetStreamSessionByIdConsumer>();
         configurator.AddConsumer<GetEventSubSubscriptionsConsumer>();
@@ -64,6 +67,7 @@ if (twitchDataCollection.Enabled)
 {
     builder.Services.AddHostedService<SubscriptionSyncBackgroundService>();
     builder.Services.AddHostedService<StreamDataPollingBackgroundService>();
+    builder.Services.AddHostedService<StreamLanguageBackfillBackgroundService>();
 }
 
 var app = builder.Build();

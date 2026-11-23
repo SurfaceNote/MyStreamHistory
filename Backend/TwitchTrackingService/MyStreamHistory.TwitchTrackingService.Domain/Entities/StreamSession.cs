@@ -16,6 +16,8 @@ public class StreamSession
     public string? StreamTitle { get; set; }
     public string? GameName { get; set; }
     public int? ViewerCount { get; set; }
+    /// <summary>Stream language from Twitch (ISO 639-1, e.g. "ru"; "other" when unspecified).</summary>
+    public string? Language { get; set; }
     
     // Navigation properties
     public ICollection<StreamCategory> StreamCategories { get; set; } = new List<StreamCategory>();

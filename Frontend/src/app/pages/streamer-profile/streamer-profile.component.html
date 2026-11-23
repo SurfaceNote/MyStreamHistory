@@ -226,12 +226,12 @@
               game of dashboard.topCategories.slice(0, 5);
               track game.twitchCategoryId
             ) {
-              <div class="game-mix-row">
+              <div class="game-mix-row has-game-link">
                 <app-game-art [src]="game.boxArtUrl" />
 
                 <div>
                   <div class="game-label">
-                    <strong>{{ game.name }}</strong
+                    <strong><a class="game-card-link" [routerLink]="game.twitchId | gamePath: game.name" [state]="{ gameSource: 'profile_top_games' }">{{ game.name }}</a></strong
                     ><span>{{ formatNumber(game.totalHours) }} {{ 'unit.hours' | t }}</span>
                   </div>
                   <div class="bar-track">
@@ -429,7 +429,7 @@
             track game.twitchCategoryId;
             let i = $index
           ) {
-            <article class="summary-card game-tile" role="listitem">
+            <article class="summary-card game-tile has-game-link" role="listitem">
               <div class="game-tile-art">
                 <app-game-art [src]="game.boxArtUrl" />
                 @if (gameSort === 'hours' && !gameQuery.trim() && i < 3) {
@@ -437,7 +437,7 @@
                 }
               </div>
               <div class="game-copy">
-                <h3 class="game-name" [title]="game.name">{{ game.name }}</h3>
+                <h3 class="game-name" [title]="game.name"><a class="game-card-link" [routerLink]="game.twitchId | gamePath: game.name" [state]="{ gameSource: 'profile_games' }">{{ game.name }}</a></h3>
                 <dl class="game-hours">
                   <dt class="sr-only">{{ 'ui.timeStreamed' | t }}</dt>
                   <dd><b>{{ formatNumber(game.totalHours) }}</b> {{ 'unit.hours' | t }}</dd>
@@ -591,12 +591,12 @@
 <ng-template #playthroughCards let-games>
   <ul class="shelf" [attr.aria-label]="'ui.gamePlaythroughs' | t">
     @for (game of games; track game.playthroughId) {
-      <li class="shelf-item">
+      <li class="shelf-item has-game-link">
         <div class="shelf-cover">
           <app-game-art [src]="game.boxArtUrl" [large]="true" />
         </div>
         <div class="shelf-copy">
-          <h3 class="shelf-name" [title]="game.gameName">{{ game.gameName }}</h3>
+          <h3 class="shelf-name" [title]="game.gameName"><a class="game-card-link" [routerLink]="game.twitchCategoryTwitchId | gamePath: game.gameName" [state]="{ gameSource: 'profile_playthroughs' }">{{ game.gameName }}</a></h3>
           <p class="shelf-run">{{ 'shelf.runNumber' | t: { number: game.runNumber ?? 1 } }}</p>
           <dl class="shelf-facts">
             @if (game.firstStreamStartedAt && game.lastStreamStartedAt) {

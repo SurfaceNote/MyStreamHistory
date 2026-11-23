@@ -6,3 +6,4 @@ Disallow: /callback
 Disallow: /*/viewer/
 
 Sitemap: https://mystreamhistory.com/sitemap.xml
+Sitemap: https://mystreamhistory.com/sitemap-games.xml

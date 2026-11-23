@@ -3,6 +3,7 @@ import { ResponseStatusService } from '../../core/api/response-status.service';
 import { LocaleService } from '../../i18n/locale.service';
 import { TranslatePipe, LocalPathPipe } from '../../i18n/translate.pipe';
 import { GameArtComponent } from '../../components/game-art/game-art.component';
+import { GamePathPipe } from '../game/game-path.pipe';
 import {
   afterNextRender,
   PLATFORM_ID,
@@ -87,7 +88,7 @@ interface DashboardSummaryCard {
 
 @Component({
   selector: 'app-streamer-profile',
-  imports: [TranslatePipe, LocalPathPipe, GameArtComponent, CommonModule, RouterLink],
+  imports: [TranslatePipe, LocalPathPipe, GamePathPipe, GameArtComponent, CommonModule, RouterLink],
   templateUrl: './streamer-profile.component.html',
   styleUrl: './streamer-profile.component.scss',
 })

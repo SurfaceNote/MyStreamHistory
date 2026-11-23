@@ -112,6 +112,7 @@ public sealed class LocalizationTests
         var xml = Assert.IsType<ContentResult>(await f.Controller.Sitemap()).Content!;
         Assert.Contains("https://mystreamhistory.com/ru/news/published", xml);
         foreach (var language in ContentLanguages.All) Assert.Contains("https://mystreamhistory.com" + ContentLanguages.Prefix(language) + "/reviews", xml);
+        foreach (var language in ContentLanguages.All) Assert.Contains("<loc>https://mystreamhistory.com" + ContentLanguages.Prefix(language) + "/games</loc>", xml);
         Assert.DoesNotContain("private-draft", xml);
         var filtered = Json(await f.Controller.ListAdmin(null, null, null, language: "ru"));
         Assert.Equal(1, filtered.GetProperty("total").GetInt32());

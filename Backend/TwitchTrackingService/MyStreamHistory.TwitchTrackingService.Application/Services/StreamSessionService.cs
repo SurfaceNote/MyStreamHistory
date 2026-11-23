@@ -261,6 +261,7 @@ public class StreamSessionService : IStreamSessionService
                     stream.Title,
                     stream.GameName,
                     stream.ViewerCount,
+                    StreamLanguage.Normalize(stream.Language),
                     cancellationToken);
                 await _publishEndpoint.Publish(new StreamLiveConfirmationRestoredEventContract
                 {
@@ -444,7 +445,8 @@ public class StreamSessionService : IStreamSessionService
             LastConfirmedLiveAt = confirmedAt,
             StreamTitle = stream?.Title,
             GameName = stream?.GameName,
-            ViewerCount = stream?.ViewerCount
+            ViewerCount = stream?.ViewerCount,
+            Language = StreamLanguage.Normalize(stream?.Language)
         };
     }
 

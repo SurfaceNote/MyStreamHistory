@@ -58,6 +58,14 @@ describe('Stream audience chart', () => {
     expect(f.nativeElement.textContent).toContain('0:07');
     f.destroy();
   });
+
+  it('links each category of the stream to its game page', () => {
+    const f = create({ ...data, categories: [
+      { streamCategoryId: 'a', twitchId: '509658', name: 'Just Chatting', startedAt: data.startedAt, endedAt: data.endedAt, boxArtUrl: '', durationMinutes: 15, uniqueViewers: 3 }
+    ] });
+    expect(f.nativeElement.querySelector('.game-entry .game-card-link').getAttribute('href')).toBe('/game/509658-just-chatting');
+    f.destroy();
+  });
   it('does not synthesize an audience curve from the last recorded viewer count', () => {
     const f = create({ ...data, audience: [], viewerCount: 100 });
     expect(f.nativeElement.querySelector('canvas')).toBeNull();

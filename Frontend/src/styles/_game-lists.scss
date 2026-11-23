@@ -50,3 +50,14 @@
 @media (max-width: 480px) { .game-entry { padding: 16px; } }
 
 .game-entry { background: var(--panel-fill); border-color: var(--border); border-radius: var(--radius); box-shadow: var(--panel-shadow); }
+
+// A game name that links to the game page. Its ::after stretches the link over the whole card,
+// so the card is one click target while the name stays the link that screen readers announce.
+.has-game-link { position: relative; }
+.game-card-link {
+  color: inherit; text-decoration: none;
+  &::after { content: ''; position: absolute; inset: 0; z-index: 0; }
+  &:hover { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+  &:focus-visible { outline: none; }
+}
+.has-game-link:has(.game-card-link:focus-visible) { outline: 2px solid var(--accent, #8ab4ff); outline-offset: 2px; }

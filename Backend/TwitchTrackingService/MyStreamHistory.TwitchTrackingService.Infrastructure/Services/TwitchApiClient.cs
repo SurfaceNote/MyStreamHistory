@@ -312,6 +312,40 @@ public class TwitchApiClient : ITwitchApiClient
         return allGames;
     }
 
+    public async Task<IReadOnlyDictionary<int, string>> GetChannelLanguagesAsync(
+        IReadOnlyCollection<int> broadcasterIds,
+        CancellationToken cancellationToken = default)
+    {
+        var languages = new Dictionary<int, string>();
+        foreach (var batch in broadcasterIds.Distinct().Chunk(100))
+        {
+            var idsParam = string.Join("&", batch.Select(id => $"broadcaster_id={id}"));
+            var url = $"https://api.twitch.tv/helix/channels?{idsParam}";
+
+            using var response = await SendWithTokenRetryAsync(
+                token => CreateHelixRequest(HttpMethod.Get, url, token),
+                cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+                throw new HttpRequestException(
+                    $"Failed to get channel information from Twitch. Status: {response.StatusCode}, Error: {errorContent}");
+            }
+
+            var channels = await response.Content.ReadFromJsonAsync<TwitchChannelResponseDto>(cancellationToken: cancellationToken);
+            foreach (var channel in channels?.Data ?? [])
+            {
+                if (int.TryParse(channel.BroadcasterId, out var id) && !string.IsNullOrWhiteSpace(channel.BroadcasterLanguage))
+                {
+                    languages[id] = channel.BroadcasterLanguage;
+                }
+            }
+        }
+
+        return languages;
+    }
+
     public async Task<int> DeleteAllSubscriptionsAsync(CancellationToken cancellationToken = default)
     {
         await EnsureAppAccessTokenAsync(cancellationToken);

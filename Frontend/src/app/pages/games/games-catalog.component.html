@@ -1,0 +1,93 @@
+<div class="games-page">
+  <header class="games-head">
+    <h1>{{ 'games.title' | t }}</h1>
+    @if (catalog; as c) {
+      <p class="games-sub">
+        {{ 'games.subtitle' | t }}
+        @if (hasFilters) { · {{ 'games.shownOf' | t: { shown: locale.number(c.totalCount, 0), total: locale.number(c.catalogCount, 0) } }} }
+        @else { · {{ 'games.total' | t: { total: locale.number(c.catalogCount, 0) } }} }
+      </p>
+    }
+  </header>
+
+  <div class="search">
+    <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+    <input type="search" [value]="searchText" (input)="onSearch($any($event.target).value)"
+           [placeholder]="'ui.searchGames' | t" [attr.aria-label]="'ui.searchGamesLabel' | t" maxlength="100">
+  </div>
+
+  <div class="controls">
+    <div class="chips" role="group" [attr.aria-label]="'games.show' | t">
+      <span class="label">{{ 'games.show' | t }}:</span>
+      @for (filter of filters; track filter) {
+        <button type="button" class="chip" [class.on]="state.filter === filter" [attr.aria-pressed]="state.filter === filter"
+                (click)="setFilter(filter)">{{ filterLabels[filter] | t }}</button>
+      }
+    </div>
+    @if (catalog?.languages?.length) {
+      <div class="chips" role="group" [attr.aria-label]="'ui.language' | t">
+        <span class="label">{{ 'ui.language' | t }}:</span>
+        <button type="button" class="chip" [class.on]="state.lang === null" [attr.aria-pressed]="state.lang === null"
+                (click)="setLanguage(null)">{{ 'games.anyLanguage' | t }}</button>
+        @for (language of catalog!.languages; track language.language) {
+          <button type="button" class="chip" [class.on]="state.lang === language.language" [attr.aria-pressed]="state.lang === language.language"
+                  (click)="setLanguage(language.language)">
+            {{ languageName(language.language) }} <span class="count">{{ language.gamesCount }}</span>
+          </button>
+        }
+      </div>
+    }
+    <div class="chips" role="group" [attr.aria-label]="'game.sort' | t">
+      <span class="label">{{ 'game.sort' | t }}:</span>
+      @for (sort of sorts; track sort) {
+        <button type="button" class="chip" [class.on]="state.sort === sort" [attr.aria-pressed]="state.sort === sort"
+                (click)="setSort(sort)">{{ sortLabels[sort] | t }}</button>
+      }
+    </div>
+  </div>
+
+  @if (loading) {
+    <div class="state" role="status"><span class="spinner" aria-hidden="true"></span></div>
+  } @else if (failed && !items.length) {
+    <div class="state">
+      <p>{{ 'games.failedToLoad' | t }}</p>
+    </div>
+  } @else if (!items.length) {
+    <div class="state">
+      <p>{{ 'games.empty' | t }}</p>
+      @if (hasFilters) {
+        <button type="button" class="reset" (click)="resetFilters()">{{ 'games.resetFilters' | t }}</button>
+      }
+    </div>
+  } @else {
+    <ul class="grid">
+      @for (game of items; track game.twitchId) {
+        <li>
+          <a class="card" [routerLink]="path(game) | localPath" [state]="{ gameSource: 'catalog' }">
+            <div class="cover">
+              <app-game-art [src]="game.boxArtUrl" [large]="true" />
+              @if (game.liveCount) {
+                <span class="badge live">{{ 'ui.live' | t }} · {{ game.liveCount }}</span>
+              }
+              @if (game.completedCount) {
+                <span class="badge done" [attr.title]="'game.completedBy' | t">✓ {{ game.completedCount }}</span>
+              }
+            </div>
+            <div class="body">
+              <span class="name">{{ game.name }}</span>
+              <span class="facts">{{ locale.plural('streamerCount', game.channelsCount) }} · {{ hours(game.totalHours) }}</span>
+            </div>
+          </a>
+        </li>
+      }
+    </ul>
+    @if (hasMore) {
+      <div class="more">
+        <button type="button" class="more-button" [disabled]="loadingMore" (click)="loadMore()">
+          {{ (loadingMore ? 'games.loading' : 'games.showMore') | t }}
+        </button>
+      </div>
+    }
+    @if (failed) { <p class="state-inline" role="alert">{{ 'games.failedToLoad' | t }}</p> }
+  }
+</div>

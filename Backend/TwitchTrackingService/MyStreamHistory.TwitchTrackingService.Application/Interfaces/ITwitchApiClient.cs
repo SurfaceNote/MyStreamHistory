@@ -15,5 +15,8 @@ public interface ITwitchApiClient
     Task<(int successCount, int failCount)> SubscribeToAllUsersAsync(List<int> userIds, CancellationToken cancellationToken = default);
     Task<List<TwitchStreamDto>> GetStreamsAsync(List<int> userIds, CancellationToken cancellationToken = default);
     Task<List<TwitchGameDataDto>> GetGamesAsync(List<string> gameIds, CancellationToken cancellationToken = default);
+
+    /// <summary>Current broadcaster language per channel (Get Channel Information); channels Twitch could not return are absent.</summary>
+    Task<IReadOnlyDictionary<int, string>> GetChannelLanguagesAsync(IReadOnlyCollection<int> broadcasterIds, CancellationToken cancellationToken = default);
 }
 

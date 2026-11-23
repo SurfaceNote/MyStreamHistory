@@ -46,6 +46,7 @@ public class GetRecentStreamsConsumer : IConsumer<GetRecentStreamsRequestContrac
                     StreamTitle = s.StreamTitle,
                     GameName = s.GameName,
                     ViewerCount = s.ViewerCount,
+                    Language = s.Language,
                     Categories = s.Categories.Select(c => new Shared.Base.Contracts.StreamSessions.TwitchCategoryDto
                     {
                         TwitchId = c.TwitchId,

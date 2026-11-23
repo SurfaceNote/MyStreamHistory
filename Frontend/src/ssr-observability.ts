@@ -6,7 +6,8 @@ export function pageRoute(path: string): { route: string; language: string } {
   const clean = (match ? path.slice(match[0].length) : path) || '/';
   const language = match?.[1] || 'en';
   if (clean === '/') return { route: '/', language };
-  for (const type of ['profile', 'stream', 'news', 'reviews']) {
+  if (clean === '/games') return { route: clean, language };
+  for (const type of ['profile', 'stream', 'game', 'news', 'reviews']) {
     if (clean === '/' + type && (type === 'news' || type === 'reviews')) return { route: clean, language };
     if (new RegExp('^/' + type + '/[^/]+$').test(clean)) return { route: '/' + type + '/:id', language };
   }
@@ -20,6 +21,8 @@ export function apiRoute(url: string): string {
   const user = /^\/user\/[^/]+\/(recent-streams|top-viewers|social-links|statistics)$/.exec(path);
   if (user) return '/user/:id/' + user[1];
   if (/^\/streams\/[^/]+$/.test(path)) return '/streams/:id';
+  if (path === '/games') return path;
+  if (/^\/games\/[^/]+$/.test(path)) return '/games/:id';
   if (path === '/content') return path;
   if (/^\/content\/(news|review)\/[^/]+$/.test(path)) return '/content/:type/:slug';
   return '/other';

@@ -21,6 +21,8 @@ public class StreamSessionDetailsDto
     public string? StreamTitle { get; set; }
     public string? GameName { get; set; }
     public int? ViewerCount { get; set; }
+    /// <summary>Stream language from Twitch (ISO 639-1, e.g. "ru"; "other" when unspecified).</summary>
+    public string? Language { get; set; }
     public List<AudiencePointDto> Audience { get; set; } = new();
     
     public List<StreamCategoryDetailsDto> Categories { get; set; } = new();

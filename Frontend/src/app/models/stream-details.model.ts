@@ -11,6 +11,8 @@ export interface StreamDetails {
   streamTitle: string | null;
   gameName: string | null;
   viewerCount: number | null;
+  /** Stream language from Twitch (ISO 639-1, e.g. "ru"); null for streams recorded before it was stored. */
+  language?: string | null;
   audience?: AudiencePoint[];
   categories: CategoryDetails[];
   viewers: StreamViewer[];

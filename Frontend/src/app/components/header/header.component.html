@@ -5,6 +5,7 @@
     </div>
     <nav class="editorial-links" [attr.aria-label]="'ui.mainNavigation' | t">
         <a [routerLink]="'/' | localPath" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" ariaCurrentWhenActive="page">{{ 'ui.streamers' | t }}</a>
+        <a [routerLink]="'/games' | localPath" routerLinkActive="active" ariaCurrentWhenActive="page">{{ 'games.title' | t }}</a>
         <a [routerLink]="'/news' | localPath" routerLinkActive="active" ariaCurrentWhenActive="page">{{ 'ui.news' | t }}</a>
         <a [routerLink]="'/reviews' | localPath" routerLinkActive="active" ariaCurrentWhenActive="page">{{ 'ui.reviews' | t }}</a>
         <a *ngIf="authReady && isLoggedIn" [routerLink]="'/analytics/community' | localPath" routerLinkActive="active" ariaCurrentWhenActive="page">{{ 'ui.community' | t }}</a>

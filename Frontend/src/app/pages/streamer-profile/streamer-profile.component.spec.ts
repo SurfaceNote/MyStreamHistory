@@ -27,6 +27,7 @@ describe('StreamerProfileComponent', () => {
     totalStreamedHours: 90,
     categories: Array.from({ length: 8 }, (_, i) => ({
       twitchCategoryId: String(i),
+      twitchId: String(100 + i),
       name: `Game ${i}`,
       boxArtUrl: '',
       totalHours: i + 1,
@@ -471,6 +472,19 @@ describe('StreamerProfileComponent', () => {
     component.selectSection('Games'); component.gameStatus = 'Planned'; fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('.shelf-item').textContent).toContain('Planned game');
     expect(fixture.nativeElement.querySelectorAll('.shelf-item').length).toBe(1);
+  });
+
+  it('links game cards and playthroughs to their game pages', () => {
+    component.statistics = { ...statistics, playthroughs: [{ playthroughId: 'p', gameName: 'Hollow Knight', title: '', status: 'Playing', twitchCategoryId: 'c', twitchCategoryTwitchId: '123', boxArtUrl: '', uniqueViewersCount: 0, totalHours: 3 }] };
+    fixture.detectChanges();
+    const element: HTMLElement = fixture.nativeElement;
+
+    // The overview shows the current playthrough on the shelf.
+    expect(element.querySelector('.shelf-item .game-card-link')!.getAttribute('href')).toBe('/game/123-hollow-knight');
+    expect(element.querySelector('.shelf-item')!.classList).toContain('has-game-link');
+    component.selectSection('Games');
+    fixture.detectChanges();
+    expect(element.querySelector('.game-tile .game-card-link')!.getAttribute('href')).toBe('/game/107-game-7');
   });
 
   it('labels replays by run number instead of the stored playthrough title', () => {

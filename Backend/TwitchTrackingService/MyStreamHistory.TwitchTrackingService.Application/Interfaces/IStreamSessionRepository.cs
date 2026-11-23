@@ -26,7 +26,15 @@ public interface IStreamSessionRepository
         string title,
         string gameName,
         int viewerCount,
+        string? language,
         CancellationToken cancellationToken = default);
+
+    /// <summary>Broadcasters that have ended streams without a stored language.</summary>
+    Task<IReadOnlyList<int>> GetTwitchUserIdsWithoutLanguageAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Sets <paramref name="language"/> on the broadcaster's ended streams that have none; returns the number updated.</summary>
+    Task<int> FillMissingLanguageAsync(int twitchUserId, string language, CancellationToken cancellationToken = default);
+
     Task<bool> TryEndActiveAsync(
         Guid streamSessionId,
         DateTime endedAt,

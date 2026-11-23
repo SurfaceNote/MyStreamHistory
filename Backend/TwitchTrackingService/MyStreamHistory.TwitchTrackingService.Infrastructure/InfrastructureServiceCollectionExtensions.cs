@@ -51,9 +51,12 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<IPlaythroughRepository, PlaythroughRepository>();
         services.AddScoped<IPlaythroughStreamCategoryRepository, PlaythroughStreamCategoryRepository>();
         services.AddScoped<IChannelActivityRepository, ChannelActivityRepository>();
+        services.AddScoped<IGameStatsRepository, GameStatsRepository>();
 
         // Add Application Services
         services.AddScoped<IStreamSessionService, StreamSessionService>();
+        services.AddScoped<IStreamLanguageBackfillService, StreamLanguageBackfillService>();
+        services.AddScoped<IGameStatsService, GameStatsService>();
         services.AddScoped<ISubscriptionSyncService, SubscriptionSyncService>();
         services.AddScoped<ICategoryTrackingService, CategoryTrackingService>();
         services.AddScoped<IPlaythroughService, PlaythroughService>();

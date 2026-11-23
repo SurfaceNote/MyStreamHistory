@@ -2,6 +2,7 @@ import { ResponseStatusService } from '../../core/api/response-status.service';
 import { LocaleService } from '../../i18n/locale.service';
 import { TranslatePipe, LocalPathPipe } from '../../i18n/translate.pipe';
 import { GameArtComponent } from '../../components/game-art/game-art.component';
+import { GamePathPipe } from '../game/game-path.pipe';
 import { Component, ElementRef, inject, OnDestroy, OnInit, PLATFORM_ID, ViewChild } from '@angular/core';
 import { Chart, registerables } from 'chart.js';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
@@ -30,7 +31,7 @@ interface CategorySegment {
 
 @Component({
   selector: 'app-stream-detail',
-  imports: [TranslatePipe, LocalPathPipe, RouterLink, GameArtComponent, CommonModule],
+  imports: [TranslatePipe, LocalPathPipe, GamePathPipe, RouterLink, GameArtComponent, CommonModule],
   templateUrl: './stream-detail.component.html',
   styleUrl: './stream-detail.component.scss'
 })
