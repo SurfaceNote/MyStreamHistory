@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-labelledby="t">
+<title id="t">Level 19</title>
+<path d="M9 15 L16 5 L24 12 L32 2 L40 12 L48 5 L55 15 V31 C55 45 45 54 32 59 C19 54 9 45 9 31 Z" fill="#a874ec"/>
+<path d="M9 15 L16 5 L24 12 L32 2 L40 12 L48 5 L55 15 V31 C55 45 45 54 32 59 C19 54 9 45 9 31 Z" fill="none" stroke="#f2c94c" stroke-width="1.4" transform="translate(32 31) scale(0.92) translate(-32 -31)"/>
+<path d="M9 15 L16 5 L24 12 L32 2 L40 12 L48 5 L55 15 V31 C55 45 45 54 32 59 C19 54 9 45 9 31 Z" fill="#22113b" transform="translate(32 31) scale(0.84) translate(-32 -31)"/>
+<ellipse cx="32" cy="14.5" rx="9.5" ry="3.4" fill="none" stroke="#f6e3ff" stroke-width="2.4"/><circle cx="32" cy="24.5" r="5.6" fill="#f6e3ff"/><path d="M19.5 45 C19.5 36 25 31.5 32 31.5 C39 31.5 44.5 36 44.5 45 Z" fill="#f6e3ff"/>
+<rect x="21" y="50.5" width="22" height="12" rx="6" fill="#a874ec" stroke="#22113b" stroke-width="1.5"/>
+<text x="32" y="59.6" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="9" font-weight="700" fill="#22113b">19</text>
+</svg>

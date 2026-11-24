@@ -8,6 +8,10 @@ public class ViewerStatsDto
     public int MinutesWatched { get; set; }
     public decimal EarnedMsgPoints { get; set; }
     public decimal Experience { get; set; }
+
+    /// <summary>Channel level derived from <see cref="Experience"/>; computed, not stored.</summary>
+    public ViewerLevelDto Level => ViewerLevels.ForExperience(Experience);
+
     public DateTime LastUpdatedAt { get; set; }
     public int? Top100Rank { get; set; }
     public int StreamsWatched { get; set; }

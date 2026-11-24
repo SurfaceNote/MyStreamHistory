@@ -2,6 +2,8 @@ import { LocaleService } from '../../i18n/locale.service';
 import { TranslatePipe } from '../../i18n/translate.pipe';
 import { GameArtComponent } from '../../components/game-art/game-art.component';
 import { GamePathPipe } from '../game/game-path.pipe';
+import { ViewerLevelBadgeComponent } from '../../components/viewer-level-badge/viewer-level-badge.component';
+import { TranslationKey } from '../../i18n/translations';
 import { CommonModule } from '@angular/common';
 import { Component, inject, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -13,7 +15,7 @@ import { SeoService } from '../../service/seo.service';
 
 @Component({
   selector: 'app-viewer-stats',
-  imports: [TranslatePipe, GamePathPipe, RouterLink, GameArtComponent, CommonModule],
+  imports: [TranslatePipe, GamePathPipe, RouterLink, GameArtComponent, CommonModule, ViewerLevelBadgeComponent],
   templateUrl: './viewer-stats.component.html',
   styleUrl: './viewer-stats.component.scss'
 })
@@ -90,6 +92,18 @@ export class ViewerStatsComponent implements OnInit, OnDestroy {
     const hours = Math.floor(minutes / 60);
     const remainingMinutes = minutes % 60;
     return this.locale.duration(minutes);
+  }
+
+  levelTitle(level: number): string {
+    return this.locale.t(`level.${level}` as TranslationKey);
+  }
+
+  levelPercent(progress: number): number {
+    return Math.round(Math.min(1, Math.max(0, progress)) * 1000) / 10;
+  }
+
+  formatXp(value: number): string {
+    return this.locale.number(Math.max(0, value), value < 100 ? 1 : 0);
   }
 
   formatDate(value: string): string {

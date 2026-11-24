@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-labelledby="t">
+<title id="t">Level 2</title>
+<circle cx="32" cy="31" r="25" fill="#c27a3e"/>
+
+<circle cx="32" cy="31" r="25" fill="#3b2414" transform="translate(32 31) scale(0.84) translate(-32 -31)"/>
+<path d="M32 13 C35.5 17.5 36.5 20 36.5 22 C36.5 24.6 34.5 26.5 32 26.5 C29.5 26.5 27.5 24.6 27.5 22 C27.5 20 28.5 17.5 32 13 Z" fill="#f3cfa6"/><path d="M32 21.5 C33.2 22.8 33.5 23.6 33.3 24.5" stroke="#3b2414" stroke-width="1.4" fill="none" stroke-linecap="round"/><rect x="27" y="28" width="10" height="14" rx="1.5" fill="#f3cfa6"/><path d="M21 44 H43" stroke="#f3cfa6" stroke-width="2.6" stroke-linecap="round"/>
+<rect x="21" y="50.5" width="22" height="12" rx="6" fill="#c27a3e" stroke="#3b2414" stroke-width="1.5"/>
+<text x="32" y="59.6" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="700" fill="#3b2414">2</text>
+</svg>

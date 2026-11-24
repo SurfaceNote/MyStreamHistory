@@ -5,6 +5,8 @@ export interface ViewerStats {
     minutesWatched: number;
     earnedMsgPoints: number;
     experience: number;
+    /** Channel level derived from experience by the backend. */
+    level?: ViewerLevel;
     lastUpdatedAt: string;
     top100Rank?: number | null;
     streamsWatched: number;
@@ -14,6 +16,16 @@ export interface ViewerStats {
     favoriteCategories: ViewerFavoriteCategory[];
     recentStreams: ViewerStreamHistory[];
     viewer?: ViewerInfo;
+}
+
+export interface ViewerLevel {
+    /** 1–20. */
+    level: number;
+    currentLevelExperience: number;
+    /** Null at the maximum level. */
+    nextLevelExperience: number | null;
+    /** 0–1 towards the next level; 1 at the maximum level. */
+    progress: number;
 }
 
 export interface ViewerFavoriteCategory {

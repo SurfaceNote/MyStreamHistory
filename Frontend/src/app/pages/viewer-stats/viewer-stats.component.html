@@ -48,6 +48,35 @@
         </div>
       </section>
 
+      @if (stats.level; as level) {
+        <section class="level-card" [title]="'hint.level' | t">
+          <app-viewer-level-badge [level]="level.level" [size]="72" />
+          <div class="level-copy">
+            <span class="eyebrow">{{ 'level.channelLevel' | t }}</span>
+            <h2>
+              {{ 'level.label' | t: { level: level.level } }}
+              <span class="level-title">· {{ levelTitle(level.level) }}</span>
+            </h2>
+            <div class="level-track" role="progressbar" aria-valuemin="0" aria-valuemax="100"
+                 [attr.aria-valuenow]="levelPercent(level.progress)"
+                 [attr.aria-label]="'level.channelLevel' | t">
+              <span [style.width.%]="levelPercent(level.progress)"></span>
+            </div>
+            <div class="level-meta">
+              @if (level.nextLevelExperience !== null) {
+                <span>{{ 'level.progress' | t: { current: formatXp(stats.experience), next: formatXp(level.nextLevelExperience) } }}</span>
+                <span>{{ 'level.toNext' | t: { xp: formatXp(level.nextLevelExperience - stats.experience) } }}</span>
+              } @else {
+                <span>{{ 'level.max' | t }}</span>
+              }
+            </div>
+          </div>
+          @if (level.nextLevelExperience !== null && level.level < 20) {
+            <app-viewer-level-badge class="next-level" [level]="level.level + 1" [size]="40" />
+          }
+        </section>
+      }
+
       <section class="metrics-grid" [attr.aria-label]="'ui.viewerStatistics' | t">
         <article class="metric-card accent-card" [title]="'hint.chatPresence' | t">
           <span class="metric-label">{{ 'ui.watchTime' | t }}</span>

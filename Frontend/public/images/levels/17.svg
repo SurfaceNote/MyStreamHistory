@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-labelledby="t">
+<title id="t">Level 17</title>
+<path d="M9 15 L16 5 L24 12 L32 2 L40 12 L48 5 L55 15 V31 C55 45 45 54 32 59 C19 54 9 45 9 31 Z" fill="#a874ec"/>
+<path d="M9 15 L16 5 L24 12 L32 2 L40 12 L48 5 L55 15 V31 C55 45 45 54 32 59 C19 54 9 45 9 31 Z" fill="none" stroke="#f2c94c" stroke-width="1.4" transform="translate(32 31) scale(0.92) translate(-32 -31)"/>
+<path d="M9 15 L16 5 L24 12 L32 2 L40 12 L48 5 L55 15 V31 C55 45 45 54 32 59 C19 54 9 45 9 31 Z" fill="#22113b" transform="translate(32 31) scale(0.84) translate(-32 -31)"/>
+<path d="M32 8.5 V16 M28.8 11.3 H35.2" stroke="#f6e3ff" stroke-width="2.4" stroke-linecap="round"/><path d="M19 39 V30 C19 21.5 25 17 32 17 C39 17 45 21.5 45 30 V39 Z" fill="#f6e3ff"/><path d="M32 18 V38 M25.5 20 C23.5 25.5 23.5 32 24.5 38 M38.5 20 C40.5 25.5 40.5 32 39.5 38" stroke="#22113b" stroke-width="1.5" fill="none"/><rect x="16.5" y="38" width="31" height="7" rx="1.5" fill="#f6e3ff"/><circle cx="23" cy="41.5" r="1.6" fill="#22113b"/><circle cx="32" cy="41.5" r="1.9" fill="#22113b"/><circle cx="41" cy="41.5" r="1.6" fill="#22113b"/>
+<rect x="21" y="50.5" width="22" height="12" rx="6" fill="#a874ec" stroke="#22113b" stroke-width="1.5"/>
+<text x="32" y="59.6" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="9" font-weight="700" fill="#22113b">17</text>
+</svg>

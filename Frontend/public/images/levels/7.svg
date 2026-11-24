@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-labelledby="t">
+<title id="t">Level 7</title>
+<path d="M32 4 L55 11 V30 C55 45 45 54 32 59 C19 54 9 45 9 30 V11 Z" fill="#b9c3cf"/>
+
+<path d="M32 4 L55 11 V30 C55 45 45 54 32 59 C19 54 9 45 9 30 V11 Z" fill="#26303c" transform="translate(32 31) scale(0.84) translate(-32 -31)"/>
+<path d="M32 15 C33.5 10.5 38 9 42.5 10.5 C39 11.5 37 13.5 36 16" fill="#eef3f8"/><path d="M20 43 V29 C20 21 25 15.5 32 15.5 C39 15.5 44 21 44 29 V43 Z" fill="#eef3f8"/><rect x="23" y="27" width="18" height="3.2" rx="1.6" fill="#26303c"/><path d="M32 32.5 V40.5 M27.5 34.5 V39.5 M36.5 34.5 V39.5" stroke="#26303c" stroke-width="1.6" stroke-linecap="round"/>
+<rect x="21" y="50.5" width="22" height="12" rx="6" fill="#b9c3cf" stroke="#26303c" stroke-width="1.5"/>
+<text x="32" y="59.6" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="700" fill="#26303c">7</text>
+</svg>

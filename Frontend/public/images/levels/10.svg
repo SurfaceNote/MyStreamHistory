@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-labelledby="t">
+<title id="t">Level 10</title>
+<polygon points="32,4 56,17.5 56,44.5 32,58 8,44.5 8,17.5" fill="#e6b52f"/>
+
+<polygon points="32,4 56,17.5 56,44.5 32,58 8,44.5 8,17.5" fill="#3a2905" transform="translate(32 31) scale(0.84) translate(-32 -31)"/>
+<path d="M22 44 V24 H20 V15 H25 V18.5 H29.5 V15 H34.5 V18.5 H39 V15 H44 V24 H42 V44 Z" fill="#ffe28c"/><path d="M28.5 44 V37.5 C28.5 34.5 35.5 34.5 35.5 37.5 V44 Z" fill="#3a2905"/><rect x="30.4" y="25.5" width="3.2" height="5.5" rx="1.6" fill="#3a2905"/>
+<rect x="21" y="50.5" width="22" height="12" rx="6" fill="#e6b52f" stroke="#3a2905" stroke-width="1.5"/>
+<text x="32" y="59.6" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="9" font-weight="700" fill="#3a2905">10</text>
+</svg>

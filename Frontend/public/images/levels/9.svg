@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-labelledby="t">
+<title id="t">Level 9</title>
+<polygon points="32,4 56,17.5 56,44.5 32,58 8,44.5 8,17.5" fill="#e6b52f"/>
+
+<polygon points="32,4 56,17.5 56,44.5 32,58 8,44.5 8,17.5" fill="#3a2905" transform="translate(32 31) scale(0.84) translate(-32 -31)"/>
+<g fill="none" stroke="#ffe28c" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="32" cy="14.5" r="3.2"/><path d="M32 18 V44"/><path d="M25 23 H39"/><path d="M19.5 33 C20.5 40 26 44 32 44 C38 44 43.5 40 44.5 33"/><path d="M16.5 36 L19.5 32.5 L23 35.5 M41 35.5 L44.5 32.5 L47.5 36"/></g>
+<rect x="21" y="50.5" width="22" height="12" rx="6" fill="#e6b52f" stroke="#3a2905" stroke-width="1.5"/>
+<text x="32" y="59.6" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="10" font-weight="700" fill="#3a2905">9</text>
+</svg>

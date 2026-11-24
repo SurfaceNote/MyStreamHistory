@@ -497,7 +497,7 @@
                   <img [src]="viewer.viewer?.profileImageUrl || getDefaultAvatar()" alt="" />
                   <span class="podium-rank">{{ i + 1 }}</span>
                 </span>
-                <strong>{{ viewer.viewer?.displayName || ('ui.unknown' | t) }}</strong>
+                <strong class="podium-name">@if (viewer.level) {<app-viewer-level-badge [level]="viewer.level.level" [size]="24" />}<span>{{ viewer.viewer?.displayName || ('ui.unknown' | t) }}</span></strong>
                 <span class="podium-stats">
                   <span [title]="'hint.chatPresence' | t"><b>{{ formatHours(viewer.minutesWatched) }}</b> {{ 'ui.watched' | t }}</span>
                   <span [title]="'hint.messagePoints' | t"><b>{{ formatMessagePoints(viewer.earnedMsgPoints) }}</b> {{ 'ui.msgPts' | t }}</span>
@@ -529,7 +529,7 @@
               loading="lazy"
               [src]="viewer.viewer?.profileImageUrl || getDefaultAvatar()"
               alt=""
-            /><strong class="viewer-name">{{ viewer.viewer?.displayName || ('ui.unknown' | t) }}</strong
+            /><strong class="viewer-name">@if (viewer.level) {<app-viewer-level-badge [level]="viewer.level.level" [size]="22" />}<span>{{ viewer.viewer?.displayName || ('ui.unknown' | t) }}</span></strong
             ><span class="viewer-watch" [title]="'hint.chatPresence' | t">{{ formatHours(viewer.minutesWatched) }} {{ 'ui.watched' | t }}</span
             ><span class="viewer-points" [title]="'hint.messagePoints' | t"
               >{{ formatMessagePoints(viewer.earnedMsgPoints) }} {{ 'ui.msgPts' | t }}</span

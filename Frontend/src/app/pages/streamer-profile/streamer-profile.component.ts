@@ -32,6 +32,7 @@ import {
 } from 'rxjs';
 import { StreamSession } from '../../models/stream-session.model';
 import { ViewerStats } from '../../models/viewer-stats.model';
+import { ViewerLevelBadgeComponent } from '../../components/viewer-level-badge/viewer-level-badge.component';
 import { isPlatformBrowser, CommonModule, Location } from '@angular/common';
 import { SocialLink } from '../../models/social-link.model';
 import {
@@ -88,7 +89,7 @@ interface DashboardSummaryCard {
 
 @Component({
   selector: 'app-streamer-profile',
-  imports: [TranslatePipe, LocalPathPipe, GamePathPipe, GameArtComponent, CommonModule, RouterLink],
+  imports: [TranslatePipe, LocalPathPipe, GamePathPipe, GameArtComponent, CommonModule, RouterLink, ViewerLevelBadgeComponent],
   templateUrl: './streamer-profile.component.html',
   styleUrl: './streamer-profile.component.scss',
 })
