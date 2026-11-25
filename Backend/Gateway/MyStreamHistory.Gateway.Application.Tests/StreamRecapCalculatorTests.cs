@@ -48,6 +48,21 @@ public class StreamRecapCalculatorTests
     }
 
     [Fact]
+    public void RecapViewers_CarryTheirChannelLevel()
+    {
+        var audience = new List<RecapAudienceMember>
+        {
+            new("veteran", "veteran", "veteran", null, 60, 0, ChannelExperience: 500m),
+            new("unknown", "unknown", "unknown", null, 30, 0),
+        };
+
+        var recap = Build(audience, new());
+
+        Assert.Equal(5, recap.NewViewers.Single(v => v.TwitchUserId == "veteran").Level!.Level);
+        Assert.Null(recap.NewViewers.Single(v => v.TwitchUserId == "unknown").Level);
+    }
+
+    [Fact]
     public void Averages_UseTheTenLatestFinishedStreams()
     {
         var counts = Earlier.Take(10).ToDictionary(s => s.Id, _ => 6);

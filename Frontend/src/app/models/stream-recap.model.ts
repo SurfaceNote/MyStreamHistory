@@ -1,3 +1,5 @@
+import { ViewerLevel } from './viewer-stats.model';
+
 /** Chat accounts exclude the broadcaster and bots. */
 export interface StreamRecap {
   streamSessionId: string;
@@ -29,6 +31,8 @@ export interface RecapViewer {
   chatPoints: number;
   missedStreams?: number | null;
   streak?: number | null;
+  /** Level on this channel (all-time experience). */
+  level?: ViewerLevel | null;
 }
 
 export interface RecapPlaythrough {

@@ -8,6 +8,9 @@ public class ViewerCategoryWatchDto
     public int MinutesWatched { get; set; }
     public decimal ChatPoints { get; set; }
     public decimal Experience { get; set; }
+
+    /// <summary>All-time experience on the channel; filled only when the request names the streamer.</summary>
+    public decimal? ChannelExperience { get; set; }
     public DateTime LastUpdatedAt { get; set; }
     
     // Navigation properties for responses

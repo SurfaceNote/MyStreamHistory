@@ -108,7 +108,8 @@ public class GetStreamRecapQueryHandler(ITransportBus bus) : IRequestHandler<Get
             {
                 StreamSessionId = session.Id,
                 IncludeSessionPresence = true,
-                StreamCategoryIds = session.Categories.Select(c => c.StreamCategoryId).ToList()
+                StreamCategoryIds = session.Categories.Select(c => c.StreamCategoryId).ToList(),
+                StreamerTwitchUserId = streamerId
             },
             cancellationToken);
 
@@ -131,7 +132,8 @@ public class GetStreamRecapQueryHandler(ITransportBus bus) : IRequestHandler<Get
                     viewer.Login,
                     viewer.ProfileImageUrl,
                     group.Max(v => v.MinutesWatched),
-                    group.Sum(v => v.ChatPoints));
+                    group.Sum(v => v.ChatPoints),
+                    group.Max(v => v.ChannelExperience));
             })
             .ToList();
     }

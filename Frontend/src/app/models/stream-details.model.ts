@@ -1,3 +1,5 @@
+import { ViewerLevel } from './viewer-stats.model';
+
 export interface StreamDetails {
   id: string;
   streamId: string | null;
@@ -46,5 +48,7 @@ export interface StreamViewer {
   viewerPoints: number;
   isBroadcaster?: boolean;
   isBot?: boolean;
+  /** Level on this channel (all-time experience). */
+  level?: ViewerLevel | null;
 }
 

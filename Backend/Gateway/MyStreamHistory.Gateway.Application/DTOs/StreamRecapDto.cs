@@ -1,3 +1,4 @@
+using MyStreamHistory.Shared.Base.Contracts.Viewers;
 namespace MyStreamHistory.Gateway.Application.DTOs;
 
 /// <summary>
@@ -42,6 +43,8 @@ public class RecapViewerDto
     public int? MissedStreams { get; set; }
     /// <summary>Streams in a row, including this one, the account was in chat (regulars).</summary>
     public int? Streak { get; set; }
+    /// <summary>Level on the streamer's channel (all-time experience), when known.</summary>
+    public ViewerLevelDto? Level { get; set; }
 }
 
 public class RecapPlaythroughDto

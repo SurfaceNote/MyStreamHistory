@@ -116,6 +116,17 @@ public class GetStreamViewersConsumer : IConsumer<GetStreamViewersRequestContrac
                 }
             }
 
+            if (!string.IsNullOrEmpty(request.StreamerTwitchUserId) && viewers.Count > 0)
+            {
+                // Levels belong to the channel, so they use all-time channel experience, not this stream's.
+                var viewerIds = viewers.Select(v => v.ViewerId).Distinct().ToList();
+                var channelExperience = await _db.ViewerStats.AsNoTracking()
+                    .Where(s => s.StreamerTwitchUserId == request.StreamerTwitchUserId && viewerIds.Contains(s.ViewerId))
+                    .ToDictionaryAsync(s => s.ViewerId, s => s.Experience, context.CancellationToken);
+                foreach (var viewer in viewers)
+                    viewer.ChannelExperience = channelExperience.GetValueOrDefault(viewer.ViewerId);
+            }
+
             var excludedLogins = await _db.RankingExcludedAccounts.AsNoTracking().Select(a => a.Login)
                 .ToListAsync(context.CancellationToken);
             var excluded = excludedLogins.ToHashSet(StringComparer.OrdinalIgnoreCase);

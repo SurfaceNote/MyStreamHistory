@@ -49,5 +49,8 @@ public class StreamViewerDto
     public decimal ViewerPoints { get; set; }
     public bool IsBroadcaster { get; set; }
     public bool IsBot { get; set; }
+
+    /// <summary>Level on the streamer's channel (all-time experience), when known.</summary>
+    public ViewerLevelDto? Level { get; set; }
 }
 

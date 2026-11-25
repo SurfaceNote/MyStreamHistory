@@ -119,7 +119,7 @@
             <li>
               <a [routerLink]="viewerLink(viewer) | localPath">
                 <img [src]="viewer.profileImageUrl || getTwitchProfileImage(viewer.twitchUserId)" alt="" loading="lazy" />
-                <span class="person-name">{{ viewer.displayName }}</span>
+                <span class="person-name">@if (viewer.level) {<app-viewer-level-badge [level]="viewer.level.level" [size]="20" />}<span>{{ viewer.displayName }}</span></span>
                 <span class="person-note">{{ viewerNote(viewer, kind) }}</span>
               </a>
             </li>
@@ -187,7 +187,7 @@
             class="viewer-avatar"
           />
           <div class="viewer-details">
-            <div class="viewer-name">{{ viewer.displayName }}</div>
+            <div class="viewer-name">@if (viewer.level && !viewer.isBroadcaster && !viewer.isBot) {<app-viewer-level-badge [level]="viewer.level.level" [size]="22" />}<span>{{ viewer.displayName }}</span></div>
             <div class="viewer-stats">
               <span class="viewer-stat-item" [title]="'hint.chatPresence' | t">{{ formatHours(viewer.minutesWatched) }} {{ 'unit.hours' | t }}</span>
               <span class="viewer-stat-item" [title]="'hint.messagePoints' | t">{{ formatPoints(viewer.chatPoints) }} {{ 'ui.msgPts' | t }}</span>

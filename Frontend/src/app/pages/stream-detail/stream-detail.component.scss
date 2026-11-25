@@ -450,3 +450,8 @@
   .recap-stat { padding: 12px; strong { font-size: 22px; } }
   .recap-actions { width: 100%; .recap-button { flex: 1; justify-content: center; } }
 }
+
+// ---- Viewer level badges
+.viewer-name, .recap-group .person-name { display: flex; align-items: center; gap: 6px;
+  > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}

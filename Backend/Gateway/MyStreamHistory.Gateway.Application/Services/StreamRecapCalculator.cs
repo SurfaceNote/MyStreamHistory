@@ -1,3 +1,4 @@
+using MyStreamHistory.Shared.Base.Contracts.Viewers;
 using MyStreamHistory.Gateway.Application.DTOs;
 using PlaythroughDto = MyStreamHistory.Shared.Base.Contracts.Playthroughs.PlaythroughDto;
 
@@ -11,7 +12,8 @@ public record RecapAudienceMember(
     string Login,
     string? ProfileImageUrl,
     int MinutesWatched,
-    decimal ChatPoints);
+    decimal ChatPoints,
+    decimal? ChannelExperience = null);
 
 /// <summary>Builds a stream recap from data that the services already store. Pure, so it is unit tested.</summary>
 public static class StreamRecapCalculator
@@ -150,7 +152,8 @@ public static class StreamRecapCalculator
         Login = member.Login,
         ProfileImageUrl = member.ProfileImageUrl,
         MinutesWatched = member.MinutesWatched,
-        ChatPoints = member.ChatPoints
+        ChatPoints = member.ChatPoints,
+        Level = member.ChannelExperience is { } channelExperience ? ViewerLevels.ForExperience(channelExperience) : null
     };
 
     private static int Minutes(DateTime from, DateTime to) => Math.Max(0, (int)Math.Round((to - from).TotalMinutes));

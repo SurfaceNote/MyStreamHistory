@@ -59,7 +59,8 @@ public class GetStreamDetailsByIdQueryHandler : IRequestHandler<GetStreamDetails
             { 
                 StreamSessionId = request.StreamSessionId,
                 IncludeSessionPresence = true,
-                StreamCategoryIds = categoryIds
+                StreamCategoryIds = categoryIds,
+                StreamerTwitchUserId = streamSession.TwitchUserId.ToString()
             }, 
             cancellationToken
         );
@@ -78,7 +79,8 @@ public class GetStreamDetailsByIdQueryHandler : IRequestHandler<GetStreamDetails
                 ChatPoints = v.ChatPoints,
                 ViewerPoints = v.MinutesWatched, // 1 minute = 1 viewer point for simplicity
                 IsBroadcaster = RankingExclusions.IsBroadcaster(v.Viewer?.TwitchUserId, streamSession.TwitchUserId.ToString()),
-                IsBot = v.Viewer?.IsRankingExcluded == true
+                IsBot = v.Viewer?.IsRankingExcluded == true,
+                Level = v.ChannelExperience is { } channelExperience ? ViewerLevels.ForExperience(channelExperience) : null
             }).ToList();
 
             // Keep the broadcaster and bots visible as chat accounts, but after the audience.
